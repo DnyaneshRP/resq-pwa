@@ -62,33 +62,12 @@ input, button, select {
   color: #333 !important; /* Base color for all inputs */
 }
 
-/* * CRITICAL FIX FOR MOBILE DATE INPUT VISIBILITY (dd/mm/yyyy text)
- * This aggressive fix uses opacity and a custom color fill to bypass
- * native mobile browser rendering issues that hide the text.
- */
+/* Simplified CSS for Date Input - JS now manages visibility */
 input[type="date"] {
-    color: #333; 
-    -webkit-text-fill-color: #333; /* For Safari/iOS */
+    color: black !important; 
+    -webkit-text-fill-color: black !important; /* Safari/iOS text color */
     opacity: 1; 
 }
-
-/* This specific rule ensures the date text is black */
-input[type="date"] {
-    color: black;
-}
-
-/* Show "DD/MM/YYYY" as a fake placeholder only when the field is empty */
-input[type="date"]:not([value]):before {
-    content: "DD/MM/YYYY" !important; 
-    color: #999;
-}
-
-/* Hide the fake placeholder when a date is selected or the field is focused */
-input[type="date"]:valid:before,
-input[type="date"]:focus:before {
-    content: '' !important;
-}
-
 
 /* Placeholder color for a native feel */
 input::placeholder {

@@ -1,10 +1,10 @@
-const CACHE_NAME = "resq-cache-v3"; // <<< INCREMENTED VERSION!
+const CACHE_NAME = "resq-cache-v3"; 
 const ASSETS = [
     '/',
     '/index.html',
     '/register.html',
     '/home.html',
-    '/profile.html', // <<< New file added to cache
+    '/profile.html', 
     '/style.css',
     '/app.js',
     '/manifest.json',

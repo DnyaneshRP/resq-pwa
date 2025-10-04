@@ -9,6 +9,28 @@ if ('serviceWorker' in navigator) {
 // alert("All user data has been cleared!");
 
 
+// --- CRITICAL FIX: Date Input Visibility Logic ---
+const dobInput = document.getElementById('dob');
+
+if (dobInput) {
+    dobInput.addEventListener('focus', () => {
+        // When user taps the field, change it to date type to launch the native picker
+        dobInput.type = 'date';
+        // Remove the placeholder while the native date text is visible
+        dobInput.removeAttribute('placeholder');
+    });
+
+    dobInput.addEventListener('blur', () => {
+        // If the user leaves the field and it is empty, revert to text to show our placeholder
+        if (!dobInput.value) {
+            dobInput.type = 'text';
+            dobInput.setAttribute('placeholder', 'DD/MM/YYYY');
+        }
+    });
+}
+// ----------------------------------------------------
+
+
 // --- CORE NAVIGATION/LOGIN LOGIC ---
 function checkLoginStatus() {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
