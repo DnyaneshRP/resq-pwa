@@ -1,49 +1,83 @@
+/* --- Base Mobile-First Styles (Smartphone Default) --- */
 body {
   margin: 0;
-  font-family: 'Arial', sans-serif;
+  font-size: 1.1em;
+  font-family: 'Roboto', 'Arial', sans-serif;
   background: #f9f9f9;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  /* Use min-height: 100vh for content to flow on long pages */
+  min-height: 100vh; 
+  padding: 20px; /* Add padding for small screens */
+  box-sizing: border-box;
 }
-
 .app {
   background: white;
   padding: 2rem;
   border-radius: 20px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   text-align: center;
-  width: 320px;
+  /* Max width for mobile view - ensures it doesn't look too wide on a phone */
+  max-width: 400px; 
+  width: 100%; /* IMPORTANT: Makes it take up full available width on small screens */
 }
-
 .logo {
   width: 100px;
   margin-bottom: 10px;
 }
-
 form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
-
-input, button {
-  padding: 10px;
-  font-size: 16px;
+input, button, select { 
+  padding: 12px; 
+  font-size: 1em;
   border-radius: 8px;
   border: 1px solid #ccc;
+  appearance: none;
+  /* Ensure inputs are full width of the container */
+  width: 100%; 
+  box-sizing: border-box; /* Include padding/border in the element's total width */
 }
-
 button {
   background: #d32f2f;
   color: white;
   font-weight: bold;
   border: none;
   cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
-
 button:hover {
   background: #b71c1c;
 }
+a {
+    color: #d32f2f;
+    text-decoration: none;
+    font-weight: bold;
+}
 
+/* --- Media Queries for Larger Screens (PC/Laptop/Tablet) --- */
+
+/* For screens larger than 600px */
+@media (min-width: 600px) {
+  body {
+    /* Center the content vertically and horizontally on large screens */
+    align-items: center;
+    justify-content: center;
+  }
+  .app {
+    /* Define a fixed, centered width for a clean look on desktop */
+    width: 450px; 
+    padding: 3rem; /* Slightly more padding on larger screens */
+  }
+}
+
+/* For screens larger than 1024px */
+@media (min-width: 1024px) {
+  .app {
+    /* Make it a little larger on huge screens but still contained */
+    width: 500px; 
+  }
+}
