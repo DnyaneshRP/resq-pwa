@@ -3,7 +3,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(() => console.log("SW Registered"));
 }
 
-// NOTE: To clear old data for a fresh start, uncomment and run these lines once:
+// NOTE: To clear old data for a fresh start (uncomment, run once, then comment again):
 // localStorage.removeItem('resqUser'); 
 // localStorage.removeItem('isLoggedIn'); 
 // alert("All user data has been cleared!");
@@ -13,16 +13,17 @@ if ('serviceWorker' in navigator) {
 function checkLoginStatus() {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const currentPage = window.location.pathname;
+    
+    // Pages requiring login
+    const protectedPages = ['home.html', 'profile.html']; 
 
-    // 1. Guaranteed Home Page Redirect (Auto-login / Offline persistence)
-    // If logged in AND on the login/register page, go to home
+    // Guaranteed Home Page Redirect (Auto-login)
     if (isLoggedIn && (currentPage.includes('index.html') || currentPage.includes('register.html') || currentPage === '/')) {
         window.location.href = "home.html";
     } 
     
-    // 2. Navigation Restriction 
-    // If NOT logged in AND on the home page, go to login
-    else if (!isLoggedIn && currentPage.includes('home.html')) {
+    // Navigation Restriction 
+    else if (!isLoggedIn && protectedPages.some(page => currentPage.includes(page))) {
         window.location.href = "index.html";
     }
 }
@@ -76,7 +77,49 @@ if (document.getElementById('loginForm')) {
   });
 }
 
-// --- Home Page Logic (Logout & Menu) ---
+// --- Profile Page Logic: Load and Display User Data ---
+if (document.getElementById('profileDetails')) {
+    const detailsContainer = document.getElementById('profileDetails');
+    const user = JSON.parse(localStorage.getItem('resqUser'));
+
+    if (user) {
+        detailsContainer.innerHTML = ''; 
+
+        // List of fields to display, formatted nicely
+        const fields = [
+            { label: 'Full Name', key: 'fullname' },
+            { label: 'Email', key: 'email' },
+            { label: 'Phone Number', key: 'phone' },
+            { label: 'Date of Birth', key: 'dob' },
+            { label: 'Gender', key: 'gender' },
+            { label: 'Blood Group', key: 'bloodgrp' },
+            { label: 'Address', key: 'address' },
+            { label: 'City', key: 'city' },
+            { label: 'Pincode', key: 'pincode' },
+            { label: 'Emergency Contact 1', key: 'emergency1' },
+            { label: 'Emergency Contact 2', key: 'emergency2' },
+            { label: 'Medical Conditions', key: 'medical' }
+        ];
+
+        fields.forEach(field => {
+            // Skip empty optional fields
+            if (user[field.key]) {
+                const item = document.createElement('div');
+                item.classList.add('profile-item');
+                item.innerHTML = `
+                    <span class="profile-label">${field.label}:</span>
+                    <span class="profile-value">${user[field.key]}</span>
+                `;
+                detailsContainer.appendChild(item);
+            }
+        });
+    } else {
+        detailsContainer.innerHTML = `<p>No user data found. Please <a href="register.html">register</a>.</p>`;
+    }
+}
+
+
+// --- Home/Profile Page Logic (Logout & Menu) ---
 if (document.getElementById('logoutButton')) {
     const menuButton = document.getElementById('menuButton');
     const menuOptions = document.getElementById('menuOptions');
@@ -87,15 +130,19 @@ if (document.getElementById('logoutButton')) {
       menuButton.addEventListener('click', () => {
           menuOptions.classList.toggle('active');
       });
+      // This listener handles clicking outside the menu to close it
+      document.body.addEventListener('click', (e) => {
+          if (menuOptions.classList.contains('active') && !menuOptions.contains(e.target) && !menuButton.contains(e.target)) {
+              menuOptions.classList.remove('active');
+          }
+      });
     }
 
     // 2. Logout Logic
     logoutButton.addEventListener('click', (e) => {
         e.preventDefault();
-        // Clear login status and user data (optional, but good for security)
         localStorage.removeItem('isLoggedIn'); 
-        // NOTE: We keep 'resqUser' so the user doesn't have to re-register
         alert("Logged out successfully.");
-        window.location.href = "index.html"; // Redirect to login page
+        window.location.href = "index.html";
     });
 }

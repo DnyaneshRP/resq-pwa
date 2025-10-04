@@ -1,15 +1,14 @@
-const CACHE_NAME = "resq-cache-v2"; // <<< INCREMENTED VERSION!
+const CACHE_NAME = "resq-cache-v3"; // <<< INCREMENTED VERSION!
 const ASSETS = [
     '/',
     '/index.html',
     '/register.html',
     '/home.html',
+    '/profile.html', // <<< New file added to cache
     '/style.css',
     '/app.js',
     '/manifest.json',
     '/icons/resq-192.png',
-    // We don't cache Font Awesome as it's an external CDN, 
-    // but the app shell is covered.
 ];
 
 // Installation: Cache all assets

@@ -8,22 +8,17 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 20px;
+  padding: 0; 
   box-sizing: border-box;
+  width: 100%; /* Ensure body takes full width */
 }
 
-/* Style for the Home Page body to allow the header to span full width */
+/* FIX: Ensure Home Page body takes up the full viewport */
 body.home-page {
     display: block; 
     min-height: 100vh;
     padding: 0;
-}
-body.home-page .app {
-    box-shadow: none; 
-    border-radius: 0;
-    max-width: none;
-    padding: 2rem;
-    padding-top: 1rem; /* Adjust padding below the fixed header */
+    width: 100%; 
 }
 
 /* Application Container (Used on Login and Register) */
@@ -33,8 +28,17 @@ body.home-page .app {
   border-radius: 20px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   text-align: center;
-  max-width: 400px; 
+  max-width: 90vw; 
   width: 100%; 
+}
+
+/* Home/Profile Page Content Area */
+body.home-page .app {
+    box-shadow: none; 
+    border-radius: 0;
+    max-width: 100%; /* CRITICAL FIX: Ensure content area can use full width */
+    padding: 2rem;
+    padding-top: 1rem; 
 }
 
 .logo {
@@ -55,8 +59,15 @@ input, button, select {
   border: 1px solid #ccc;
   width: 100%; 
   box-sizing: border-box; 
-  /* FIX: Ensure all input text (including date) is dark for visibility */
-  color: #333; 
+  /* FIX: Ensure input text (including date) is dark and visible */
+  color: #333 !important; 
+}
+
+/* FIX: Date Input Visibility on some Mobile Browsers */
+input[type="date"] {
+    color: #333; 
+    -webkit-text-fill-color: #333; /* For Safari/iOS */
+    opacity: 1; 
 }
 
 /* Placeholder color for a native feel */
@@ -66,13 +77,11 @@ input::placeholder {
 
 /* Style for select dropdowns to look like inputs */
 select {
-    /* Removes native arrow/styling */
     appearance: none;
     -webkit-appearance: none;
-    /* Adds a custom dark arrow for visibility and consistency */
     background: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") no-repeat right 12px center;
     background-size: 12px;
-    padding-right: 30px; /* Space for the custom arrow */
+    padding-right: 30px;
 }
 
 button {
@@ -92,12 +101,11 @@ a {
     font-weight: bold;
 }
 
-/* --- Navbar Styling for Home Page --- */
+/* --- Navbar Styling for Home/Profile Pages --- */
 .header {
-    /* Fixed position at the top for native app feel */
     position: sticky; 
     top: 0;
-    width: 100%;
+    width: 100%; /* CRITICAL FIX: Ensure the header spans 100% */
     background-color: #d32f2f;
     color: white;
     padding: 15px 20px;
@@ -106,6 +114,7 @@ a {
     align-items: center;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     z-index: 10;
+    box-sizing: border-box;
 }
 .header h2 {
     margin: 0;
@@ -115,14 +124,14 @@ a {
 .hamburger {
     font-size: 24px;
     cursor: pointer;
-    padding: 5px; /* Increase hit area */
+    padding: 5px; 
 }
 
 /* Profile/Logout Menu (Slides down from the right) */
 .menu-options {
     display: none;
     position: absolute;
-    top: 55px; /* Position right below the header */
+    top: 55px; 
     right: 10px;
     background: white;
     border-radius: 5px;
@@ -131,7 +140,6 @@ a {
     min-width: 150px;
     text-align: left;
     overflow: hidden;
-    /* Added slight transition for a smoother feel */
     transition: all 0.2s ease-in-out; 
 }
 .menu-options a {
@@ -148,11 +156,40 @@ a {
     display: block;
 }
 
+/* --- Profile Page Specific Styles --- */
+.profile-info {
+    text-align: left;
+    max-width: 400px;
+    margin: 20px auto;
+    padding: 20px;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.profile-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.profile-item:last-child {
+    border-bottom: none;
+}
+.profile-label {
+    font-weight: bold;
+    color: #d32f2f; /* ResQ brand color for labels */
+    display: block;
+    font-size: 0.9em;
+    margin-bottom: 2px;
+}
+.profile-value {
+    color: #333;
+    font-size: 1.1em;
+}
 
-/* --- Media Queries for Larger Screens (Laptop/Desktop Fix) --- */
+/* --- Media Queries for Larger Screens (Laptop/Desktop) --- */
 
 @media (min-width: 600px) {
-    /* Only apply centering to Login/Register pages, not Home */
+    /* Only apply centering to Login/Register pages, not Home/Profile */
     body:not(.home-page) {
         align-items: center;
         justify-content: center;
@@ -161,5 +198,8 @@ a {
         width: 450px; 
         padding: 3rem; 
         margin: 0 auto; 
+    }
+    .header {
+        max-width: 100%; 
     }
 }
