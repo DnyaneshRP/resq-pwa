@@ -3,24 +3,24 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(() => console.log("SW Registered"));
 }
 
-// *** Data Reset & Initial Setup (RUN ONCE) ***
-// To clear all previous registrations:
+// NOTE: To clear old data for a fresh start, uncomment and run these lines once:
 // localStorage.removeItem('resqUser'); 
 // localStorage.removeItem('isLoggedIn'); 
-// alert("All previous registration data cleared!"); // You can remove this line after testing
+// alert("All user data has been cleared!");
+
 
 // --- CORE NAVIGATION/LOGIN LOGIC ---
 function checkLoginStatus() {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const currentPage = window.location.pathname;
 
-    // Guaranteed Home Page Redirect (Auto-login)
+    // 1. Guaranteed Home Page Redirect (Auto-login / Offline persistence)
     // If logged in AND on the login/register page, go to home
     if (isLoggedIn && (currentPage.includes('index.html') || currentPage.includes('register.html') || currentPage === '/')) {
         window.location.href = "home.html";
     } 
     
-    // Navigation Restriction 
+    // 2. Navigation Restriction 
     // If NOT logged in AND on the home page, go to login
     else if (!isLoggedIn && currentPage.includes('home.html')) {
         window.location.href = "index.html";
@@ -29,7 +29,7 @@ function checkLoginStatus() {
 checkLoginStatus(); // Run the check on every page load
 
 
-// --- Registration Logic (No Changes to data handling, just cleaner syntax) ---
+// --- Registration Logic ---
 if (document.getElementById('registerForm')) {
   document.getElementById('registerForm').addEventListener('submit', e => {
     e.preventDefault();
@@ -78,15 +78,23 @@ if (document.getElementById('loginForm')) {
 
 // --- Home Page Logic (Logout & Menu) ---
 if (document.getElementById('logoutButton')) {
+    const menuButton = document.getElementById('menuButton');
+    const menuOptions = document.getElementById('menuOptions');
+    const logoutButton = document.getElementById('logoutButton');
+
     // 1. Menu Toggle Logic
-    document.getElementById('menuButton').addEventListener('click', () => {
-        document.getElementById('menuOptions').classList.toggle('active');
-    });
+    if (menuButton) {
+      menuButton.addEventListener('click', () => {
+          menuOptions.classList.toggle('active');
+      });
+    }
 
     // 2. Logout Logic
-    document.getElementById('logoutButton').addEventListener('click', (e) => {
+    logoutButton.addEventListener('click', (e) => {
         e.preventDefault();
-        localStorage.setItem('isLoggedIn', 'false'); // Unset login flag
+        // Clear login status and user data (optional, but good for security)
+        localStorage.removeItem('isLoggedIn'); 
+        // NOTE: We keep 'resqUser' so the user doesn't have to re-register
         alert("Logged out successfully.");
         window.location.href = "index.html"; // Redirect to login page
     });
