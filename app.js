@@ -14,14 +14,11 @@ const dobInput = document.getElementById('dob');
 
 if (dobInput) {
     dobInput.addEventListener('focus', () => {
-        // When user taps the field, change it to date type to launch the native picker
         dobInput.type = 'date';
-        // Remove the placeholder while the native date text is visible
         dobInput.removeAttribute('placeholder');
     });
 
     dobInput.addEventListener('blur', () => {
-        // If the user leaves the field and it is empty, revert to text to show our placeholder
         if (!dobInput.value) {
             dobInput.type = 'text';
             dobInput.setAttribute('placeholder', 'DD/MM/YYYY');
@@ -41,6 +38,8 @@ function checkLoginStatus() {
 
     // Guaranteed Home Page Redirect (Auto-login)
     if (isLoggedIn && (currentPage.includes('index.html') || currentPage.includes('register.html') || currentPage === '/')) {
+        // Use replaceState here too, to prevent going back to login screen after auto-redirect
+        window.history.replaceState({}, document.title, "home.html");
         window.location.href = "home.html";
     } 
     
@@ -92,7 +91,11 @@ if (document.getElementById('loginForm')) {
     if (loginEmail === user.email && loginPassword === user.password) {
       alert("Login successful!");
       localStorage.setItem('isLoggedIn', 'true'); // Set login flag
+      
+      // CRITICAL FIX: Replace the current history entry so 'back' button exits the app
+      window.history.replaceState({}, document.title, "home.html"); 
       window.location.href = "home.html";
+      
     } else {
       alert("Invalid email or password!");
     }

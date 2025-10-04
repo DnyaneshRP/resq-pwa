@@ -1,3 +1,15 @@
+/* --- Global Reset and Overflow Fix --- */
+html {
+    /* FIX: Prevents horizontal scrolling by clipping content that exceeds viewport width */
+    overflow-x: hidden; 
+    box-sizing: border-box; 
+    /* The 100% width prevents margin/padding on the body from causing scroll */
+    width: 100%; 
+}
+*, *::before, *::after {
+    box-sizing: inherit; /* Ensure all elements inherit border-box model */
+}
+
 /* --- Base Mobile-First Styles (Smartphone Default) --- */
 body {
   margin: 0;
@@ -9,8 +21,8 @@ body {
   align-items: center;
   min-height: 100vh;
   padding: 0; 
-  box-sizing: border-box;
-  width: 100%; /* Ensure body takes full width */
+  /* CRITICAL: Must be 100% to fill the screen and prevent overflow-x */
+  width: 100vw; 
 }
 
 /* FIX: Ensure Home Page body takes up the full viewport */
@@ -18,7 +30,7 @@ body.home-page {
     display: block; 
     min-height: 100vh;
     padding: 0;
-    width: 100%; 
+    width: 100vw; /* Use 100vw here as well */
 }
 
 /* Application Container (Used on Login and Register) */
@@ -28,18 +40,38 @@ body.home-page {
   border-radius: 20px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   text-align: center;
-  max-width: 90vw; 
+  /* Use max-width to allow centering, but ensure full screen width use */
+  max-width: 95vw; 
   width: 100%; 
+  /* FIX: Ensure container itself doesn't cause overflow */
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Home/Profile Page Content Area */
 body.home-page .app {
     box-shadow: none; 
     border-radius: 0;
-    max-width: 100%; /* CRITICAL FIX: Ensure content area can use full width */
+    /* CRITICAL FIX: Ensure content area uses 100% of available width within body */
+    max-width: 100%; 
     padding: 2rem;
     padding-top: 1rem; 
 }
+
+/* FIX: Ensure the profile info container doesn't overflow */
+.profile-info {
+    text-align: left;
+    /* Use percentage to ensure it always fits phone width */
+    max-width: 95%; 
+    margin: 20px auto;
+    padding: 15px; /* Slightly reduced padding to avoid overflow */
+    border: 1px solid #eee;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* The rest of the CSS remains the same: */
 
 .logo {
   width: 100px;
@@ -65,15 +97,12 @@ input, button, select {
 /* Simplified CSS for Date Input - JS now manages visibility */
 input[type="date"] {
     color: black !important; 
-    -webkit-text-fill-color: black !important; /* Safari/iOS text color */
+    -webkit-text-fill-color: black !important; 
     opacity: 1; 
 }
-
-/* Placeholder color for a native feel */
 input::placeholder {
     color: #999;
 }
-/* Style for select dropdowns to look like inputs */
 select {
     appearance: none;
     -webkit-appearance: none;
@@ -103,7 +132,7 @@ a {
 .header {
     position: sticky; 
     top: 0;
-    width: 100%; /* CRITICAL FIX: Ensure the header spans 100% */
+    width: 100%; 
     background-color: #d32f2f;
     color: white;
     padding: 15px 20px;
@@ -154,17 +183,7 @@ a {
     display: block;
 }
 
-/* --- Profile Page Specific Styles --- */
-.profile-info {
-    text-align: left;
-    max-width: 400px;
-    margin: 20px auto;
-    padding: 20px;
-    border: 1px solid #eee;
-    border-radius: 10px;
-    background: #fff;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
+
 .profile-item {
     padding: 8px 0;
     border-bottom: 1px solid #f0f0f0;
@@ -174,7 +193,7 @@ a {
 }
 .profile-label {
     font-weight: bold;
-    color: #d32f2f; /* ResQ brand color for labels */
+    color: #d32f2f; 
     display: block;
     font-size: 0.9em;
     margin-bottom: 2px;
