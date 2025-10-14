@@ -172,6 +172,7 @@ if (document.getElementById('loginForm')) {
     const loginPassword = document.getElementById('password').value;
 
     if (!user) {
+        // More specific error if no user is registered at all
         return showMessage("Account not found. Please register first.", 'error');
     }
 
@@ -179,14 +180,14 @@ if (document.getElementById('loginForm')) {
       showMessage("Login successful!", 'success');
       localStorage.setItem('isLoggedIn', 'true'); 
       
-      // CRITICAL: Prevent history back to login page
+      // CRITICAL: Prevent history back to login page (Point 1)
       window.history.replaceState({}, document.title, "home.html"); 
       setTimeout(() => {
         window.location.href = "home.html";
       }, 1000);
       
     } else {
-      // Clear error message for wrong credentials
+      // Clear error message for wrong credentials (Point 3)
       showMessage("Invalid email or password. Please try again.", 'error');
     }
   });

@@ -4,21 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ResQ - Login</title>
-  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#d32f2f">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
-<body>
+<body class="login-page">
+
   <div class="app">
-    <img src="icons/resq-192.png" alt="ResQ Logo" class="logo">
-    <h1>ResQ 🚑</h1>
-    <form id="loginForm">
-      <input type="email" id="username" placeholder="Email" required autocomplete="email"> 
-      <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
-      <button type="submit">Login</button>
-      <p>New user? <a href="register.html">Register</a></p>
-    </form>
+    <div class="form-container">
+      <h1>ResQ Login</h1>
+      <form id="loginForm">
+        
+        <div class="form-group">
+          <label for="username">Email:</label>
+          <input type="email" id="username" required autocomplete="username">
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password:</label>
+          <input type="password" id="password" required autocomplete="current-password">
+        </div>
+        
+        <button type="submit">Log In</button>
+      </form>
+      
+      <p class="text-center">Don't have an account? <a href="register.html">Register Here</a></p>
+    </div>
   </div>
+
+  <div id="customMessageBox" class="custom-message-box hidden"></div>
+  
   <script src="app.js"></script>
 </body>
 </html>
