@@ -50,7 +50,7 @@ function showInstallPromotion() {
 }
 
 
-// --- NEW: Custom Message Box Function (Replaces alert()) ---
+// --- Custom Message Box Function (Replaces alert()) ---
 function showMessage(message, type = 'success', duration = 3000) {
     const messageBox = document.getElementById('customMessageBox');
     if (!messageBox) return;
@@ -141,7 +141,6 @@ if (document.getElementById('registerForm')) {
     };
 
     localStorage.setItem('resqUser', JSON.stringify(user));
-    // REPLACED: alert("Registration Successful! Please login.");
     showMessage("Registration Successful! Please login.", 'success');
     setTimeout(() => {
         window.location.href = "index.html";
@@ -157,10 +156,9 @@ if (document.getElementById('loginForm')) {
     const loginEmail = document.getElementById('username').value;
     const loginPassword = document.getElementById('password').value;
 
-    if (!user) return showMessage("No account found! Please register first.", 'error'); // REPLACED alert()
+    if (!user) return showMessage("No account found! Please register first.", 'error');
 
     if (loginEmail === user.email && loginPassword === user.password) {
-      // REPLACED: alert("Login successful!");
       showMessage("Login successful!", 'success');
       localStorage.setItem('isLoggedIn', 'true'); // Set login flag
       
@@ -171,7 +169,7 @@ if (document.getElementById('loginForm')) {
       }, 1000);
       
     } else {
-      showMessage("Invalid email or password!", 'error'); // REPLACED alert()
+      showMessage("Invalid email or password!", 'error');
     }
   });
 }
@@ -218,9 +216,9 @@ if (document.getElementById('profileDetails')) {
 }
 
 
-// ===============================================
-// Home/Profile Page Logic (NEW Side Drawer Menu)
-// ===============================================
+// =======================================================
+// Home/Profile Page Logic (Corrected Side Drawer Menu)
+// =======================================================
 
 const menuButton = document.getElementById('menuButton');
 const sideDrawer = document.getElementById('sideDrawer');
@@ -230,32 +228,28 @@ const backdrop = document.getElementById('drawerBackdrop');
 
 if (menuButton && sideDrawer) {
 
+    // Main function to toggle the drawer state
     function toggleDrawer() {
-        // Toggle the drawer and backdrop classes
         sideDrawer.classList.toggle('open');
         backdrop.classList.toggle('active');
         
-        // Prevent body scrolling when the drawer is open (crucial for good UX)
+        // Prevent body scrolling when the drawer is open
         document.body.style.overflowY = sideDrawer.classList.contains('open') ? 'hidden' : 'auto';
     }
 
-    // Open Drawer (clicking the hamburger)
+    // Event listeners for opening and closing the drawer
     menuButton.addEventListener('click', toggleDrawer);
-
-    // Close Drawer (clicking the X button)
     closeDrawer.addEventListener('click', toggleDrawer);
-
-    // Close Drawer (clicking the backdrop/outside the menu)
     backdrop.addEventListener('click', toggleDrawer);
 
-    // 2. Logout Logic (Uses the element inside the new drawer)
+    // Logout Logic (Now inside the drawer's event listener block)
     if (logoutButton) {
         logoutButton.addEventListener('click', (e) => {
             e.preventDefault();
             localStorage.removeItem('isLoggedIn'); 
-            showMessage("Logged out successfully.", 'success'); // REPLACED alert()
+            showMessage("Logged out successfully.", 'success');
             
-            // Close the drawer before redirecting
+            // Close the drawer before redirecting for a cleaner transition
             if (sideDrawer.classList.contains('open')) {
                  toggleDrawer(); 
             }
