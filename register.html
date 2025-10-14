@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ResQ - Register</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <h1>Register on ResQ</h1>
+    <form id="registerForm">
+      <input type="text" id="fullname" placeholder="Full Name" required autocomplete="name">
+      <input type="email" id="email" placeholder="Email" required autocomplete="email">
+      <input type="tel" id="phone" placeholder="Phone Number" required autocomplete="tel">
+      
+      <input type="text" id="dob" placeholder="DD/MM/YYYY" required> 
+      
+      <select id="gender" required>
+        <option value="" disabled selected>Select Gender</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+        <option value="Other">Other</option>
+      </select>
+      
+      <select id="bloodgrp" required>
+        <option value="" disabled selected>Select Blood Group</option>
+        <option value="A+">A+</option>
+        <option value="A-">A-</option>
+        <option value="B+">B+</option>
+        <option value="B-">B-</option>
+        <option value="AB+">AB+</option>
+        <option value="AB-">AB-</option>
+        <option value="O+">O+</option>
+        <option value="O-">O-</option>
+      </select>
+      
+      <input type="text" id="address" placeholder="Full Address" required autocomplete="street-address">
+      
+      <select id="city" required>
+        <option value="" disabled selected>Select City</option>
+        <option value="Pune">Pune</option>
+        <option value="Mumbai">Mumbai</option>
+        <option value="Delhi">Delhi</option>
+        <option value="Bangalore">Bangalore</option>
+        <option value="Hyderabad">Hyderabad</option>
+      </select>
+
+      <input type="text" id="pincode" placeholder="Pincode" required autocomplete="postal-code">
+      <input type="tel" id="emergency1" placeholder="Emergency Contact 1 (Required)" required autocomplete="tel">
+      <input type="tel" id="emergency2" placeholder="Emergency Contact 2 (Optional)" autocomplete="tel">
+      <input type="text" id="medical" placeholder="Medical Conditions / Allergies (Optional)">
+      
+      <input type="password" id="password" placeholder="Create Password" required autocomplete="new-password"> 
+      
+      <button type="submit">Register</button>
+      <p>Already registered? <a href="index.html">Login</a></p>
+    </form>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
