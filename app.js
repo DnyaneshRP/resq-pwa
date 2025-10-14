@@ -3,10 +3,78 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(() => console.log("SW Registered"));
 }
 
-// NOTE: To clear old data for a fresh start (uncomment, run once, then comment again):
-// localStorage.removeItem('resqUser'); 
-// localStorage.removeItem('isLoggedIn'); 
-// alert("All user data has been cleared!");
+// ===============================================
+// PWA Installation Prompt Logic (NEW FEATURE)
+// ===============================================
+let deferredPrompt;
+
+// 1. Listen for the native browser prompt (and prevent it from showing automatically)
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent the default browser UI from showing
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    deferredPrompt = e;
+    
+    // Show a custom UI to the user to let them know they can install
+    showInstallPromotion(); 
+});
+
+// A simple function to display a subtle install message
+function showInstallPromotion() {
+    // Check if the banner already exists to prevent duplicates
+    if (document.getElementById('pwaInstallBanner')) return;
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        // Already installed, don't show the prompt
+        return;
+    }
+
+    // --- Inject a temporary Install Banner into the DOM ---
+    const banner = document.createElement('div');
+    banner.id = "pwaInstallBanner";
+    banner.innerHTML = `
+        <div style="position:fixed; bottom:0; left:0; width:100%; padding:15px; background:#d32f2f; color:white; text-align:center; cursor:pointer; font-weight:600; z-index: 10000; box-shadow: 0 -2px 10px rgba(0,0,0,0.3);">
+            Tap here to Install ResQ PWA for a full app experience!
+        </div>
+    `;
+    document.body.appendChild(banner);
+
+    document.getElementById('pwaInstallBanner').addEventListener('click', () => {
+        if (deferredPrompt) {
+            // Show the deferred prompt
+            deferredPrompt.prompt();
+            // Hide the custom banner after showing the prompt
+            document.getElementById('pwaInstallBanner').remove();
+            deferredPrompt = null;
+        }
+    });
+}
+
+
+// --- NEW: Custom Message Box Function (Replaces alert()) ---
+function showMessage(message, type = 'success', duration = 3000) {
+    const messageBox = document.getElementById('customMessageBox');
+    if (!messageBox) return;
+
+    // Remove any previous classes and set content
+    messageBox.className = `custom-message-box hidden ${type}`;
+    messageBox.textContent = message;
+
+    // Show the box with transition
+    setTimeout(() => {
+        messageBox.classList.remove('hidden');
+        messageBox.classList.add('show');
+    }, 10); // Small delay to allow transition
+
+    // Hide the box after duration
+    setTimeout(() => {
+        messageBox.classList.remove('show');
+        // Hide completely after transition
+        setTimeout(() => {
+             messageBox.classList.add('hidden');
+        }, 300);
+    }, duration);
+}
+// ----------------------------------------------------
 
 
 // --- CRITICAL FIX: Date Input Visibility Logic ---
@@ -73,8 +141,11 @@ if (document.getElementById('registerForm')) {
     };
 
     localStorage.setItem('resqUser', JSON.stringify(user));
-    alert("Registration Successful! Please login.");
-    window.location.href = "index.html";
+    // REPLACED: alert("Registration Successful! Please login.");
+    showMessage("Registration Successful! Please login.", 'success');
+    setTimeout(() => {
+        window.location.href = "index.html";
+    }, 1000);
   });
 }
 
@@ -86,18 +157,21 @@ if (document.getElementById('loginForm')) {
     const loginEmail = document.getElementById('username').value;
     const loginPassword = document.getElementById('password').value;
 
-    if (!user) return alert("No account found! Please register first.");
+    if (!user) return showMessage("No account found! Please register first.", 'error'); // REPLACED alert()
 
     if (loginEmail === user.email && loginPassword === user.password) {
-      alert("Login successful!");
+      // REPLACED: alert("Login successful!");
+      showMessage("Login successful!", 'success');
       localStorage.setItem('isLoggedIn', 'true'); // Set login flag
       
       // CRITICAL FIX: Replace the current history entry so 'back' button exits the app
       window.history.replaceState({}, document.title, "home.html"); 
-      window.location.href = "home.html";
+      setTimeout(() => {
+        window.location.href = "home.html";
+      }, 1000);
       
     } else {
-      alert("Invalid email or password!");
+      showMessage("Invalid email or password!", 'error'); // REPLACED alert()
     }
   });
 }
@@ -144,30 +218,51 @@ if (document.getElementById('profileDetails')) {
 }
 
 
-// --- Home/Profile Page Logic (Logout & Menu) ---
-if (document.getElementById('logoutButton')) {
-    const menuButton = document.getElementById('menuButton');
-    const menuOptions = document.getElementById('menuOptions');
-    const logoutButton = document.getElementById('logoutButton');
+// ===============================================
+// Home/Profile Page Logic (NEW Side Drawer Menu)
+// ===============================================
 
-    // 1. Menu Toggle Logic
-    if (menuButton) {
-      menuButton.addEventListener('click', () => {
-          menuOptions.classList.toggle('active');
-      });
-      // This listener handles clicking outside the menu to close it
-      document.body.addEventListener('click', (e) => {
-          if (menuOptions.classList.contains('active') && !menuOptions.contains(e.target) && !menuButton.contains(e.target)) {
-              menuOptions.classList.remove('active');
-          }
-      });
+const menuButton = document.getElementById('menuButton');
+const sideDrawer = document.getElementById('sideDrawer');
+const closeDrawer = document.getElementById('closeDrawer');
+const logoutButton = document.getElementById('logoutButton');
+const backdrop = document.getElementById('drawerBackdrop'); 
+
+if (menuButton && sideDrawer) {
+
+    function toggleDrawer() {
+        // Toggle the drawer and backdrop classes
+        sideDrawer.classList.toggle('open');
+        backdrop.classList.toggle('active');
+        
+        // Prevent body scrolling when the drawer is open (crucial for good UX)
+        document.body.style.overflowY = sideDrawer.classList.contains('open') ? 'hidden' : 'auto';
     }
 
-    // 2. Logout Logic
-    logoutButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        localStorage.removeItem('isLoggedIn'); 
-        alert("Logged out successfully.");
-        window.location.href = "index.html";
-    });
+    // Open Drawer (clicking the hamburger)
+    menuButton.addEventListener('click', toggleDrawer);
+
+    // Close Drawer (clicking the X button)
+    closeDrawer.addEventListener('click', toggleDrawer);
+
+    // Close Drawer (clicking the backdrop/outside the menu)
+    backdrop.addEventListener('click', toggleDrawer);
+
+    // 2. Logout Logic (Uses the element inside the new drawer)
+    if (logoutButton) {
+        logoutButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('isLoggedIn'); 
+            showMessage("Logged out successfully.", 'success'); // REPLACED alert()
+            
+            // Close the drawer before redirecting
+            if (sideDrawer.classList.contains('open')) {
+                 toggleDrawer(); 
+            }
+            
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 1000);
+        });
+    }
 }

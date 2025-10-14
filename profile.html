@@ -11,15 +11,25 @@
 </head>
 <body class="home-page">
 
+  <div id="sideDrawer" class="side-drawer">
+    <div class="drawer-header">
+        <h3>ResQ Menu</h3>
+        <span id="closeDrawer" class="close-btn">&times;</span>
+    </div>
+    <div class="drawer-content">
+        <a href="home.html" class="drawer-link"><i class="fas fa-home fa-fw"></i> Home</a>
+        <a href="profile.html" class="drawer-link"><i class="fas fa-user fa-fw"></i> My Profile</a>
+        <a href="#" id="logoutButton" class="drawer-link logout-link"><i class="fas fa-sign-out-alt fa-fw"></i> Logout</a>
+    </div>
+  </div>
+  
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+
   <header class="header">
-    <h2>My Profile</h2>
     <div class="hamburger" id="menuButton">
         <i class="fas fa-bars"></i>
     </div>
-    <div class="menu-options" id="menuOptions">
-        <a href="home.html">Home</a>
-        <a href="#" id="logoutButton">Logout</a>
-    </div>
+    <h2>My Profile</h2>
   </header>
   
   <div class="app">
@@ -33,6 +43,8 @@
 
   </div>
   
+  <div id="customMessageBox" class="custom-message-box hidden"></div>
+
   <script src="app.js"></script>
 </body>
 </html>
