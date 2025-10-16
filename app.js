@@ -1,20 +1,28 @@
-// Register Service Worker
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').then(() => console.log("SW Registered"));
-}
+// --- Firebase SDK Imports ---
+// These lines import the necessary functions from the Firebase SDK.
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// --- Global Utility: Get User Data ---
-function getUserData() {
-    try {
-        const userJson = localStorage.getItem('resqUser');
-        return userJson ? JSON.parse(userJson) : null;
-    } catch (e) {
-        console.error("Error retrieving user data:", e);
-        return null;
-    }
-}
+// =================================================================
+// YOUR FIREBASE CONFIGURATION (ALREADY PASTED IN)
+// =================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCQg7G0bhU6w65nPhxnr_DjnSpmJY55Iww",
+  authDomain: "resq-pwa-backend.firebaseapp.com",
+  projectId: "resq-pwa-backend",
+  storageBucket: "resq-pwa-backend.appspot.com",
+  messagingSenderId: "615234174517",
+  appId: "1:615234174517:web:76523a6e0d6d0feb813b7c"
+};
+// =================================================================
 
-// --- Custom Message Box Function (Replaces alert()) ---
+// --- Initialize Firebase Services ---
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// --- Global Utility: Custom Message Box ---
 function showMessage(message, type = 'success', duration = 3000) {
     const messageBox = document.getElementById('customMessageBox');
     if (!messageBox) return;
@@ -34,241 +42,211 @@ function showMessage(message, type = 'success', duration = 3000) {
         }, 300);
     }, duration);
 }
-// ----------------------------------------------------
 
-// --- Date Input Visibility Logic ---
-const dobInput = document.getElementById('dob');
-
-if (dobInput) {
-    dobInput.addEventListener('focus', () => {
-        dobInput.type = 'date';
-        dobInput.removeAttribute('placeholder');
-    });
-
-    dobInput.addEventListener('blur', () => {
-        if (!dobInput.value) {
-            dobInput.type = 'text';
-            dobInput.setAttribute('placeholder', 'DD/MM/YYYY');
-        }
-    });
-}
-// ----------------------------------------------------
-
-// ===============================================
-// CORE NAVIGATION/LOGIN LOGIC (FIXED)
-// ===============================================
-function checkLoginStatus() {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const currentPagePath = window.location.pathname.split('/').pop(); // Gets 'index.html', 'home.html', etc.
+// --- CORE NAVIGATION & AUTH STATE ---
+// This function runs automatically whenever a user logs in or out.
+onAuthStateChanged(auth, user => {
+    const isLoggedIn = !!user; // true if a user object exists, false otherwise
+    const currentPagePath = window.location.pathname.split('/').pop() || 'index.html';
     
-    // Pages requiring login
     const protectedPages = ['home.html', 'profile.html', 'about.html']; 
-    // Login pages
-    const loginPages = ['index.html', 'register.html', '']; // '' handles root path
+    const loginPages = ['index.html', 'register.html'];
 
-    // FIX 1: Prevent logged-in user from entering login/register pages
     if (isLoggedIn && loginPages.includes(currentPagePath)) {
-        // Only redirect if not ALREADY on home.html (prevents refresh loop)
-        if (currentPagePath !== 'home.html') {
-            window.history.replaceState({}, document.title, "home.html");
-            window.location.href = "home.html";
-            return;
-        }
+        // If a logged-in user tries to access a login page, redirect them to home.
+        window.location.replace('home.html'); // Use replace to prevent back navigation
     } 
-    
-    // FIX 2: Redirect non-logged-in user from protected pages
     else if (!isLoggedIn && protectedPages.includes(currentPagePath)) {
-        window.history.replaceState({}, document.title, "index.html");
-        window.location.href = "index.html";
-        return;
+        // If a logged-out user tries to access a protected page, redirect them to the login page.
+        window.location.replace('index.html');
     }
     
-    // If logged in and on a protected page, initialize drawer name
+    // If the user is logged in and on a protected page, update the drawer name.
     if (isLoggedIn && protectedPages.includes(currentPagePath)) {
-        setDrawerHeaderName();
+        setDrawerHeaderName(user.uid);
     }
-}
-// Ensure this runs immediately on script load
-window.onload = checkLoginStatus; 
+});
 
+// --- REGISTRATION LOGIC (Firebase Auth + Firestore) ---
+const registerForm = document.getElementById('registerForm');
+if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        
+        try {
+            // Step 1: Create the user in Firebase Authentication.
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
 
-// --- Registration Logic ---
-if (document.getElementById('registerForm')) {
-  document.getElementById('registerForm').addEventListener('submit', e => {
-    e.preventDefault();
+            // Step 2: Create the profile data object from the form.
+            const userProfileData = {
+              uid: user.uid, // Store the unique user ID from Firebase Auth
+              fullname: document.getElementById('fullname').value,
+              email: email,
+              phone: document.getElementById('phone').value,
+              dob: document.getElementById('dob').value,
+              gender: document.getElementById('gender').value,
+              bloodgrp: document.getElementById('bloodgrp').value,
+              address: document.getElementById('address').value,
+              city: document.getElementById('city').value,
+              pincode: document.getElementById('pincode').value,
+              emergency1: document.getElementById('emergency1').value,
+              emergency2: document.getElementById('emergency2').value,
+              medical: document.getElementById('medical').value
+            };
 
-    const user = {
-      fullname: document.getElementById('fullname').value,
-      email: document.getElementById('email').value,
-      phone: document.getElementById('phone').value,
-      dob: document.getElementById('dob').value,
-      gender: document.getElementById('gender').value,
-      bloodgrp: document.getElementById('bloodgrp').value,
-      address: document.getElementById('address').value,
-      city: document.getElementById('city').value,
-      pincode: document.getElementById('pincode').value,
-      emergency1: document.getElementById('emergency1').value,
-      emergency2: document.getElementById('emergency2').value,
-      medical: document.getElementById('medical').value,
-      password: document.getElementById('password').value
-    };
+            // Step 3: Save this profile data to our Firestore database in a "users" collection.
+            await setDoc(doc(db, "users", user.uid), userProfileData);
 
-    localStorage.setItem('resqUser', JSON.stringify(user));
-    showMessage("Registration Successful! Please login.", 'success');
-    setTimeout(() => {
-        window.location.href = "index.html";
-    }, 1000);
-  });
-}
+            showMessage("Registration successful! Please login.", 'success');
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 1500);
 
-// --- Login Logic (Point 3: Improved Error Handling) ---
-if (document.getElementById('loginForm')) {
-  document.getElementById('loginForm').addEventListener('submit', e => {
-    e.preventDefault();
-    const user = getUserData();
-    const loginEmail = document.getElementById('username').value;
-    const loginPassword = document.getElementById('password').value;
-
-    if (!user) {
-        return showMessage("Account not found. Please register first.", 'error');
-    }
-
-    if (loginEmail === user.email && loginPassword === user.password) {
-      showMessage("Login successful!", 'success');
-      localStorage.setItem('isLoggedIn', 'true'); 
-      
-      // CRITICAL: Prevent history back to login page
-      window.history.replaceState({}, document.title, "home.html"); 
-      setTimeout(() => {
-        window.location.href = "home.html";
-      }, 500); // Shorter delay for better UX
-      
-    } else {
-      showMessage("Invalid email or password. Please try again.", 'error');
-    }
-  });
+        } catch (error) {
+            console.error("Registration Error:", error);
+            // Provide a user-friendly error message, e.g., "auth/email-already-in-use".
+            showMessage(`Registration Failed: ${error.code}`, 'error');
+        }
+    });
 }
 
-// --- Profile Page Logic: Load and Display User Data ---
-if (document.getElementById('profileDetails')) {
-    // Only run this code once the entire page structure is loaded
-    document.addEventListener('DOMContentLoaded', () => {
-        const detailsContainer = document.getElementById('profileDetails');
-        const user = getUserData();
+// --- LOGIN LOGIC (Firebase Auth) ---
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
 
+        try {
+            // This securely signs the user in using Firebase.
+            await signInWithEmailAndPassword(auth, email, password);
+            showMessage("Login successful!", 'success');
+            // The onAuthStateChanged function above will automatically handle the redirect to home.html.
+        } catch (error) {
+            console.error("Login Error:", error);
+            showMessage("Login Failed: Invalid email or password.", 'error');
+        }
+    });
+}
+
+// --- PROFILE PAGE LOGIC (Read from Firestore) ---
+const profileDetails = document.getElementById('profileDetails');
+if (profileDetails) {
+    onAuthStateChanged(auth, async (user) => {
         if (user) {
-            detailsContainer.innerHTML = ''; 
+            // If a user is logged in, fetch their specific document from the "users" collection in Firestore.
+            const docRef = doc(db, "users", user.uid);
+            const docSnap = await getDoc(docRef);
 
-            const fields = [
-                { label: 'Full Name', key: 'fullname' },
-                { label: 'Email', key: 'email' },
-                { label: 'Phone Number', key: 'phone' },
-                { label: 'Date of Birth', key: 'dob' },
-                { label: 'Gender', key: 'gender' },
-                { label: 'Blood Group', key: 'bloodgrp' },
-                { label: 'Address', key: 'address' },
-                { label: 'City', key: 'city' },
-                { label: 'Pincode', key: 'pincode' },
-                { label: 'Emergency Contact 1', key: 'emergency1' },
-                { label: 'Emergency Contact 2', key: 'emergency2' },
-                { label: 'Medical Conditions', key: 'medical' }
-            ];
+            if (docSnap.exists()) {
+                // If the document exists, display the data using the renderProfile function.
+                renderProfile(docSnap.data());
+            } else {
+                profileDetails.innerHTML = "<p>No profile data found. Please complete your registration.</p>";
+            }
+        }
+    });
+}
 
-            fields.forEach(field => {
-                if (user[field.key]) {
-                    const item = document.createElement('div');
-                    item.classList.add('profile-item');
-                    item.innerHTML = `
-                        <span class="profile-label">${field.label}:</span>
-                        <span class="profile-value">${user[field.key]}</span>
-                    `;
-                    detailsContainer.appendChild(item);
-                }
-            });
-            
-        } else {
-            detailsContainer.innerHTML = `<p>No user data found. Please <a href="register.html">register</a>.</p>`;
+function renderProfile(user) {
+    profileDetails.innerHTML = '';
+    const fields = [
+        { label: 'Full Name', key: 'fullname' },
+        { label: 'Email', key: 'email' },
+        { label: 'Phone Number', key: 'phone' },
+        { label: 'Date of Birth', key: 'dob' },
+        { label: 'Gender', key: 'gender' },
+        { label: 'Blood Group', key: 'bloodgrp' },
+        { label: 'Address', key: 'address' },
+        { label: 'City', key: 'city' },
+        { label: 'Pincode', key: 'pincode' },
+        { label: 'Emergency Contact 1', key: 'emergency1' },
+        { label: 'Emergency Contact 2', key: 'emergency2' },
+        { label: 'Medical Conditions', key: 'medical' }
+    ];
+    fields.forEach(field => {
+        if (user[field.key]) {
+            const item = document.createElement('div');
+            item.classList.add('profile-item');
+            item.innerHTML = `
+                <span class="profile-label">${field.label}:</span>
+                <span class="profile-value">${user[field.key]}</span>
+            `;
+            profileDetails.appendChild(item);
         }
     });
 }
 
 
-// =======================================================
-// Drawer Menu Logic (FIXED JUMPING/JANKINESS)
-// =======================================================
+// --- DRAWER & LOGOUT LOGIC (Firebase Auth) ---
+const menuButton = document.getElementById('menuButton');
+const sideDrawer = document.getElementById('sideDrawer');
+const closeDrawer = document.getElementById('closeDrawer');
+const logoutButton = document.getElementById('logoutButton');
+const backdrop = document.getElementById('drawerBackdrop');
 
-function setDrawerHeaderName() {
+async function setDrawerHeaderName(uid) {
     const drawerTitleElement = document.getElementById('drawerTitle');
-    const user = getUserData();
+    if (!drawerTitleElement) return;
 
-    if (drawerTitleElement && user && user.fullname) {
-        const firstName = user.fullname.split(' ')[0];
+    // Fetch the user's profile from Firestore to get their name.
+    const docRef = doc(db, "users", uid);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        const userData = docSnap.data();
+        const firstName = userData.fullname.split(' ')[0];
         drawerTitleElement.textContent = `Hi ${firstName}!`;
     }
 }
 
-// Only run drawer logic if the elements exist (i.e., on protected pages)
-document.addEventListener('DOMContentLoaded', () => {
-    const menuButton = document.getElementById('menuButton');
-    const sideDrawer = document.getElementById('sideDrawer');
-    const closeDrawer = document.getElementById('closeDrawer');
-    const logoutButton = document.getElementById('logoutButton');
-    const backdrop = document.getElementById('drawerBackdrop'); 
-
-    if (!menuButton || !sideDrawer) return; // Exit if not a protected page
-
-    setDrawerHeaderName(); // Set name when the DOM is ready
-
+if (menuButton) {
+    // This is your existing, working drawer logic.
     function toggleDrawer() {
-        // FIX: The drawer jump is often due to the scrollbar appearing/disappearing.
-        // The CSS handles preventing y-scrolling on the body when open.
         sideDrawer.classList.toggle('open');
         backdrop.classList.toggle('active');
         document.body.style.overflowY = sideDrawer.classList.contains('open') ? 'hidden' : 'auto';
     }
-
     menuButton.addEventListener('click', toggleDrawer);
     closeDrawer.addEventListener('click', toggleDrawer);
     backdrop.addEventListener('click', toggleDrawer);
 
-    // Logout Logic
-    if (logoutButton) {
-        logoutButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            localStorage.removeItem('isLoggedIn'); 
+    logoutButton.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+            // This signs the user out of their Firebase session.
+            await signOut(auth);
             showMessage("Logged out successfully.", 'success');
-            
-            if (sideDrawer.classList.contains('open')) {
-                 toggleDrawer(); 
-            }
-            
-            setTimeout(() => {
-                window.location.href = "index.html";
-            }, 500); 
-        });
-    }
-});
+            // The onAuthStateChanged function will automatically handle the redirect to index.html.
+        } catch (error) {
+            showMessage("Logout failed. Please try again.", 'error');
+        }
+    });
+}
 
-// ===============================================
-// PWA Installation Prompt Logic (Full-Screen Modal)
-// Re-added below to ensure it runs globally before DOMContentLoaded
-// ===============================================
+
+// --- Helper Functions (Date input, PWA Install Prompt) ---
+// These are unchanged and placed at the end for clarity.
+const dobInput = document.getElementById('dob');
+if (dobInput) {
+    dobInput.addEventListener('focus', () => { dobInput.type = 'date'; dobInput.removeAttribute('placeholder'); });
+    dobInput.addEventListener('blur', () => { if (!dobInput.value) { dobInput.type = 'text'; dobInput.setAttribute('placeholder', 'DD/MM/YYYY'); } });
+}
+
 let deferredPrompt;
-
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    
-    // Check if the user has already installed or dismissed the prompt
     if (localStorage.getItem('pwaPromptShown') !== 'true' && !window.matchMedia('(display-mode: standalone)').matches) {
         showInstallPromotionModal(); 
     }
 });
 
 function showInstallPromotionModal() {
-    // Mark as shown so it doesn't appear again on next page load
     localStorage.setItem('pwaPromptShown', 'true');
-
     const modalHtml = `
         <div id="pwaModal" class="pwa-modal-overlay">
             <div class="pwa-modal-content">
@@ -281,18 +259,10 @@ function showInstallPromotionModal() {
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
-
     const pwaModal = document.getElementById('pwaModal');
-
     document.getElementById('installButton').addEventListener('click', () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            deferredPrompt = null;
-        }
+        if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }
         pwaModal.remove();
     });
-
-    document.getElementById('dismissButton').addEventListener('click', () => {
-        pwaModal.remove();
-    });
+    document.getElementById('dismissButton').addEventListener('click', () => { pwaModal.remove(); });
 }
