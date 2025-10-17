@@ -1,19 +1,18 @@
 // --- Supabase SDK Imports ---
-// We use the recommended CDN approach for simple PWA/Vanilla JS projects.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.3/+esm';
 
 // =================================================================
 // YOUR SUPABASE CONFIGURATION (REPLACE WITH YOUR KEYS)
 // =================================================================
-const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; // e.g., https://[project-ref].supabase.co
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; // e.g., eyJ...
+const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; 
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
 // =================================================================
 
 // --- Initialize Supabase Client ---
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-// Supabase client gives us access to Auth and Database (Postgres)
+let storedRegistrationData = {}; // Temporary storage for registration data
 
-// --- Global Utility: Custom Message Box (Unchanged) ---
+// --- Global Utility: Custom Message Box ---
 function showMessage(message, type = 'success', duration = 3000) {
     const messageBox = document.getElementById('customMessageBox');
     if (!messageBox) return;
@@ -35,12 +34,9 @@ function showMessage(message, type = 'success', duration = 3000) {
 }
 
 
-// --- CORE NAVIGATION & AUTH STATE (Supabase Auth) ---
-// Supabase uses 'onAuthStateChange' to listen for login/logout events.
+// --- CORE NAVIGATION, AUTH STATE, AND PROFILE CREATION/CHECK ---
 supabase.auth.onAuthStateChange((event, session) => {
-    // 'session' is null when logged out, and an object when logged in.
     const isLoggedIn = !!session;
-    // user object from session.user, or null
     const user = session?.user || null;
     
     const currentPagePath = window.location.pathname.split('/').pop() || 'index.html';
@@ -49,22 +45,68 @@ supabase.auth.onAuthStateChange((event, session) => {
     const loginPages = ['index.html', 'register.html'];
 
     if (isLoggedIn && loginPages.includes(currentPagePath)) {
-        // Redirect logged-in user from login/register to home.
+        // Logged-in user accessing login/register page
+        if (user) {
+            // Check for and create a profile if it was staged during registration
+            checkForStagedProfile(user.id);
+        }
         window.location.replace('home.html'); 
     } 
     else if (!isLoggedIn && protectedPages.includes(currentPagePath)) {
-        // Redirect logged-out user from protected pages to login.
+        // Logged-out user accessing protected page
         window.location.replace('index.html');
     }
     
-    // If the user is logged in and on a protected page, update the drawer name.
+    // Logic for Protected Pages
     if (isLoggedIn && protectedPages.includes(currentPagePath)) {
-        setDrawerHeaderName(user.id); // Supabase uses user.id for the unique ID
+        setDrawerHeaderName(user.id); 
+        
+        // Fetch profile data only on the profile page
+        if (currentPagePath === 'profile.html' && document.getElementById('profileDetails')) {
+             fetchUserProfile(user.id);
+        }
     }
 });
 
+// --- NEW FUNCTION: Inserts profile data immediately after successful Auth flow ---
+async function checkForStagedProfile(userId) {
+    if (storedRegistrationData && storedRegistrationData.email) {
+        
+        // 1. Check if profile already exists (to prevent duplicates if user logs out and back in quickly)
+        const { data: profileCheck } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', userId)
+            .single();
 
-// --- REGISTRATION LOGIC (Supabase Auth + Database) ---
+        if (profileCheck) {
+            storedRegistrationData = {}; // Clear stage data
+            return; 
+        }
+
+        // 2. Insert the profile data now that the user is fully authenticated
+        const userProfileData = {
+            id: userId,
+            ...storedRegistrationData // Spread the stored form data
+        };
+        delete userProfileData.password; // Remove password which was only for Auth signup
+
+        const { error: dbError } = await supabase
+            .from('profiles')
+            .insert([userProfileData]);
+
+        if (dbError) {
+             console.error("Profile Insertion Error:", dbError);
+             showMessage(`Profile incomplete: ${dbError.message}`, 'error', 5000);
+        } else {
+             showMessage("Profile saved successfully!", 'success');
+        }
+        storedRegistrationData = {}; // Clear stage data after successful insertion
+    }
+}
+
+
+// --- REGISTRATION LOGIC (Supabase Auth + Staging Data) ---
 const registerForm = document.getElementById('registerForm');
 if (registerForm) {
     registerForm.addEventListener('submit', async (e) => {
@@ -72,8 +114,25 @@ if (registerForm) {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         
+        // Step 1: Stage all form data temporarily 
+        storedRegistrationData = {
+          fullname: document.getElementById('fullname').value,
+          email: email,
+          phone: document.getElementById('phone').value,
+          dob: document.getElementById('dob').value,
+          gender: document.getElementById('gender').value,
+          bloodgrp: document.getElementById('bloodgrp').value,
+          address: document.getElementById('address').value,
+          city: document.getElementById('city').value,
+          pincode: document.getElementById('pincode').value,
+          emergency1: document.getElementById('emergency1').value,
+          emergency2: document.getElementById('emergency2').value,
+          medical: document.getElementById('medical').value
+        };
+
         try {
-            // Step 1: Create the user in Supabase Authentication.
+            // Step 2: Create the user in Supabase Authentication.
+            // Using a temporary redirect URL to suppress the automatic deep link in some cases
             const { data, error: authError } = await supabase.auth.signUp({
                 email: email,
                 password: password,
@@ -81,53 +140,23 @@ if (registerForm) {
 
             if (authError) throw authError;
 
-            // Supabase Auth requires email confirmation by default. 
-            // The data.user will be available, but might be unconfirmed.
-            const user = data.user;
-            if (!user) {
-                // This typically happens if email confirmation is required but not yet done
+            // Step 3: Handle post-signup state
+            if (data.user) {
+                // User auto-logged in (no confirmation needed) -> Reroute to home
+                // The onAuthStateChange listener will now trigger checkForStagedProfile
+                showMessage("Registration successful! Redirecting...", 'success');
+            } else {
+                 // Confirmation email sent
                 showMessage("Registration successful! Check your email to confirm your account, then log in.", 'success', 5000);
                 setTimeout(() => {
                     window.location.href = "index.html";
                 }, 3000);
-                return;
             }
-
-            // Step 2: Create the profile data object from the form.
-            const userProfileData = {
-              id: user.id, // CRITICAL: Supabase user ID is mapped to the 'id' column in the profiles table
-              fullname: document.getElementById('fullname').value,
-              email: email,
-              phone: document.getElementById('phone').value,
-              dob: document.getElementById('dob').value,
-              gender: document.getElementById('gender').value,
-              bloodgrp: document.getElementById('bloodgrp').value,
-              address: document.getElementById('address').value,
-              city: document.getElementById('city').value,
-              pincode: document.getElementById('pincode').value,
-              emergency1: document.getElementById('emergency1').value,
-              emergency2: document.getElementById('emergency2').value,
-              medical: document.getElementById('medical').value
-            };
-
-            // Step 3: Save this profile data to the 'profiles' table in the database.
-            const { error: dbError } = await supabase
-                .from('profiles') // The table name we created
-                .insert([userProfileData]);
-
-            if (dbError) throw dbError;
-
-            showMessage("Registration successful and profile saved!", 'success');
-            setTimeout(() => {
-                // If email confirmation is NOT required, the user is automatically logged in.
-                // If it IS required, the onAuthStateChange listener will handle the redirect 
-                // after the user confirms their email and tries to log in.
-                window.location.href = "index.html";
-            }, 1500);
 
         } catch (error) {
             console.error("Registration Error:", error);
-            // Supabase errors are often full objects, so we check for the message.
+            // Clear staged data if signup failed
+            storedRegistrationData = {}; 
             showMessage(`Registration Failed: ${error.message || error.toString()}`, 'error');
         }
     });
@@ -142,16 +171,19 @@ if (loginForm) {
         const password = document.getElementById('password').value;
 
         try {
-            // Step 1: Sign the user in using Supabase.
-            const { error } = await supabase.auth.signInWithPassword({
+            const { data, error } = await supabase.auth.signInWithPassword({
                 email: email,
                 password: password,
             });
             
             if (error) throw error;
+            
+            // Check for and create profile in case of new login after email confirmation
+            if (data.user) {
+                 checkForStagedProfile(data.user.id);
+            }
 
             showMessage("Login successful!", 'success');
-            // onAuthStateChange handles the redirect to home.html.
 
         } catch (error) {
             console.error("Login Error:", error);
@@ -163,27 +195,16 @@ if (loginForm) {
 
 // --- PROFILE PAGE LOGIC (Read from Supabase Database) ---
 const profileDetails = document.getElementById('profileDetails');
-if (profileDetails) {
-    // The previous onAuthStateChanged is now inside the supabase.auth.onAuthStateChange listener.
-    // We check the session synchronously or wait for the listener to fire.
-    // For profile, we can use a direct call to get the current session.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-            fetchUserProfile(session.user.id);
-        } else {
-            // Should not happen due to the navigation guard, but for safety:
-            profileDetails.innerHTML = "<p>Please log in to view your profile.</p>";
-        }
-    });
-}
 
 async function fetchUserProfile(userId) {
+    profileDetails.innerHTML = 'Loading user data...'; // Reset loading text
+    
     // Select all columns from the 'profiles' table where the id matches the logged-in user's ID.
     const { data: userProfiles, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId) // RLS ensures this only returns the *current* user's profile anyway
-        .single(); // Expect only one user profile
+        .eq('id', userId) 
+        .single(); 
 
     if (error && error.code !== 'PGRST116') { // PGRST116 means "No rows found"
         console.error("Profile Fetch Error:", error);
@@ -200,7 +221,6 @@ async function fetchUserProfile(userId) {
 
 
 function renderProfile(user) {
-    // ... (This function remains unchanged as it only deals with DOM manipulation)
     profileDetails.innerHTML = '';
     const fields = [
         { label: 'Full Name', key: 'fullname' },
@@ -241,24 +261,17 @@ async function setDrawerHeaderName(userId) {
     const drawerTitleElement = document.getElementById('drawerTitle');
     if (!drawerTitleElement) return;
 
-    // Fetch the user's profile to get their name.
     const { data, error } = await supabase
         .from('profiles')
         .select('fullname')
         .eq('id', userId)
         .single();
         
-    if (error && error.code !== 'PGRST116') {
-         console.error("Drawer Name Fetch Error:", error);
-         drawerTitleElement.textContent = `Hi User!`;
-         return;
-    }
-    
     if (data && data.fullname) {
         const firstName = data.fullname.split(' ')[0];
         drawerTitleElement.textContent = `Hi ${firstName}!`;
     } else {
-         drawerTitleElement.textContent = `Hi ResQ User!`;
+         drawerTitleElement.textContent = `ResQ Menu`; // Default if name not found
     }
 }
 
@@ -276,13 +289,11 @@ if (menuButton) {
     logoutButton.addEventListener('click', async (e) => {
         e.preventDefault();
         try {
-            // Step 1: Sign the user out of their Supabase session.
             const { error } = await supabase.auth.signOut();
             
             if (error) throw error;
             
             showMessage("Logged out successfully.", 'success');
-            // onAuthStateChange handles the redirect to index.html.
 
         } catch (error) {
             console.error("Logout Error:", error);
@@ -293,8 +304,6 @@ if (menuButton) {
 
 
 // --- Helper Functions (Date input, PWA Install Prompt) ---
-// ... (The rest of the file remains unchanged)
-
 const dobInput = document.getElementById('dob');
 if (dobInput) {
     dobInput.addEventListener('focus', () => { dobInput.type = 'date'; dobInput.removeAttribute('placeholder'); });
@@ -342,26 +351,4 @@ function showInstallPromotionModal() {
     document.getElementById('dismissButton').addEventListener('click', () => {
         pwaModal.remove();
     });
-}
-
-// Minimal CSS to make the modal function on the login/register pages
-// Since style.css isn't fully provided, here is the necessary structure for the PWA modal:
-if (document.head.querySelector('link[href="style.css"]')) {
-    // Wait for the main CSS to load for best styling, or include these minimal styles.
-    // For a robust solution, you should place the styling in your style.css.
-    const modalStyle = document.createElement('style');
-    modalStyle.textContent = `
-        .pwa-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 5000;
-        }
-        .pwa-modal-content {
-            background: white; padding: 30px; border-radius: 12px; max-width: 90%; text-align: center;
-        }
-        .pwa-icon { color: #d32f2f; font-size: 3em; margin-bottom: 10px; }
-        .pwa-install-btn, .pwa-dismiss-btn { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; font-weight: bold; }
-        .pwa-install-btn { background-color: #d32f2f; color: white; border: none; }
-        .pwa-dismiss-btn { background-color: #ccc; color: #333; border: none; }
-    `;
-    document.head.appendChild(modalStyle);
 }
