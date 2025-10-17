@@ -1,49 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ResQ - Profile</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#d32f2f">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile - ResQ</title>
+  <link rel="stylesheet" href="styles.css" />
+
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background: #f5f6fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .profile-container {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      padding: 30px 40px;
+      width: 100%;
+      max-width: 600px;
+      transition: 0.3s ease;
+    }
+
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 20px;
+    }
+
+    .profile-field {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .profile-field:last-child {
+      border-bottom: none;
+    }
+
+    .label {
+      font-weight: 600;
+      color: #34495e;
+    }
+
+    .value {
+      color: #2c3e50;
+      text-align: right;
+      max-width: 60%;
+    }
+
+    #logoutButton {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 25px;
+      width: 100%;
+      font-size: 16px;
+      transition: background 0.3s;
+    }
+
+    #logoutButton:hover {
+      background: #c0392b;
+    }
+
+    .custom-message-box {
+      position: fixed;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2ecc71;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 6px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 999;
+    }
+
+    .custom-message-box.error {
+      background: #e74c3c;
+    }
+
+    .custom-message-box.show {
+      opacity: 1;
+    }
+  </style>
 </head>
-<body class="home-page">
-
-  <div id="sideDrawer" class="side-drawer">
-    <div class="drawer-header">
-        <h3 id="drawerTitle">ResQ Menu</h3>
-        <span id="closeDrawer" class="close-btn">&times;</span>
-    </div>
-    <div class="drawer-content">
-        <a href="home.html" class="drawer-link"><i class="fas fa-home fa-fw"></i> Home</a>
-        <a href="profile.html" class="drawer-link"><i class="fas fa-user fa-fw"></i> My Profile</a>
-        <a href="about.html" class="drawer-link"><i class="fas fa-info-circle fa-fw"></i> About App</a>
-        <a href="#" id="logoutButton" class="drawer-link logout-link"><i class="fas fa-sign-out-alt fa-fw"></i> Logout</a>
-    </div>
-  </div>
-  
-  <div id="drawerBackdrop" class="drawer-backdrop"></div>
-
-  <header class="header">
-    <div class="hamburger" id="menuButton">
-        <i class="fas fa-bars"></i>
-    </div>
+<body>
+  <div class="profile-container">
     <h2>My Profile</h2>
-  </header>
-  
-  <div class="app">
-    <h1>Personal Information</h1>
-    
-    <div id="profileDetails" class="profile-info">
-        <p>Loading user data...</p>
-    </div>
 
+    <div class="profile-field"><span class="label">Full Name:</span><span id="profile-name" class="value"></span></div>
+    <div class="profile-field"><span class="label">Email:</span><span id="profile-email" class="value"></span></div>
+    <div class="profile-field"><span class="label">Phone:</span><span id="profile-phone" class="value"></span></div>
+    <div class="profile-field"><span class="label">Date of Birth:</span><span id="profile-dob" class="value"></span></div>
+    <div class="profile-field"><span class="label">Gender:</span><span id="profile-gender" class="value"></span></div>
+    <div class="profile-field"><span class="label">Blood Group:</span><span id="profile-blood" class="value"></span></div>
+    <div class="profile-field"><span class="label">Address:</span><span id="profile-address" class="value"></span></div>
+    <div class="profile-field"><span class="label">City:</span><span id="profile-city" class="value"></span></div>
+    <div class="profile-field"><span class="label">Pincode:</span><span id="profile-pincode" class="value"></span></div>
+    <div class="profile-field"><span class="label">Emergency Contact 1:</span><span id="profile-emergency1" class="value"></span></div>
+    <div class="profile-field"><span class="label">Emergency Contact 2:</span><span id="profile-emergency2" class="value"></span></div>
+    <div class="profile-field"><span class="label">Medical Info:</span><span id="profile-medical" class="value"></span></div>
+
+    <button id="logoutButton">Logout</button>
   </div>
-  
+
   <div id="customMessageBox" class="custom-message-box hidden"></div>
 
   <script type="module" src="app.js"></script>
+  <script>
+    loadProfile();
+  </script>
 </body>
 </html>
