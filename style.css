@@ -1,47 +1,143 @@
 body {
-  font-family: 'Inter', sans-serif;
-  background: #f7f7f7;
+  font-family: "Poppins", sans-serif;
+  background: #f5f6fa;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
   margin: 0;
   padding: 0;
 }
 
 .container {
   background: #fff;
-  padding: 25px 30px;
-  max-width: 400px;
-  margin: 80px auto;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  padding: 30px 40px;
+  width: 100%;
+  max-width: 450px;
+  text-align: center;
 }
 
-input, button {
+.container h2 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+}
+
+input, select, textarea {
   width: 100%;
-  margin-bottom: 15px;
-  padding: 10px;
-  font-size: 15px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
   border-radius: 8px;
   border: 1px solid #ccc;
+  font-size: 14px;
 }
 
 button {
-  background: #d32f2f;
-  color: white;
-  font-weight: 600;
+  background: #3498db;
+  color: #fff;
   border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 16px;
+  width: 100%;
   transition: background 0.3s;
 }
 
 button:hover {
-  background: #b71c1c;
+  background: #2980b9;
 }
 
-h2 {
-  text-align: center;
-  color: #d32f2f;
+.custom-message-box {
+  position: fixed;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2ecc71;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 999;
 }
 
-a {
-  color: #d32f2f;
+.custom-message-box.error {
+  background: #e74c3c;
+}
+
+.custom-message-box.show {
+  opacity: 1;
+}
+
+.profile-container {
+  max-width: 600px;
+  text-align: left;
+}
+
+.profile-field {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.label {
+  font-weight: 600;
+  color: #34495e;
+}
+
+.value {
+  color: #2c3e50;
+}
+
+.menu-button {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  font-size: 18px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: -240px;
+  width: 240px;
+  height: 100%;
+  background: #2c3e50;
+  color: white;
+  padding-top: 60px;
+  transition: left 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.drawer a {
+  color: white;
   text-decoration: none;
+  font-size: 18px;
+}
+
+.drawer.show {
+  left: 0;
+}
+
+.close-drawer {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  color: white;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
 }

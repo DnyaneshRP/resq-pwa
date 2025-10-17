@@ -1,39 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login - ResQ</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="container">
     <h2>Login</h2>
-    <input type="email" id="loginEmail" placeholder="Email" required>
-    <input type="password" id="loginPassword" placeholder="Password" required>
+    <input type="email" id="loginEmail" placeholder="Email" required />
+    <input type="password" id="loginPassword" placeholder="Password" required />
     <button id="loginButton">Login</button>
-    <p>Don't have an account? <a href="register.html">Register</a></p>
+    <p>Don’t have an account? <a href="register.html">Register</a></p>
   </div>
-
-  <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-    const supabase = createClient(
-      'https://sletyixovbshfotyemly.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsZXR5aXhvdmJzaGZvdHllbWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTMyNDMsImV4cCI6MjA3NjE2OTI0M30.lb70Matfyr3pX9aXobRoozqVkOJL8b2G2Ao-cE8ESjA'
-    )
-
-    document.getElementById('loginButton').addEventListener('click', async () => {
-      const email = document.getElementById('loginEmail').value.trim()
-      const password = document.getElementById('loginPassword').value.trim()
-
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) {
-        alert('Login failed: ' + error.message)
-      } else {
-        window.location.href = 'home.html'
-      }
-    })
-  </script>
+  <div id="customMessageBox" class="custom-message-box hidden"></div>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -1,90 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Register - ResQ</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="container">
-    <h2>Register</h2>
+    <h2>Create Account</h2>
 
-    <input type="text" id="fullname" placeholder="Full Name" required>
-    <input type="email" id="email" placeholder="Email" required>
-    <input type="password" id="password" placeholder="Password" required>
-    <input type="text" id="phone" placeholder="Phone Number">
-    <input type="date" id="dob" placeholder="Date of Birth">
-    <input type="text" id="gender" placeholder="Gender">
-    <input type="text" id="bloodgrp" placeholder="Blood Group">
-    <input type="text" id="address" placeholder="Address">
-    <input type="text" id="city" placeholder="City">
-    <input type="text" id="pincode" placeholder="Pincode">
-    <input type="text" id="emergency1" placeholder="Emergency Contact 1">
-    <input type="text" id="emergency2" placeholder="Emergency Contact 2">
-    <input type="text" id="medical" placeholder="Medical Info">
+    <input type="text" id="name" placeholder="Full Name" required />
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <input type="tel" id="phone" placeholder="Phone Number" required />
+    <input type="date" id="dob" placeholder="Date of Birth" required />
+
+    <select id="gender" required>
+      <option value="" disabled selected>Gender</option>
+      <option>Male</option>
+      <option>Female</option>
+      <option>Other</option>
+    </select>
+
+    <input type="text" id="blood_group" placeholder="Blood Group (e.g. B+)" />
+    <textarea id="address" placeholder="Address"></textarea>
+    <input type="text" id="city" placeholder="City" />
+    <input type="text" id="pincode" placeholder="Pincode" />
+    <input type="text" id="emergency_contact1" placeholder="Emergency Contact 1" />
+    <input type="text" id="emergency_contact2" placeholder="Emergency Contact 2" />
+    <textarea id="medical_info" placeholder="Medical Information"></textarea>
 
     <button id="registerButton">Register</button>
     <p>Already have an account? <a href="index.html">Login</a></p>
   </div>
-
-  <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-    const supabase = createClient(
-      'https://sletyixovbshfotyemly.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsZXR5aXhvdmJzaGZvdHllbWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTMyNDMsImV4cCI6MjA3NjE2OTI0M30.lb70Matfyr3pX9aXobRoozqVkOJL8b2G2Ao-cE8ESjA'
-    )
-
-    document.getElementById('registerButton').addEventListener('click', async () => {
-      const data = {
-        fullname: document.getElementById('fullname').value.trim(),
-        email: document.getElementById('email').value.trim(),
-        password: document.getElementById('password').value.trim(),
-        phone: document.getElementById('phone').value.trim(),
-        dob: document.getElementById('dob').value, // ✅ already in correct format
-        gender: document.getElementById('gender').value.trim(),
-        bloodgrp: document.getElementById('bloodgrp').value.trim(),
-        address: document.getElementById('address').value.trim(),
-        city: document.getElementById('city').value.trim(),
-        pincode: document.getElementById('pincode').value.trim(),
-        emergency1: document.getElementById('emergency1').value.trim(),
-        emergency2: document.getElementById('emergency2').value.trim(),
-        medical: document.getElementById('medical').value.trim()
-      }
-
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password
-      })
-
-      if (signUpError) {
-        alert('Sign-up failed: ' + signUpError.message)
-        return
-      }
-
-      const { error: insertError } = await supabase.from('profiles').insert([{
-        email: data.email,
-        fullname: data.fullname,
-        phone: data.phone,
-        dob: data.dob,
-        gender: data.gender,
-        bloodgrp: data.bloodgrp,
-        address: data.address,
-        city: data.city,
-        pincode: data.pincode,
-        emergency1: data.emergency1,
-        emergency2: data.emergency2,
-        medical: data.medical
-      }])
-
-      if (insertError) {
-        alert('Error saving profile: ' + insertError.message)
-      } else {
-        alert('Registration successful!')
-        window.location.href = 'index.html'
-      }
-    })
-  </script>
+  <div id="customMessageBox" class="custom-message-box hidden"></div>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

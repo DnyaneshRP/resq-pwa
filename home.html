@@ -1,28 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Home - ResQ</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <button id="menuToggle">☰</button>
-    <h1>ResQ Dashboard</h1>
-  </header>
+  <div class="layout">
+    <div id="drawer" class="drawer">
+      <button id="closeDrawer">&times;</button>
+      <a href="home.html">🏠 Home</a>
+      <a href="profile.html">👤 Profile</a>
+      <a href="about.html">ℹ️ About</a>
+      <a href="#" id="logoutLink">🚪 Logout</a>
+    </div>
 
-  <nav id="drawer" class="drawer">
-    <a href="home.html">Home</a>
-    <a href="profile.html">Profile</a>
-    <a href="about.html">About</a>
-    <a href="#" id="logoutLink">Logout</a>
-  </nav>
-
-  <main>
-    <h2>Welcome to ResQ</h2>
-    <p>Your disaster-aid companion app.</p>
-  </main>
+    <div class="main-content">
+      <header>
+        <button id="menuToggle" class="menu-btn">☰</button>
+        <h1>ResQ Dashboard</h1>
+      </header>
+      <section class="center-card">
+        <h2>Welcome to ResQ</h2>
+        <p>Your disaster-aid companion app.</p>
+      </section>
+    </div>
+  </div>
 
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -32,67 +36,16 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsZXR5aXhvdmJzaGZvdHllbWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTMyNDMsImV4cCI6MjA3NjE2OTI0M30.lb70Matfyr3pX9aXobRoozqVkOJL8b2G2Ao-cE8ESjA'
     )
 
-    const menuButton = document.getElementById('menuToggle')
-    const drawer = document.getElementById('drawer')
-
-    menuButton.addEventListener('click', () => {
-      drawer.classList.toggle('open')
+    document.getElementById('menuToggle').addEventListener('click', () => {
+      document.getElementById('drawer').classList.add('open')
     })
-
+    document.getElementById('closeDrawer').addEventListener('click', () => {
+      document.getElementById('drawer').classList.remove('open')
+    })
     document.getElementById('logoutLink').addEventListener('click', async () => {
       await supabase.auth.signOut()
       window.location.href = 'index.html'
     })
   </script>
-
-  <style>
-    header {
-      display: flex;
-      align-items: center;
-      background: #d32f2f;
-      color: white;
-      padding: 10px 15px;
-    }
-
-    #menuToggle {
-      font-size: 24px;
-      background: none;
-      color: white;
-      border: none;
-      cursor: pointer;
-      margin-right: 15px;
-    }
-
-    .drawer {
-      position: fixed;
-      top: 0;
-      left: -220px;
-      width: 220px;
-      height: 100%;
-      background: #fff;
-      box-shadow: 2px 0 8px rgba(0,0,0,0.2);
-      padding-top: 60px;
-      transition: left 0.3s ease;
-    }
-
-    .drawer.open {
-      left: 0;
-    }
-
-    .drawer a {
-      display: block;
-      padding: 12px 18px;
-      text-decoration: none;
-      color: #333;
-    }
-
-    .drawer a:hover {
-      background: #f2f2f2;
-    }
-
-    main {
-      padding: 20px;
-    }
-  </style>
 </body>
 </html>

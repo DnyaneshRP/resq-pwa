@@ -5,121 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Profile - ResQ</title>
   <link rel="stylesheet" href="styles.css" />
-
-  <style>
-    body {
-      font-family: "Poppins", sans-serif;
-      background: #f5f6fa;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      padding: 20px;
-    }
-
-    .profile-container {
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      padding: 30px 40px;
-      width: 100%;
-      max-width: 600px;
-      transition: 0.3s ease;
-    }
-
-    h2 {
-      text-align: center;
-      color: #2c3e50;
-      margin-bottom: 20px;
-    }
-
-    .profile-field {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid #eee;
-    }
-
-    .profile-field:last-child {
-      border-bottom: none;
-    }
-
-    .label {
-      font-weight: 600;
-      color: #34495e;
-    }
-
-    .value {
-      color: #2c3e50;
-      text-align: right;
-      max-width: 60%;
-    }
-
-    #logoutButton {
-      background: #e74c3c;
-      color: white;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 25px;
-      width: 100%;
-      font-size: 16px;
-      transition: background 0.3s;
-    }
-
-    #logoutButton:hover {
-      background: #c0392b;
-    }
-
-    .custom-message-box {
-      position: fixed;
-      top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #2ecc71;
-      color: white;
-      padding: 10px 18px;
-      border-radius: 6px;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      z-index: 999;
-    }
-
-    .custom-message-box.error {
-      background: #e74c3c;
-    }
-
-    .custom-message-box.show {
-      opacity: 1;
-    }
-  </style>
 </head>
 <body>
-  <div class="profile-container">
+  <div class="drawer" id="drawer">
+    <button class="close-drawer" id="closeDrawer">×</button>
+    <a href="profile.html">Profile</a>
+    <a href="#" id="logoutButton">Logout</a>
+  </div>
+
+  <button class="menu-button" id="openDrawer">☰</button>
+
+  <div class="container profile-container">
     <h2>My Profile</h2>
 
     <div class="profile-field"><span class="label">Full Name:</span><span id="profile-name" class="value"></span></div>
     <div class="profile-field"><span class="label">Email:</span><span id="profile-email" class="value"></span></div>
     <div class="profile-field"><span class="label">Phone:</span><span id="profile-phone" class="value"></span></div>
-    <div class="profile-field"><span class="label">Date of Birth:</span><span id="profile-dob" class="value"></span></div>
+    <div class="profile-field"><span class="label">DOB:</span><span id="profile-dob" class="value"></span></div>
     <div class="profile-field"><span class="label">Gender:</span><span id="profile-gender" class="value"></span></div>
     <div class="profile-field"><span class="label">Blood Group:</span><span id="profile-blood" class="value"></span></div>
     <div class="profile-field"><span class="label">Address:</span><span id="profile-address" class="value"></span></div>
     <div class="profile-field"><span class="label">City:</span><span id="profile-city" class="value"></span></div>
     <div class="profile-field"><span class="label">Pincode:</span><span id="profile-pincode" class="value"></span></div>
-    <div class="profile-field"><span class="label">Emergency Contact 1:</span><span id="profile-emergency1" class="value"></span></div>
-    <div class="profile-field"><span class="label">Emergency Contact 2:</span><span id="profile-emergency2" class="value"></span></div>
+    <div class="profile-field"><span class="label">Emergency 1:</span><span id="profile-emergency1" class="value"></span></div>
+    <div class="profile-field"><span class="label">Emergency 2:</span><span id="profile-emergency2" class="value"></span></div>
     <div class="profile-field"><span class="label">Medical Info:</span><span id="profile-medical" class="value"></span></div>
-
-    <button id="logoutButton">Logout</button>
   </div>
 
   <div id="customMessageBox" class="custom-message-box hidden"></div>
 
   <script type="module" src="app.js"></script>
-  <script>
-    loadProfile();
-  </script>
 </body>
 </html>
