@@ -10,9 +10,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 // --- Initialize Supabase Client ---
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let storedRegistrationData = {}; // Temporary storage for registration data
 
-// --- Global Utility: Custom Message Box ---
+// --- Global Utility: Custom Message Box (Unchanged) ---
 function showMessage(message, type = 'success', duration = 3000) {
     const messageBox = document.getElementById('customMessageBox');
     if (!messageBox) return;
@@ -34,7 +33,7 @@ function showMessage(message, type = 'success', duration = 3000) {
 }
 
 
-// --- CORE NAVIGATION, AUTH STATE, AND PROFILE CREATION/CHECK ---
+// --- CORE NAVIGATION, AUTH STATE, AND PROFILE INSERTER ---
 supabase.auth.onAuthStateChange((event, session) => {
     const isLoggedIn = !!session;
     const user = session?.user || null;
@@ -44,17 +43,21 @@ supabase.auth.onAuthStateChange((event, session) => {
     const protectedPages = ['home.html', 'profile.html', 'about.html']; 
     const loginPages = ['index.html', 'register.html'];
 
-    if (isLoggedIn && loginPages.includes(currentPagePath)) {
-        // Logged-in user accessing login/register page
-        if (user) {
-            // Check for and create a profile if it was staged during registration
-            checkForStagedProfile(user.id);
+    if (isLoggedIn) {
+        // If the user is authenticated, ensure their profile is in the database
+        checkForMissingProfile(user); 
+
+        if (loginPages.includes(currentPagePath)) {
+            // Logged-in user accessing login/register page
+            window.location.replace('home.html'); 
+            return;
         }
-        window.location.replace('home.html'); 
     } 
-    else if (!isLoggedIn && protectedPages.includes(currentPagePath)) {
-        // Logged-out user accessing protected page
+    
+    // Handle redirection for unauthenticated users
+    if (!isLoggedIn && protectedPages.includes(currentPagePath)) {
         window.location.replace('index.html');
+        return;
     }
     
     // Logic for Protected Pages
@@ -68,45 +71,59 @@ supabase.auth.onAuthStateChange((event, session) => {
     }
 });
 
-// --- NEW FUNCTION: Inserts profile data immediately after successful Auth flow ---
-async function checkForStagedProfile(userId) {
-    if (storedRegistrationData && storedRegistrationData.email) {
-        
-        // 1. Check if profile already exists (to prevent duplicates if user logs out and back in quickly)
-        const { data: profileCheck } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', userId)
-            .single();
 
-        if (profileCheck) {
-            storedRegistrationData = {}; // Clear stage data
-            return; 
-        }
+// --- NEW FUNCTION: Inserts profile data upon first successful sign-in/login ---
+async function checkForMissingProfile(user) {
+    const userId = user.id;
+    const metadata = user.user_metadata;
+    
+    if (!metadata || !metadata.fullname) return; // No metadata means this flow is not applicable
 
-        // 2. Insert the profile data now that the user is fully authenticated
-        const userProfileData = {
-            id: userId,
-            ...storedRegistrationData // Spread the stored form data
-        };
-        delete userProfileData.password; // Remove password which was only for Auth signup
+    // 1. Check if profile already exists in the 'profiles' table
+    const { data: profileCheck } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
 
-        const { error: dbError } = await supabase
-            .from('profiles')
-            .insert([userProfileData]);
+    if (profileCheck) {
+        // Profile exists, no action needed
+        return; 
+    }
 
-        if (dbError) {
-             console.error("Profile Insertion Error:", dbError);
-             showMessage(`Profile incomplete: ${dbError.message}`, 'error', 5000);
-        } else {
-             showMessage("Profile saved successfully!", 'success');
-        }
-        storedRegistrationData = {}; // Clear stage data after successful insertion
+    // 2. Profile does NOT exist. Insert it using the data we stored in user_metadata during signup.
+    const userProfileData = {
+        id: userId,
+        fullname: metadata.fullname,
+        email: user.email, // Use email from the main user object
+        phone: metadata.phone,
+        dob: metadata.dob,
+        gender: metadata.gender,
+        bloodgrp: metadata.bloodgrp,
+        address: metadata.address,
+        city: metadata.city,
+        pincode: metadata.pincode,
+        emergency1: metadata.emergency1,
+        emergency2: metadata.emergency2,
+        medical: metadata.medical
+    };
+
+    const { error: dbError } = await supabase
+        .from('profiles')
+        .insert([userProfileData]);
+
+    if (dbError) {
+         console.error("Profile Insertion Error:", dbError);
+         showMessage(`Profile setup failed: ${dbError.message}`, 'error', 5000);
+    } else {
+         // Now that the profile is saved, optionally clear the metadata (not strictly necessary but clean)
+         // Not doing this to keep it simple, metadata is fine to keep.
+         showMessage("User profile created in the database!", 'success');
     }
 }
 
 
-// --- REGISTRATION LOGIC (Supabase Auth + Staging Data) ---
+// --- REGISTRATION LOGIC (Supabase Auth + Metadata) ---
 const registerForm = document.getElementById('registerForm');
 if (registerForm) {
     registerForm.addEventListener('submit', async (e) => {
@@ -114,10 +131,9 @@ if (registerForm) {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         
-        // Step 1: Stage all form data temporarily 
-        storedRegistrationData = {
+        // Stage all form data for user_metadata
+        const metadata = {
           fullname: document.getElementById('fullname').value,
-          email: email,
           phone: document.getElementById('phone').value,
           dob: document.getElementById('dob').value,
           gender: document.getElementById('gender').value,
@@ -131,32 +147,33 @@ if (registerForm) {
         };
 
         try {
-            // Step 2: Create the user in Supabase Authentication.
-            // Using a temporary redirect URL to suppress the automatic deep link in some cases
+            // Step 1: Create the user in Supabase Authentication and save metadata
             const { data, error: authError } = await supabase.auth.signUp({
                 email: email,
                 password: password,
+                options: {
+                    data: metadata // Store profile data securely in Auth metadata
+                }
             });
 
             if (authError) throw authError;
 
-            // Step 3: Handle post-signup state
+            // Step 2: Handle post-signup state
             if (data.user) {
-                // User auto-logged in (no confirmation needed) -> Reroute to home
-                // The onAuthStateChange listener will now trigger checkForStagedProfile
-                showMessage("Registration successful! Redirecting...", 'success');
+                // User auto-logged in. onAuthStateChange will handle profile insert and redirect.
+                showMessage("Registration successful! Redirecting to home...", 'success');
             } else {
-                 // Confirmation email sent
+                 // Confirmation email sent.
                 showMessage("Registration successful! Check your email to confirm your account, then log in.", 'success', 5000);
+                
+                // *** FIX 1: Explicitly redirect to the login page (index.html) if confirmation is needed. ***
                 setTimeout(() => {
-                    window.location.href = "index.html";
+                    window.location.replace("index.html"); 
                 }, 3000);
             }
 
         } catch (error) {
             console.error("Registration Error:", error);
-            // Clear staged data if signup failed
-            storedRegistrationData = {}; 
             showMessage(`Registration Failed: ${error.message || error.toString()}`, 'error');
         }
     });
@@ -171,17 +188,14 @@ if (loginForm) {
         const password = document.getElementById('password').value;
 
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
+            const { error } = await supabase.auth.signInWithPassword({
                 email: email,
                 password: password,
             });
             
             if (error) throw error;
             
-            // Check for and create profile in case of new login after email confirmation
-            if (data.user) {
-                 checkForStagedProfile(data.user.id);
-            }
+            // onAuthStateChange handles profile creation and redirect
 
             showMessage("Login successful!", 'success');
 
@@ -197,9 +211,9 @@ if (loginForm) {
 const profileDetails = document.getElementById('profileDetails');
 
 async function fetchUserProfile(userId) {
-    profileDetails.innerHTML = 'Loading user data...'; // Reset loading text
+    profileDetails.innerHTML = 'Loading user data...'; 
     
-    // Select all columns from the 'profiles' table where the id matches the logged-in user's ID.
+    // Fetch profile from the 'profiles' table
     const { data: userProfiles, error } = await supabase
         .from('profiles')
         .select('*')
@@ -215,6 +229,7 @@ async function fetchUserProfile(userId) {
     if (userProfiles) {
         renderProfile(userProfiles);
     } else {
+        // This should only happen if the profile creation failed after login.
         profileDetails.innerHTML = "<p>No profile data found. Please complete your registration.</p>";
     }
 }
@@ -261,7 +276,7 @@ async function setDrawerHeaderName(userId) {
     const drawerTitleElement = document.getElementById('drawerTitle');
     if (!drawerTitleElement) return;
 
-    const { data, error } = await supabase
+    const { data } = await supabase
         .from('profiles')
         .select('fullname')
         .eq('id', userId)
@@ -271,12 +286,11 @@ async function setDrawerHeaderName(userId) {
         const firstName = data.fullname.split(' ')[0];
         drawerTitleElement.textContent = `Hi ${firstName}!`;
     } else {
-         drawerTitleElement.textContent = `ResQ Menu`; // Default if name not found
+         drawerTitleElement.textContent = `ResQ Menu`; 
     }
 }
 
 if (menuButton) {
-    // Drawer functionality (Unchanged)
     function toggleDrawer() {
         sideDrawer.classList.toggle('open');
         backdrop.classList.toggle('active');
