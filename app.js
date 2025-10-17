@@ -1,111 +1,268 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js";
+// --- Firebase SDK Imports ---
+// These lines import the necessary functions from the Firebase SDK.
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-const SUPABASE_URL = "https://sletyixovbshfotyemly.supabase.co";
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsZXR5aXhvdmJzaGZvdHllbWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTMyNDMsImV4cCI6MjA3NjE2OTI0M30.lb70Matfyr3pX9aXobRoozqVkOJL8b2G2Ao-cE8ESjA";
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-const showMessage = (msg, error = false) => {
-  const box = document.getElementById("customMessageBox");
-  box.textContent = msg;
-  box.classList.add("show");
-  box.classList.toggle("error", error);
-  setTimeout(() => box.classList.remove("show"), 2500);
+// =================================================================
+// YOUR FIREBASE CONFIGURATION (ALREADY PASTED IN)
+// =================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCQg7G0bhU6w65nPhxnr_DjnSpmJY55Iww",
+  authDomain: "resq-pwa-backend.firebaseapp.com",
+  projectId: "resq-pwa-backend",
+  storageBucket: "resq-pwa-backend.appspot.com",
+  messagingSenderId: "615234174517",
+  appId: "1:615234174517:web:76523a6e0d6d0feb813b7c"
 };
+// =================================================================
 
-// REGISTER
-const registerBtn = document.getElementById("registerButton");
-if (registerBtn) {
-  registerBtn.addEventListener("click", async () => {
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
-    const name = document.getElementById("name").value.trim();
-    const phone = document.getElementById("phone").value.trim();
-    const dob = document.getElementById("dob").value;
-    const gender = document.getElementById("gender").value;
-    const blood_group = document.getElementById("blood_group").value;
-    const address = document.getElementById("address").value;
-    const city = document.getElementById("city").value;
-    const pincode = document.getElementById("pincode").value;
-    const emergency_contact1 = document.getElementById("emergency_contact1").value;
-    const emergency_contact2 = document.getElementById("emergency_contact2").value;
-    const medical_info = document.getElementById("medical_info").value;
+// --- Initialize Firebase Services ---
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) return showMessage(error.message, true);
+// --- Global Utility: Custom Message Box ---
+function showMessage(message, type = 'success', duration = 3000) {
+    const messageBox = document.getElementById('customMessageBox');
+    if (!messageBox) return;
 
-    await supabase.from("profiles").insert({
-      id: data.user.id,
-      name,
-      email,
-      phone,
-      dob: dob || null,
-      gender,
-      blood_group,
-      address,
-      city,
-      pincode,
-      emergency_contact1,
-      emergency_contact2,
-      medical_info,
+    messageBox.className = `custom-message-box hidden ${type}`;
+    messageBox.textContent = message;
+
+    setTimeout(() => {
+        messageBox.classList.remove('hidden');
+        messageBox.classList.add('show');
+    }, 10); 
+
+    setTimeout(() => {
+        messageBox.classList.remove('show');
+        setTimeout(() => {
+             messageBox.classList.add('hidden');
+        }, 300);
+    }, duration);
+}
+
+// --- CORE NAVIGATION & AUTH STATE ---
+// This function runs automatically whenever a user logs in or out.
+onAuthStateChanged(auth, user => {
+    const isLoggedIn = !!user; // true if a user object exists, false otherwise
+    const currentPagePath = window.location.pathname.split('/').pop() || 'index.html';
+    
+    const protectedPages = ['home.html', 'profile.html', 'about.html']; 
+    const loginPages = ['index.html', 'register.html'];
+
+    if (isLoggedIn && loginPages.includes(currentPagePath)) {
+        // If a logged-in user tries to access a login page, redirect them to home.
+        window.location.replace('home.html'); // Use replace to prevent back navigation
+    } 
+    else if (!isLoggedIn && protectedPages.includes(currentPagePath)) {
+        // If a logged-out user tries to access a protected page, redirect them to the login page.
+        window.location.replace('index.html');
+    }
+    
+    // If the user is logged in and on a protected page, update the drawer name.
+    if (isLoggedIn && protectedPages.includes(currentPagePath)) {
+        setDrawerHeaderName(user.uid);
+    }
+});
+
+// --- REGISTRATION LOGIC (Firebase Auth + Firestore) ---
+const registerForm = document.getElementById('registerForm');
+if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        
+        try {
+            // Step 1: Create the user in Firebase Authentication.
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            // Step 2: Create the profile data object from the form.
+            const userProfileData = {
+              uid: user.uid, // Store the unique user ID from Firebase Auth
+              fullname: document.getElementById('fullname').value,
+              email: email,
+              phone: document.getElementById('phone').value,
+              dob: document.getElementById('dob').value,
+              gender: document.getElementById('gender').value,
+              bloodgrp: document.getElementById('bloodgrp').value,
+              address: document.getElementById('address').value,
+              city: document.getElementById('city').value,
+              pincode: document.getElementById('pincode').value,
+              emergency1: document.getElementById('emergency1').value,
+              emergency2: document.getElementById('emergency2').value,
+              medical: document.getElementById('medical').value
+            };
+
+            // Step 3: Save this profile data to our Firestore database in a "users" collection.
+            await setDoc(doc(db, "users", user.uid), userProfileData);
+
+            showMessage("Registration successful! Please login.", 'success');
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 1500);
+
+        } catch (error) {
+            console.error("Registration Error:", error);
+            // Provide a user-friendly error message, e.g., "auth/email-already-in-use".
+            showMessage(`Registration Failed: ${error.code}`, 'error');
+        }
     });
-
-    showMessage("Registration successful!");
-    setTimeout(() => (window.location = "index.html"), 1500);
-  });
 }
 
-// LOGIN
-const loginBtn = document.getElementById("loginButton");
-if (loginBtn) {
-  loginBtn.addEventListener("click", async () => {
-    const email = document.getElementById("loginEmail").value.trim();
-    const password = document.getElementById("loginPassword").value.trim();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return showMessage(error.message, true);
-    showMessage("Login successful!");
-    setTimeout(() => (window.location = "profile.html"), 1500);
-  });
+// --- LOGIN LOGIC (Firebase Auth) ---
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            // This securely signs the user in using Firebase.
+            await signInWithEmailAndPassword(auth, email, password);
+            showMessage("Login successful!", 'success');
+            // The onAuthStateChanged function above will automatically handle the redirect to home.html.
+        } catch (error) {
+            console.error("Login Error:", error);
+            showMessage("Login Failed: Invalid email or password.", 'error');
+        }
+    });
 }
 
-// LOAD PROFILE
-window.loadProfile = async function () {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    window.location = "index.html";
-    return;
-  }
+// --- PROFILE PAGE LOGIC (Read from Firestore) ---
+const profileDetails = document.getElementById('profileDetails');
+if (profileDetails) {
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            // If a user is logged in, fetch their specific document from the "users" collection in Firestore.
+            const docRef = doc(db, "users", user.uid);
+            const docSnap = await getDoc(docRef);
 
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-  if (error || !data) return showMessage("Profile not found", true);
-
-  const fields = [
-    "name", "email", "phone", "dob", "gender",
-    "blood_group", "address", "city", "pincode",
-    "emergency_contact1", "emergency_contact2", "medical_info"
-  ];
-  fields.forEach(f => {
-    const el = document.getElementById(`profile-${f.replace("_", "")}`);
-    if (el) el.textContent = data[f] || "-";
-  });
-};
-
-// LOGOUT
-const logoutBtn = document.getElementById("logoutButton");
-if (logoutBtn) {
-  logoutBtn.addEventListener("click", async () => {
-    await supabase.auth.signOut();
-    window.location = "index.html";
-  });
+            if (docSnap.exists()) {
+                // If the document exists, display the data using the renderProfile function.
+                renderProfile(docSnap.data());
+            } else {
+                profileDetails.innerHTML = "<p>No profile data found. Please complete your registration.</p>";
+            }
+        }
+    });
 }
 
-// DRAWER TOGGLE
-const openDrawer = document.getElementById("openDrawer");
-const closeDrawer = document.getElementById("closeDrawer");
-const drawer = document.getElementById("drawer");
+function renderProfile(user) {
+    profileDetails.innerHTML = '';
+    const fields = [
+        { label: 'Full Name', key: 'fullname' },
+        { label: 'Email', key: 'email' },
+        { label: 'Phone Number', key: 'phone' },
+        { label: 'Date of Birth', key: 'dob' },
+        { label: 'Gender', key: 'gender' },
+        { label: 'Blood Group', key: 'bloodgrp' },
+        { label: 'Address', key: 'address' },
+        { label: 'City', key: 'city' },
+        { label: 'Pincode', key: 'pincode' },
+        { label: 'Emergency Contact 1', key: 'emergency1' },
+        { label: 'Emergency Contact 2', key: 'emergency2' },
+        { label: 'Medical Conditions', key: 'medical' }
+    ];
+    fields.forEach(field => {
+        if (user[field.key]) {
+            const item = document.createElement('div');
+            item.classList.add('profile-item');
+            item.innerHTML = `
+                <span class="profile-label">${field.label}:</span>
+                <span class="profile-value">${user[field.key]}</span>
+            `;
+            profileDetails.appendChild(item);
+        }
+    });
+}
 
-if (openDrawer && drawer && closeDrawer) {
-  openDrawer.addEventListener("click", () => drawer.classList.add("show"));
-  closeDrawer.addEventListener("click", () => drawer.classList.remove("show"));
+
+// --- DRAWER & LOGOUT LOGIC (Firebase Auth) ---
+const menuButton = document.getElementById('menuButton');
+const sideDrawer = document.getElementById('sideDrawer');
+const closeDrawer = document.getElementById('closeDrawer');
+const logoutButton = document.getElementById('logoutButton');
+const backdrop = document.getElementById('drawerBackdrop');
+
+async function setDrawerHeaderName(uid) {
+    const drawerTitleElement = document.getElementById('drawerTitle');
+    if (!drawerTitleElement) return;
+
+    // Fetch the user's profile from Firestore to get their name.
+    const docRef = doc(db, "users", uid);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        const userData = docSnap.data();
+        const firstName = userData.fullname.split(' ')[0];
+        drawerTitleElement.textContent = `Hi ${firstName}!`;
+    }
+}
+
+if (menuButton) {
+    // This is your existing, working drawer logic.
+    function toggleDrawer() {
+        sideDrawer.classList.toggle('open');
+        backdrop.classList.toggle('active');
+        document.body.style.overflowY = sideDrawer.classList.contains('open') ? 'hidden' : 'auto';
+    }
+    menuButton.addEventListener('click', toggleDrawer);
+    closeDrawer.addEventListener('click', toggleDrawer);
+    backdrop.addEventListener('click', toggleDrawer);
+
+    logoutButton.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+            // This signs the user out of their Firebase session.
+            await signOut(auth);
+            showMessage("Logged out successfully.", 'success');
+            // The onAuthStateChanged function will automatically handle the redirect to index.html.
+        } catch (error) {
+            showMessage("Logout failed. Please try again.", 'error');
+        }
+    });
+}
+
+
+// --- Helper Functions (Date input, PWA Install Prompt) ---
+// These are unchanged and placed at the end for clarity.
+const dobInput = document.getElementById('dob');
+if (dobInput) {
+    dobInput.addEventListener('focus', () => { dobInput.type = 'date'; dobInput.removeAttribute('placeholder'); });
+    dobInput.addEventListener('blur', () => { if (!dobInput.value) { dobInput.type = 'text'; dobInput.setAttribute('placeholder', 'DD/MM/YYYY'); } });
+}
+
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (localStorage.getItem('pwaPromptShown') !== 'true' && !window.matchMedia('(display-mode: standalone)').matches) {
+        showInstallPromotionModal(); 
+    }
+});
+
+function showInstallPromotionModal() {
+    localStorage.setItem('pwaPromptShown', 'true');
+    const modalHtml = `
+        <div id="pwaModal" class="pwa-modal-overlay">
+            <div class="pwa-modal-content">
+                <i class="fas fa-heartbeat pwa-icon"></i>
+                <h2>Install ResQ - Your Safety App</h2>
+                <p>Install the ResQ app to get quick access to emergency features and use it even when you're offline. Get the full app experience!</p>
+                <button id="installButton" class="pwa-install-btn">Install App Now</button>
+                <button id="dismissButton" class="pwa-dismiss-btn">Not now, continue to website</button>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const pwaModal = document.getElementById('pwaModal');
+    document.getElementById('installButton').addEventListener('click', () => {
+        if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }
+        pwaModal.remove();
+    });
+    document.getElementById('dismissButton').addEventListener('click', () => { pwaModal.remove(); });
 }
