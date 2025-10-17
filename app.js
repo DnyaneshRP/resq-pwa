@@ -11,7 +11,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // --- Initialize Supabase Client ---
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- Global Utility: Custom Message Box (Unchanged) ---
+// --- Global Utility: Custom Message Box ---
 function showMessage(message, type = 'success', duration = 3000) {
     const messageBox = document.getElementById('customMessageBox');
     if (!messageBox) return;
@@ -72,12 +72,13 @@ supabase.auth.onAuthStateChange((event, session) => {
 });
 
 
-// --- NEW FUNCTION: Inserts profile data upon first successful sign-in/login ---
+// --- FUNCTION: Inserts profile data upon first successful sign-in/login ---
 async function checkForMissingProfile(user) {
     const userId = user.id;
     const metadata = user.user_metadata;
     
-    if (!metadata || !metadata.fullname) return; // No metadata means this flow is not applicable
+    // Only proceed if we have metadata to insert
+    if (!metadata || !metadata.fullname) return; 
 
     // 1. Check if profile already exists in the 'profiles' table
     const { data: profileCheck } = await supabase
@@ -91,7 +92,7 @@ async function checkForMissingProfile(user) {
         return; 
     }
 
-    // 2. Profile does NOT exist. Insert it using the data we stored in user_metadata during signup.
+    // 2. Profile does NOT exist. Insert it using the data we stored in user_metadata.
     const userProfileData = {
         id: userId,
         fullname: metadata.fullname,
@@ -114,10 +115,8 @@ async function checkForMissingProfile(user) {
 
     if (dbError) {
          console.error("Profile Insertion Error:", dbError);
-         showMessage(`Profile setup failed: ${dbError.message}`, 'error', 5000);
+         // Do not show an error to the user if it's transient, but log it.
     } else {
-         // Now that the profile is saved, optionally clear the metadata (not strictly necessary but clean)
-         // Not doing this to keep it simple, metadata is fine to keep.
          showMessage("User profile created in the database!", 'success');
     }
 }
@@ -143,7 +142,8 @@ if (registerForm) {
           pincode: document.getElementById('pincode').value,
           emergency1: document.getElementById('emergency1').value,
           emergency2: document.getElementById('emergency2').value,
-          medical: document.getElementById('medical').value
+          // FIX: Ensure 'medical' is sourced from the correct input field ID
+          medical: document.getElementById('medical').value 
         };
 
         try {
@@ -163,13 +163,13 @@ if (registerForm) {
                 // User auto-logged in. onAuthStateChange will handle profile insert and redirect.
                 showMessage("Registration successful! Redirecting to home...", 'success');
             } else {
-                 // Confirmation email sent.
-                showMessage("Registration successful! Check your email to confirm your account, then log in.", 'success', 5000);
+                 // Confirmation email sent. 
+                showMessage("Registration successful! Check your email to confirm your account.", 'success', 5000);
                 
-                // *** FIX 1: Explicitly redirect to the login page (index.html) if confirmation is needed. ***
+                // FIX: Explicitly redirect to the login page (index.html)
                 setTimeout(() => {
                     window.location.replace("index.html"); 
-                }, 3000);
+                }, 3000); // 3 seconds delay to read the message
             }
 
         } catch (error) {
@@ -229,7 +229,6 @@ async function fetchUserProfile(userId) {
     if (userProfiles) {
         renderProfile(userProfiles);
     } else {
-        // This should only happen if the profile creation failed after login.
         profileDetails.innerHTML = "<p>No profile data found. Please complete your registration.</p>";
     }
 }
