@@ -2,65 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ResQ - Home</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#d32f2f">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0v4LLanw2qksYuRlEzO+tcaEPQogQ0KaoGN26/zrn20ImR1DfuLWnOo7aBA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
-<body class="home-page">
+<body>
 
   <div id="sideDrawer" class="side-drawer">
     <div class="drawer-header">
-        <h3 id="drawerTitle">ResQ Menu</h3>
-        <span id="closeDrawer" class="close-btn">&times;</span>
+        <h3 id="drawerTitle">Hello!</h3>
+        <button id="closeDrawer" class="close-btn">&times;</button>
     </div>
-    <div class="drawer-content">
-        <a href="home.html" class="drawer-link"><i class="fas fa-home fa-fw"></i> Home</a>
-        <a href="profile.html" class="drawer-link"><i class="fas fa-user fa-fw"></i> My Profile</a>
-        <a href="about.html" class="drawer-link"><i class="fas fa-info-circle fa-fw"></i> About App</a>
-        <a href="#" id="logoutButton" class="drawer-link logout-link"><i class="fas fa-sign-out-alt fa-fw"></i> Logout</a>
-    </div>
+    <nav class="drawer-content">
+        <a href="home.html" class="drawer-link"><i class="fas fa-home"></i> Home</a>
+        <a href="profile.html" class="drawer-link"><i class="fas fa-user"></i> My Profile</a>
+        <a href="about.html" class="drawer-link"><i class="fas fa-info-circle"></i> About</a>
+        <a href="#" id="logoutButton" class="drawer-link logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </nav>
   </div>
-  
   <div id="drawerBackdrop" class="drawer-backdrop"></div>
-  
+
   <header class="header">
-    <div class="hamburger" id="menuButton">
-        <i class="fas fa-bars"></i>
-    </div>
-    <h2>ResQ Dashboard</h2>
+    <button id="menuButton" class="hamburger"><i class="fas fa-bars"></i></button>
+    <h2>Dashboard</h2>
   </header>
   
-  <div class="app">
-    <h1>Welcome Back!</h1>
-    
-    <div class="dashboard-card action-report">
+  <main class="app-container">
+    <div class="home-card">
         <i class="fas fa-bullhorn card-icon"></i>
-        <h2>Report Emergency</h2>
-        <p>Quickly report an accident, fire, or medical crisis. Your GPS location will be automatically attached.</p>
-        <button class="action-btn primary-btn">Start New Report</button>
+        <h2>Report an Emergency</h2>
+        <p>Quickly send an alert with your location and details to responders.</p>
+        <button class="btn btn-primary">New Report</button>
     </div>
-
-    <div class="dashboard-card action-profile">
+    <div class="home-card">
         <i class="fas fa-user-shield card-icon"></i>
-        <h2>Review Profile</h2>
-        <p>Ensure your medical details and emergency contacts are up-to-date for first responders.</p>
-        <button class="action-btn secondary-btn" onclick="window.location.href='profile.html'">Go to Profile</button>
+        <h2>Review Your Profile</h2>
+        <p>Ensure your medical details and emergency contacts are up to date.</p>
+        <button class="btn btn-primary" onclick="window.location.href='profile.html'">View Profile</button>
     </div>
+  </main>
 
-    <div class="dashboard-card info-alerts">
-        <i class="fas fa-bell card-icon"></i>
-        <h2>General Alerts</h2>
-        <p>View the latest broadcast alerts and safety messages from the relief management team.</p>
-        <button class="action-btn tertiary-btn">Check Alerts</button>
-    </div>
-  </div>
-  
-  <div id="customMessageBox" class="custom-message-box hidden"></div>
-  <div id="loadingSpinner" class="loading-spinner"></div>
-
+  <div id="customMessageBox" class="custom-message-box"></div>
   <script type="module" src="app.js"></script>
 </body>
 </html>

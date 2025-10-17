@@ -11,7 +11,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // --- Initialize Supabase Client ---
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- Global Utility: Custom Message Box (Unchanged) ---
+// --- Global Utility: Custom Message Box ---
 function showMessage(message, type = 'success') {
     const box = document.getElementById('customMessageBox');
     if (!box) return;
@@ -23,7 +23,7 @@ function showMessage(message, type = 'success') {
     }, 3000);
 }
 
-// --- Navigation Utilities (Unchanged) ---
+// --- Navigation ---
 function navigateTo(path) {
     window.location.href = path;
 }
@@ -37,13 +37,19 @@ supabase.auth.onAuthStateChange(async (event, session) => {
         if (isPublicPage) {
             navigateTo('home.html');
         }
-        // Fetch profile to greet user
-        const { data: profile } = await supabase.from('profiles').select('full_name').single();
-        const drawerTitle = document.getElementById('drawerTitle');
-        if (drawerTitle && profile) {
-            const firstName = profile.full_name.split(' ')[0];
-            drawerTitle.textContent = `Hi, ${firstName}`;
+        // Fetch profile to greet user by first name
+        try {
+            const { data: profile, error } = await supabase.from('profiles').select('full_name').single();
+            if (error) throw error;
+            const drawerTitle = document.getElementById('drawerTitle');
+            if (drawerTitle && profile && profile.full_name) {
+                const firstName = profile.full_name.split(' ')[0];
+                drawerTitle.textContent = `Hi, ${firstName}`;
+            }
+        } catch (error) {
+            console.error("Error fetching user's first name for greeting:", error);
         }
+
     } else {
         if (!isPublicPage) {
             navigateTo('index.html');
@@ -73,21 +79,24 @@ async function handleRegistration(e) {
     };
 
     try {
-        const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+        const { data: { user }, error: authError } = await supabase.auth.signUp({ email, password });
         if (authError) throw authError;
 
+        // After successful signup, insert the profile with the new user's ID
         const { error: profileError } = await supabase
             .from('profiles')
-            .insert({ id: authData.user.id, ...profileData });
+            .insert({ id: user.id, ...profileData });
             
         if (profileError) {
-            console.error('Profile save error details:', profileError);
+            // This is critical for debugging if it ever fails again
+            console.error('CRITICAL: Profile insert failed after signup. Details:', profileError);
             throw new Error(`Profile save failed: ${profileError.message}`);
         }
 
         showMessage('Registration successful!', 'success');
+        // The onAuthStateChange listener will handle the redirect
     } catch (error) {
-        console.error('Registration failed:', error);
+        console.error('Registration process failed:', error);
         showMessage(error.message, 'error');
     }
 }
@@ -99,7 +108,7 @@ async function handleLogin(e) {
     try {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        showMessage('Login successful!', 'success');
+        // The onAuthStateChange listener will handle the redirect and success message is not needed
     } catch (error) {
         showMessage(error.message, 'error');
     }
@@ -107,7 +116,7 @@ async function handleLogin(e) {
 
 async function handleLogout() {
     await supabase.auth.signOut();
-    navigateTo('index.html');
+    // The onAuthStateChange listener will handle the redirect
 }
 
 // =================================================================
@@ -115,24 +124,33 @@ async function handleLogout() {
 // =================================================================
 
 async function initializeProfilePage() {
-    const { data: profile, error } = await supabase.from('profiles').select('*').single();
+    try {
+        const { data: profile, error } = await supabase.from('profiles').select('*').single();
 
-    if (error) {
-        console.error("Error fetching profile:", error);
+        if (error) {
+            // This handles the case where a user is logged in but has no profile row
+            if (error.code === 'PGRST116') { 
+                console.error("No profile found for this user.");
+                showMessage("Could not find profile data.", "error");
+            } else {
+                throw error; // Other, more serious errors
+            }
+        }
+        
+        if (profile) {
+            document.getElementById('display-fullname').textContent = profile.full_name || 'N/A';
+            document.getElementById('display-phone').textContent = profile.phone_number || 'N/A';
+            document.getElementById('display-dob').textContent = profile.dob || 'N/A';
+            document.getElementById('display-address').textContent = profile.address || 'N/A';
+            const cityPincode = [profile.city, profile.pincode].filter(Boolean).join(', ');
+            document.getElementById('display-city-pincode').textContent = cityPincode || 'N/A';
+            document.getElementById('display-emergency1').textContent = profile.emergency_contact_1 || 'N/A';
+            document.getElementById('display-emergency2').textContent = profile.emergency_contact_2 || 'N/A';
+            document.getElementById('display-medical').textContent = profile.medical_conditions || 'None specified';
+        }
+    } catch (error) {
+        console.error("Error initializing profile page:", error);
         showMessage("Could not load profile data.", "error");
-        return;
-    }
-    
-    if (profile) {
-        document.getElementById('display-fullname').textContent = profile.full_name || 'N/A';
-        document.getElementById('display-phone').textContent = profile.phone_number || 'N/A';
-        document.getElementById('display-dob').textContent = profile.dob || 'N/A';
-        document.getElementById('display-address').textContent = profile.address || 'N/A';
-        const cityPincode = [profile.city, profile.pincode].filter(Boolean).join(', ');
-        document.getElementById('display-city-pincode').textContent = cityPincode || 'N/A';
-        document.getElementById('display-emergency1').textContent = profile.emergency_contact_1 || 'N/A';
-        document.getElementById('display-emergency2').textContent = profile.emergency_contact_2 || 'N/A';
-        document.getElementById('display-medical').textContent = profile.medical_conditions || 'None specified';
     }
 }
 
@@ -156,17 +174,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const drawerBackdrop = document.getElementById('drawerBackdrop');
     const logoutButton = document.getElementById('logoutButton');
 
-    if (menuButton) menuButton.onclick = () => {
-        sideDrawer.classList.add('open');
-        drawerBackdrop.classList.add('active');
+    const toggleDrawer = (open) => {
+        sideDrawer.classList.toggle('open', open);
+        drawerBackdrop.classList.toggle('active', open);
     };
-    if (closeDrawer) closeDrawer.onclick = () => {
-        sideDrawer.classList.remove('open');
-        drawerBackdrop.classList.remove('active');
-    };
-    if (drawerBackdrop) drawerBackdrop.onclick = () => {
-        sideDrawer.classList.remove('open');
-        drawerBackdrop.classList.remove('active');
-    };
+
+    if (menuButton) menuButton.onclick = () => toggleDrawer(true);
+    if (closeDrawer) closeDrawer.onclick = () => toggleDrawer(false);
+    if (drawerBackdrop) drawerBackdrop.onclick = () => toggleDrawer(false);
     if(logoutButton) logoutButton.onclick = handleLogout;
 });

@@ -9,7 +9,7 @@
     --border-color: #e2e8f0;
     --success-color: #4caf50;
     --error-color: #f44336;
-    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 html {
@@ -24,7 +24,7 @@ body {
     font-family: var(--font-family);
     background-color: var(--background-light);
     color: var(--text-dark);
-    font-size: 16px; /* Base font size for rem units */
+    font-size: 16px;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -34,10 +34,10 @@ body {
 .app-container {
     max-width: 500px;
     margin: 0 auto;
-    padding: 80px 1rem 2rem; /* Top padding for header, bottom padding for content */
+    padding: 80px 1rem 2rem;
 }
 
-.login-page, .register-page {
+.auth-page {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -76,6 +76,7 @@ body {
     font-size: 1.75rem;
     cursor: pointer;
     padding: 0.5rem;
+    z-index: 101;
 }
 
 /* === CARDS (FOR FORMS & PROFILE) === */
@@ -111,11 +112,13 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     transition: border-color 0.2s, box-shadow 0.2s;
+    background-color: #f9fafb;
 }
 .form-group input:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.2);
+    background-color: #fff;
 }
 .form-link {
     text-align: center;
@@ -152,14 +155,14 @@ body {
     transform: scale(0.98);
 }
 
-/* === SIDE DRAWER (WIDER & STYLED) === */
+/* === SIDE DRAWER === */
 .side-drawer {
     position: fixed;
     top: 0;
     left: 0;
     height: 100%;
     width: 80%;
-    max-width: 300px; /* Wider drawer */
+    max-width: 300px;
     background: #fff;
     box-shadow: 4px 0 15px rgba(0,0,0,0.15);
     transform: translateX(-100%);
@@ -178,6 +181,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    height: 60px;
 }
 .drawer-header h3 {
     margin: 0;
@@ -217,6 +221,7 @@ body {
     background-color: var(--background-light);
 }
 .logout-link {
+    margin-top: auto;
     color: var(--error-color);
     font-weight: 700;
 }
@@ -264,7 +269,7 @@ body {
     color: var(--primary-color);
     margin: 2rem 0 0.5rem;
     padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--primary-color);
+    border-bottom: 2px solid var(--border-color);
 }
 
 /* === HOME PAGE === */
@@ -272,7 +277,7 @@ body {
     background: var(--card-background);
     border-radius: 12px;
     padding: 1.5rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     text-align: center;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     border: 1px solid var(--border-color);
@@ -289,14 +294,17 @@ body {
 .home-card p {
     color: var(--text-light);
     margin-bottom: 1.5rem;
+    font-size: 1rem;
 }
 
 /* === MESSAGE BOX === */
 .custom-message-box {
     position: fixed;
     bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 1rem;
+    right: 1rem;
+    margin: 0 auto;
+    max-width: 500px;
     padding: 1rem 1.5rem;
     border-radius: 8px;
     color: white;
@@ -305,27 +313,13 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     z-index: 2000;
     opacity: 0;
+    transform: translateY(20px);
     transition: opacity 0.3s, transform 0.3s;
     pointer-events: none;
 }
 .custom-message-box.show {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
 }
 .custom-message-box.success { background-color: var(--success-color); }
 .custom-message-box.error { background-color: var(--error-color); }
-
-/* === PWA INSTALL PROMPT (Styled to match UI) === */
-.pwa-modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6);
-    display: flex; justify-content: center; align-items: center; z-index: 5000;
-}
-.pwa-modal-content {
-    background: white; padding: 2rem; margin: 1rem; border-radius: 12px;
-    text-align: center; max-width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-}
-.pwa-icon { font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem; }
-.pwa-modal-content h2 { font-size: 1.5rem; margin: 0 0 0.5rem; }
-.pwa-modal-content p { color: var(--text-light); margin-bottom: 1.5rem; }
-.pwa-dismiss-btn { background: var(--border-color); color: var(--text-dark); }
