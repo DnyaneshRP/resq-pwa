@@ -25,7 +25,8 @@ body {
     max-width: 450px; 
     width: 100%;
     margin: 0 auto;
-    padding: 0;
+    /* FIX: Added horizontal padding for screen margins */
+    padding: 0 15px; 
     padding-top: 70px; /* Space for fixed header on protected pages */
     box-sizing: border-box;
 }
@@ -41,64 +42,56 @@ body {
     top: 0;
     left: 0;
     width: 100%;
-    background-color: #d32f2f; /* Primary App Color: Red */
+    background-color: #d32f2f; /* Primary red color */
     color: white;
-    padding: 15px 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 15px 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 10;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    z-index: 100;
     box-sizing: border-box;
+    max-width: 450px; /* Match max-width of .app for centering */
+    margin: 0 auto; /* Center header */
 }
 
 .header h2 {
-    margin: 0;
+    margin: 0 auto;
     font-size: 1.2em;
-    font-weight: 600;
-    flex-grow: 1; /* Pushes content to the right of the hamburger */
-    text-align: center;
-    padding-right: 40px; /* Counteracts hamburger size for better centering */
+    font-weight: 500;
 }
 
 .hamburger {
     cursor: pointer;
     font-size: 1.5em;
-    padding: 0 10px 0 0;
-    display: flex;
-    align-items: center;
 }
 
-/* ------------------------------------------- */
-/* --- Form Styles --- */
-/* ------------------------------------------- */
-.form-container {
+/* Form Styles */
+.form-container, .profile-info {
     background-color: white;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    box-sizing: border-box;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 25px;
 }
 
 .form-container h1 {
     font-size: 1.8em;
-    color: #d32f2f;
-    margin-bottom: 25px;
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
     text-align: center;
-    font-weight: 700;
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
-    color: #444;
-    font-size: 0.95em;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9em;
 }
 
 .form-group input, .form-group textarea {
@@ -106,62 +99,39 @@ body {
     padding: 12px;
     border: 1px solid #ccc;
     border-radius: 8px;
-    box-sizing: border-box;
     font-size: 1em;
-    transition: border-color 0.3s, box-shadow 0.3s;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
 }
 
 .form-group input:focus, .form-group textarea:focus {
     border-color: #d32f2f;
-    box-shadow: 0 0 5px rgba(211, 47, 47, 0.3);
     outline: none;
+    box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.2);
 }
 
-.form-group textarea {
-    resize: vertical;
-    min-height: 100px;
-}
-
-/* Button Styles */
-button[type="submit"], .action-btn {
+button {
     width: 100%;
     padding: 15px;
-    background-color: #d32f2f; /* Primary color */
+    background-color: #d32f2f; /* Primary red */
     color: white;
     border: none;
     border-radius: 8px;
-    cursor: pointer;
     font-size: 1.1em;
     font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
     margin-top: 10px;
-    transition: background-color 0.3s, transform 0.1s;
 }
 
-button[type="submit"]:hover, .action-btn:hover {
-    background-color: #b71c1c; /* Slightly darker red */
+button:hover {
+    background-color: #b71c1c; /* Darker red on hover */
 }
 
-button[type="submit"]:active, .action-btn:active {
-    transform: scale(0.98);
+button:active {
+    transform: scale(0.99);
 }
 
-.secondary-btn {
-    background-color: #1976d2; /* Blue for secondary actions */
-}
-
-.secondary-btn:hover {
-    background-color: #1565c0;
-}
-
-.tertiary-btn {
-    background-color: #388e3c; /* Green for tertiary info */
-}
-
-.tertiary-btn:hover {
-    background-color: #2e7d32;
-}
-
-/* Link in forms */
 .text-center {
     text-align: center;
     margin-top: 20px;
@@ -174,124 +144,56 @@ button[type="submit"]:active, .action-btn:active {
     font-weight: 600;
 }
 
-/* ------------------------------------------- */
-/* --- Dashboard/Home Page Styles --- */
-/* ------------------------------------------- */
-
-.app h1 {
-    font-size: 1.8em;
-    color: #333;
-    margin-bottom: 25px;
-    font-weight: 700;
-}
-
-.dashboard-card {
-    background-color: white;
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    margin-bottom: 20px;
+/* Home Page Specific Styles */
+.quick-action-button {
+    background-color: #d32f2f;
+    color: white;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    border-radius: 15px;
+    text-decoration: none;
+    text-align: center;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(211, 47, 47, 0.3);
+    transition: background-color 0.2s;
 }
 
-.card-icon {
-    font-size: 2.5em;
+.quick-action-button i {
+    font-size: 3em;
     margin-bottom: 10px;
 }
 
-.action-report .card-icon { color: #d32f2f; }
-.action-profile .card-icon { color: #1976d2; }
-.info-alerts .card-icon { color: #388e3c; }
-
-.dashboard-card h2 {
-    font-size: 1.3em;
-    margin: 0 0 10px 0;
+.quick-action-button span {
+    font-size: 1.2em;
     font-weight: 600;
 }
 
-.dashboard-card p {
-    font-size: 0.95em;
-    color: #666;
-    margin-bottom: 15px;
-    flex-grow: 1;
-}
-
-.dashboard-card .action-btn {
-    margin-top: 0;
-}
-
-/* ------------------------------------------- */
-/* --- Profile/About Page Styles --- */
-/* ------------------------------------------- */
-.profile-info {
-    background-color: white;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    margin-bottom: 20px;
-}
-
-.profile-info h2 {
-    font-size: 1.3em;
-    color: #d32f2f;
+.action-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
     margin-top: 20px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid #eee;
 }
 
-.profile-info p {
-    font-size: 0.95em;
-    margin: 10px 0;
-    color: #333;
-}
-
-.profile-info strong {
-    font-weight: 600;
-    color: #000;
-}
-
-.profile-status {
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 5px;
-    font-size: 0.9em;
-}
-
-.online-status {
-    color: #388e3c;
-    background-color: #e8f5e9;
-}
-
-.small-text {
-    font-size: 0.85em;
-    color: #999;
-    margin-top: 15px;
-}
-
-
-/* ------------------------------------------- */
-/* --- SIDE DRAWER --- */
-/* ------------------------------------------- */
+/* Drawer Styles */
 .side-drawer {
     position: fixed;
     top: 0;
     left: 0;
-    width: 80%; /* Takes 80% of the screen width */
-    max-width: 300px;
     height: 100%;
-    background-color: white;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-    transform: translateX(-100%); /* Start off-screen */
+    width: 250px;
+    background-color: #fff;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+    transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
-    z-index: 1000; /* Above all other content */
-    display: flex;
-    flex-direction: column;
+    z-index: 1000;
 }
 
 .side-drawer.open {
-    transform: translateX(0); /* Slide in */
+    transform: translateX(0);
 }
 
 .drawer-header {
@@ -301,36 +203,30 @@ button[type="submit"]:active, .action-btn:active {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid #b71c1c;
 }
 
 .drawer-header h3 {
     margin: 0;
     font-size: 1.1em;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
 }
 
 .close-btn {
-    font-size: 2em;
+    font-size: 1.8em;
     cursor: pointer;
-    line-height: 0.5;
-    padding: 5px;
-    margin: -5px;
+    line-height: 1;
 }
 
 .drawer-content {
-    padding: 0;
-    flex-grow: 1;
-    overflow-y: auto;
+    padding: 10px 0;
 }
 
 .drawer-link {
-    display: flex;
-    align-items: center;
+    display: block;
+    padding: 15px 20px;
     text-decoration: none;
     color: #333;
-    padding: 15px 20px;
+    font-weight: 500;
     border-bottom: 1px solid #f0f2f5;
     transition: background-color 0.2s;
 }
@@ -381,35 +277,32 @@ button[type="submit"]:active, .action-btn:active {
     left: 50%;
     transform: translateX(-50%);
     padding: 15px 25px; 
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    font-size: 1em;
+    border-radius: 8px;
+    color: white;
     font-weight: 500;
     text-align: center;
-    z-index: 1010; 
-    min-width: 280px;
-    max-width: 90%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 2000;
     transition: opacity 0.3s, transform 0.3s;
-    pointer-events: none; /* Allows clicks to pass through when hidden */
+    max-width: 90%;
+}
+
+.custom-message-box.success {
+    background-color: #4CAF50; /* Green */
+}
+
+.custom-message-box.error {
+    background-color: #f44336; /* Red */
 }
 
 .custom-message-box.hidden {
     opacity: 0;
     transform: translateX(-50%) translateY(20px);
-}
-
-.custom-message-box.success {
-    background-color: #4CAF50; /* Green */
-    color: white;
-}
-
-.custom-message-box.error {
-    background-color: #f44336; /* Red */
-    color: white;
+    pointer-events: none;
 }
 
 /* ------------------------------------------- */
-/* --- PWA INSTALL PROMPT MODAL --- */
+/* --- PWA INSTALL MODAL --- */
 /* ------------------------------------------- */
 
 .pwa-modal-overlay {
@@ -419,126 +312,43 @@ button[type="submit"]:active, .action-btn:active {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.7);
+    z-index: 5000;
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 2000;
 }
 
 .pwa-modal-content {
-    background: white;
-    padding: 30px;
+    background-color: white;
     margin: 20px;
+    padding: 30px;
     border-radius: 15px;
-    text-align: center;
     max-width: 350px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
 .pwa-icon {
     font-size: 3em;
     color: #d32f2f;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .pwa-modal-content h2 {
+    margin-top: 0;
     font-size: 1.5em;
-    margin-bottom: 10px;
-    color: #333;
-}
-
-.pwa-modal-content p {
-    font-size: 0.95em;
-    color: #666;
-    margin-bottom: 25px;
 }
 
 .pwa-install-btn {
     background-color: #d32f2f;
     color: white;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1em;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
+    margin-top: 20px;
     margin-bottom: 10px;
 }
 
 .pwa-dismiss-btn {
-    background: none;
+    background-color: #eee;
     color: #333;
     border: 1px solid #ccc;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 1em;
-    cursor: pointer;
-    width: 100%;
-}
-
-/* ------------------------------------------- */
-/* --- LOADING SPINNER --- */
-/* ------------------------------------------- */
-
-.loading-spinner {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.8);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 1100;
-    transition: opacity 0.3s;
-    opacity: 0;
-}
-
-.loading-spinner.visible {
-    display: flex;
-    opacity: 1;
-}
-
-.loading-spinner::after {
-    content: "";
-    width: 40px;
-    height: 40px;
-    border: 5px solid #d32f2f;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* ------------------------------------------- */
-/* --- Media Queries for small screens --- */
-/* ------------------------------------------- */
-@media (max-width: 480px) {
-    .app {
-        padding-top: 60px; /* Smaller space for smaller header */
-    }
-
-    .header {
-        padding: 10px 15px;
-    }
-
-    .header h2 {
-        font-size: 1.1em;
-        padding-right: 35px;
-    }
-
-    .form-container {
-        padding: 20px;
-    }
-
-    .custom-message-box {
-        bottom: 15px;
-        padding: 12px 20px;
-        font-size: 0.9em;
-    }
+    font-weight: 500;
 }

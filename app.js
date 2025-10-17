@@ -95,7 +95,6 @@ async function handleRegistration(e) {
 
         // 2. Insert profile data into the 'profiles' table
         // We use upsert here to handle cases where the RLS trigger might have already created a placeholder row.
-        // The RLS policy for INSERT will ensure the user can only insert a row with their own ID.
         const { error: profileError } = await supabase
             .from('profiles')
             .upsert({
@@ -107,7 +106,7 @@ async function handleRegistration(e) {
 
         if (profileError) {
             console.error('Profile save error:', profileError.message);
-            // NOTE: In a real app, you might want to delete the auth user if profile save fails
+            // This error should now be fixed by dropping the SQL trigger
             throw new Error("Registration succeeded but profile save failed. Please contact support.");
         }
 
@@ -179,15 +178,13 @@ async function fetchUserProfile() {
 
     try {
         // Query the 'profiles' table, secured by the RLS policy we set up.
-        // It will only return the row where the 'id' matches the authenticated user's ID.
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', user.id)
-            .single(); // Expecting only one row
+            .single(); 
 
-        // PGRST116 is the error code for 'no rows found', which is expected 
-        // if the user is logged in but hasn't fully completed their profile yet.
+        // PGRST116 is the error code for 'no rows found'
         if (error && error.code !== 'PGRST116') { 
             throw error;
         }
@@ -215,7 +212,6 @@ async function saveUserProfile(formData) {
 
     try {
         // Use upsert to insert a new row or update an existing one based on the primary key (id)
-        // The RLS policy for UPDATE/INSERT handles security.
         const { error } = await supabase
             .from('profiles')
             .upsert({

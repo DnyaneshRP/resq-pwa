@@ -34,49 +34,61 @@
   </header>
   
   <div class="app">
-    <h1>Personal & Medical Information</h1>
-    
-    <div class="profile-info">
-        <p><strong>Status:</strong> <span class="profile-status online-status"><i class="fas fa-check-circle"></i> Logged In</span></p>
-        <p><strong>User ID:</strong> <span id="displayUserId">Loading...</span></p>
-
+    <div class="form-container">
+        <h1>Update Profile</h1>
         <form id="profileForm">
-            <!-- Data will be loaded/saved here -->
+            
             <div class="form-group">
-                <label for="profileFullname">Full Name:</label>
-                <input type="text" id="profileFullname" disabled>
+                <label for="fullname">Full Name:</label>
+                <input type="text" id="fullname" required autocomplete="name">
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number:</label>
+                <input type="tel" id="phone" required autocomplete="tel">
             </div>
             
             <div class="form-group">
-                <label for="profileEmail">Email:</label>
-                <input type="email" id="profileEmail" disabled>
+                <label for="dob">Date of Birth (DOB):</label>
+                <input type="text" id="dob" placeholder="YYYY-MM-DD" autocomplete="bday">
             </div>
 
             <div class="form-group">
-                <label for="profileMedical">Medical Conditions:</label>
-                <textarea id="profileMedical" placeholder="Loading..."></textarea>
+                <label for="address">Address:</label>
+                <input type="text" id="address" required autocomplete="street-address">
             </div>
-
-            <h2>Emergency Contacts</h2>
+            
             <div class="form-group">
-                <label for="profileContact1">Contact 1 (Phone):</label>
-                <input type="tel" id="profileContact1" placeholder="Loading...">
+                <label for="city">City:</label>
+                <input type="text" id="city" required autocomplete="address-level2">
             </div>
 
             <div class="form-group">
-                <label for="profileContact2">Contact 2 (Phone):</label>
-                <input type="tel" id="profileContact2" placeholder="Loading...">
+                <label for="pincode">Pincode:</label>
+                <input type="text" id="pincode" required autocomplete="postal-code">
             </div>
 
-            <button type="submit" class="primary-btn">Save Updates (Not Yet Implemented)</button>
+            <div class="form-group">
+                <label for="emergency1">Emergency Contact 1 (Phone):</label>
+                <input type="tel" id="emergency1" required autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="emergency2">Emergency Contact 2 (Phone):</label>
+                <input type="tel" id="emergency2" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="medical">Known Medical Conditions/Allergies:</label>
+                <input type="text" id="medical" placeholder="e.g., Diabetic, Penicillin Allergy" autocomplete="off">
+            </div>
+
+            <button type="submit">Save Changes</button>
         </form>
-        <p class="small-text">Note: Data saving features are the next step after successful Supabase integration.</p>
     </div>
   </div>
   
   <div id="customMessageBox" class="custom-message-box hidden"></div>
-  <div id="loadingSpinner" class="loading-spinner"></div>
-
 
   <script type="module" src="app.js"></script>
 </body>
