@@ -1,325 +1,347 @@
-/* === GLOBAL & ROOT VARIABLES === */
-:root {
-    --primary-color: #d32f2f;
-    --primary-dark: #b71c1c;
-    --background-light: #f4f5f7;
-    --text-dark: #2d3748;
-    --text-light: #718096;
-    --card-background: #ffffff;
-    --border-color: #e2e8f0;
-    --success-color: #4caf50;
-    --error-color: #f44336;
-    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+/* Global Styles */
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f2f5; /* Light grey background for native feel */
+    color: #333;
+    -webkit-tap-highlight-color: transparent;
+    font-size: 16px; /* Base font size */
 }
 
-html {
+/* ------------------------------------------- */
+/* --- Centering Fix for Login/Register Pages (Point 1) --- */
+/* ------------------------------------------- */
+.login-page, .register-page {
+    min-height: 100vh;
+    display: flex; /* Enable Flexbox */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    padding: 20px;
     box-sizing: border-box;
 }
-*, *:before, *:after {
-    box-sizing: inherit;
-}
-
-body {
-    margin: 0;
-    font-family: var(--font-family);
-    background-color: var(--background-light);
-    color: var(--text-dark);
-    font-size: 16px;
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-/* === LAYOUT CONTAINER === */
-.app-container {
-    max-width: 500px;
+.app {
+    /* Responsive container for all pages */
+    max-width: 450px; 
+    width: 100%;
     margin: 0 auto;
-    padding: 80px 1rem 2rem;
+    padding: 0;
+    padding-top: 70px; /* Space for fixed header on protected pages */
+    box-sizing: border-box;
+}
+/* Override padding-top for login/register pages */
+.login-page .app, .register-page .app {
+    padding-top: 0;
 }
 
-.auth-page {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 1rem;
-}
 
-/* === HEADER === */
+/* Header/Navbar Styles (Native App Feel) */
 .header {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 0 1rem;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    z-index: 100;
-}
-.header h2 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-}
-.hamburger {
-    background: none;
-    border: none;
+    width: 100%;
+    background-color: #d32f2f; /* Red primary color */
     color: white;
-    font-size: 1.75rem;
+    padding: 12px 15px; /* Larger padding */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.header h2 {
+    margin: 0; 
+    font-size: 1.3em;
+    font-weight: 600;
+}
+
+.hamburger {
+    font-size: 26px; /* Larger tap target */
     cursor: pointer;
-    padding: 0.5rem;
-    z-index: 101;
+    margin-right: 15px;
+    padding: 5px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+.hamburger:active {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* === CARDS (FOR FORMS & PROFILE) === */
-.card {
-    background: var(--card-background);
-    border-radius: 12px;
-    padding: 2rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    border: 1px solid var(--border-color);
+/* Form Styles (Login/Register) */
+.form-container {
+    background-color: white;
+    padding: 30px; /* Generous padding */
+    border-radius: 16px; /* Rounded corners */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    margin-top: 0;
 }
-.card h1 {
+
+h1, h2 {
+    color: #d32f2f;
     text-align: center;
-    font-size: 1.75rem;
-    margin: 0 0 1.5rem;
-    color: var(--text-dark);
+    margin-bottom: 25px;
 }
 
-/* === FORMS & INPUTS === */
 .form-group {
-    margin-bottom: 1.25rem;
+    margin-bottom: 20px; /* Increased spacing */
 }
+
 .form-group label {
     display: block;
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--text-light);
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #555;
+    font-size: 0.9em;
 }
-.form-group input {
+
+.form-group input, .form-group select {
     width: 100%;
-    padding: 0.8rem 1rem;
-    font-size: 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    background-color: #f9fafb;
+    padding: 14px 10px; /* Taller input fields for touch */
+    border: 1px solid #ddd;
+    border-radius: 10px; /* Rounded inputs */
+    box-sizing: border-box;
+    font-size: 1em;
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
-.form-group input:focus {
-    outline: none;
-    border-color: var(--primary-color);
+
+.form-group input:focus, .form-group select:focus {
+    border-color: #d32f2f;
     box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.2);
-    background-color: #fff;
-}
-.form-link {
-    text-align: center;
-    margin-top: 1.5rem;
-    font-size: 0.95rem;
-}
-.form-link a {
-    color: var(--primary-color);
-    font-weight: 600;
-    text-decoration: none;
+    outline: none;
 }
 
-/* === BUTTONS === */
-.btn {
-    display: block;
+button {
     width: 100%;
-    padding: 1rem;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
-    margin-top: 1.5rem;
-}
-.btn-primary {
-    background-color: var(--primary-color);
+    padding: 18px; /* Large, easy-to-tap button */
+    background-color: #d32f2f;
     color: white;
-}
-.btn-primary:hover {
-    background-color: var(--primary-dark);
-}
-.btn:active {
-    transform: scale(0.98);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: 700;
+    transition: background-color 0.3s, transform 0.1s;
+    margin-top: 25px;
+    box-shadow: 0 5px #a00; /* Subtle 3D effect */
 }
 
-/* === SIDE DRAWER === */
+button:active {
+    background-color: #a00;
+    transform: translateY(3px);
+    box-shadow: 0 2px #a00;
+}
+
+.text-center {
+    text-align: center;
+    margin-top: 25px;
+}
+
+.text-center a {
+    color: #d32f2f;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* Protected Page Content Styles */
+.app > h1 {
+    font-size: 1.8em;
+    text-align: left;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    padding: 0 15px; 
+}
+.app > p {
+    font-size: 1em;
+    color: #666;
+    margin-bottom: 10px;
+    padding: 0 15px;
+}
+
+/* Profile/About Page Container Styles */
+.profile-info {
+    background-color: white;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    margin: 20px 15px; 
+    font-size: 1em; 
+}
+
+.profile-item {
+    padding: 12px 0; 
+    border-bottom: 1px solid #eee;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.profile-item:last-child {
+    border-bottom: none;
+}
+
+.profile-label {
+    font-weight: 600;
+    color: #444;
+    min-width: 130px;
+    margin-right: 15px;
+}
+
+.profile-value {
+    flex-grow: 1;
+    text-align: right;
+    color: #333;
+    font-weight: 400;
+}
+
+/* List styles for About page */
+.profile-info ul {
+    list-style: disc inside;
+    padding-left: 0;
+    margin-top: 15px;
+    line-height: 1.5;
+}
+.profile-info li {
+    margin-bottom: 8px;
+    color: #555;
+}
+
+
+/* ------------------------------------------- */
+/* --- SLIDE-OUT DRAWER STYLES --- */
+/* ------------------------------------------- */
+
 .side-drawer {
     position: fixed;
     top: 0;
     left: 0;
-    height: 100%;
-    width: 80%;
-    max-width: 300px;
-    background: #fff;
-    box-shadow: 4px 0 15px rgba(0,0,0,0.15);
+    height: 100%; 
+    width: 80%; 
+    max-width: 320px; 
+    background-color: white;
+    box-shadow: 2px 0 15px rgba(0,0,0,0.5);
+    z-index: 1000; 
+    overflow-y: auto;
     transform: translateX(-100%);
-    transition: transform 0.3s ease-in-out;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1); 
 }
+
 .side-drawer.open {
     transform: translateX(0);
 }
+
 .drawer-header {
-    background: var(--primary-color);
+    background-color: #d32f2f;
     color: white;
-    padding: 1rem 1.25rem;
+    padding: 20px; 
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    height: 60px;
+    align-items: center;
+    font-size: 1.2em;
 }
-.drawer-header h3 {
-    margin: 0;
-    font-size: 1.2rem;
-    font-weight: 600;
-}
+
 .close-btn {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 2rem;
+    font-size: 36px;
     cursor: pointer;
     line-height: 1;
+    color: white;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
 }
+
 .drawer-content {
-    padding: 1rem 0;
-    flex-grow: 1;
+    padding-top: 5px;
 }
+
 .drawer-link {
     display: flex;
     align-items: center;
-    padding: 1rem 1.25rem;
+    padding: 18px 20px; /* Taller touch targets */
     text-decoration: none;
-    color: var(--text-dark);
-    font-weight: 500;
-    font-size: 1.1rem;
+    color: #333;
+    font-size: 1.1em;
+    border-bottom: 1px solid #f0f2f5;
     transition: background-color 0.2s;
 }
 .drawer-link i {
-    margin-right: 1.25rem;
-    color: var(--text-light);
-    font-size: 1.4rem;
-    width: 30px;
-    text-align: center;
+    margin-right: 15px;
+    color: #d32f2f;
+    font-size: 1.2em;
 }
-.drawer-link:hover {
-    background-color: var(--background-light);
+
+.drawer-link:hover, .drawer-link:active {
+    background-color: #f5f5f5;
 }
+
 .logout-link {
-    margin-top: auto;
-    color: var(--error-color);
-    font-weight: 700;
+    color: #d32f2f !important;
+    font-weight: 600;
 }
 .logout-link i {
-    color: var(--error-color);
+    color: #d32f2f;
 }
+
+/* Overlay Backdrop */
 .drawer-backdrop {
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 999;
-    opacity: 0;
+    background-color: rgba(0, 0, 0, 0.6); 
+    z-index: 999; 
+    opacity: 0; 
     transition: opacity 0.3s ease-in-out;
-    pointer-events: none;
 }
+
 .drawer-backdrop.active {
+    display: block;
     opacity: 1;
-    pointer-events: auto;
 }
 
-/* === PROFILE DISPLAY PAGE === */
-.info-group {
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border-color);
-}
-.info-group:last-child {
-    border-bottom: none;
-}
-.info-group label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-light);
-    margin: 0 0 0.25rem;
-}
-.info-value {
-    font-size: 1.1rem;
-    color: var(--text-dark);
-    font-weight: 500;
-}
-.section-header {
-    font-size: 1.25rem;
-    color: var(--primary-color);
-    margin: 2rem 0 0.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--border-color);
-}
+/* ------------------------------------------- */
+/* --- CUSTOM MESSAGE BOX --- */
+/* ------------------------------------------- */
 
-/* === HOME PAGE === */
-.home-card {
-    background: var(--card-background);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    border: 1px solid var(--border-color);
-}
-.home-card .card-icon {
-    font-size: 3rem;
-    color: var(--primary-color);
-    margin-bottom: 0.5rem;
-}
-.home-card h2 {
-    font-size: 1.5rem;
-    margin: 0.5rem 0;
-}
-.home-card p {
-    color: var(--text-light);
-    margin-bottom: 1.5rem;
-    font-size: 1rem;
-}
-
-/* === MESSAGE BOX === */
 .custom-message-box {
     position: fixed;
-    bottom: 20px;
-    left: 1rem;
-    right: 1rem;
-    margin: 0 auto;
-    max-width: 500px;
-    padding: 1rem 1.5rem;
-    border-radius: 8px;
+    bottom: 30px; 
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 25px; 
+    border-radius: 10px;
     color: white;
     font-weight: 600;
-    text-align: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     z-index: 2000;
     opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.3s, transform 0.3s;
-    pointer-events: none;
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+    min-width: 280px;
+    text-align: center;
+    font-size: 1em;
 }
+
 .custom-message-box.show {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(-50%) translateY(0);
 }
-.custom-message-box.success { background-color: var(--success-color); }
-.custom-message-box.error { background-color: var(--error-color); }
+
+.custom-message-box.success {
+    background-color: #4CAF50;
+}
+
+.custom-message-box.error {
+    background-color: #f44336;
+}
+
+.custom-message-box.hidden {
+    display: none;
+}
+
+
+
+
+
