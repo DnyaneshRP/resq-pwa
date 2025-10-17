@@ -34,15 +34,49 @@
   </header>
   
   <div class="app">
-    <h1>Personal Information</h1>
+    <h1>Personal & Medical Information</h1>
     
-    <div id="profileDetails" class="profile-info">
-        <p>Loading user data...</p>
-    </div>
+    <div class="profile-info">
+        <p><strong>Status:</strong> <span class="profile-status online-status"><i class="fas fa-check-circle"></i> Logged In</span></p>
+        <p><strong>User ID:</strong> <span id="displayUserId">Loading...</span></p>
 
+        <form id="profileForm">
+            <!-- Data will be loaded/saved here -->
+            <div class="form-group">
+                <label for="profileFullname">Full Name:</label>
+                <input type="text" id="profileFullname" disabled>
+            </div>
+            
+            <div class="form-group">
+                <label for="profileEmail">Email:</label>
+                <input type="email" id="profileEmail" disabled>
+            </div>
+
+            <div class="form-group">
+                <label for="profileMedical">Medical Conditions:</label>
+                <textarea id="profileMedical" placeholder="Loading..."></textarea>
+            </div>
+
+            <h2>Emergency Contacts</h2>
+            <div class="form-group">
+                <label for="profileContact1">Contact 1 (Phone):</label>
+                <input type="tel" id="profileContact1" placeholder="Loading...">
+            </div>
+
+            <div class="form-group">
+                <label for="profileContact2">Contact 2 (Phone):</label>
+                <input type="tel" id="profileContact2" placeholder="Loading...">
+            </div>
+
+            <button type="submit" class="primary-btn">Save Updates (Not Yet Implemented)</button>
+        </form>
+        <p class="small-text">Note: Data saving features are the next step after successful Supabase integration.</p>
+    </div>
   </div>
   
   <div id="customMessageBox" class="custom-message-box hidden"></div>
+  <div id="loadingSpinner" class="loading-spinner"></div>
+
 
   <script type="module" src="app.js"></script>
 </body>

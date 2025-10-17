@@ -1,250 +1,318 @@
-// --- Firebase SDK Imports ---
-// These lines import the necessary functions from the Firebase SDK.
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+// --- Supabase SDK Import ---
+// We use the @supabase/supabase-js library from a CDN.
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 // =================================================================
-// YOUR FIREBASE CONFIGURATION (ALREADY PASTED IN)
+// YOUR SUPABASE CONFIGURATION
 // =================================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyCQg7G0bhU6w65nPhxnr_DjnSpmJY55Iww",
-  authDomain: "resq-pwa-backend.firebaseapp.com",
-  projectId: "resq-pwa-backend",
-  storageBucket: "resq-pwa-backend.appspot.com",
-  messagingSenderId: "615234174517",
-  appId: "1:615234174517:web:76523a6e0d6d0feb813b7c"
-};
+// IMPORTANT: These keys are pulled from your Supabase Project Dashboard
+const SUPABASE_URL = "https://eluzuaqbuvnsrtqfjntj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsdXp1YXFidXZuc3J0cWZqbnRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1ODI5OTgsImV4cCI6MjA3NjE1ODk5OH0.J_qEz3mQZoXsZGSIkQ5UDq-bmgFCNh8MkrzoLg0-YtU";
 // =================================================================
 
-// --- Initialize Firebase Services ---
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// --- Initialize Supabase Client ---
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- Global Utility: Custom Message Box ---
-function showMessage(message, type = 'success', duration = 3000) {
-    const messageBox = document.getElementById('customMessageBox');
-    if (!messageBox) return;
-
-    messageBox.className = `custom-message-box hidden ${type}`;
-    messageBox.textContent = message;
-
+// --- Global Utility: Custom Message Box (Unchanged) ---
+function showMessage(message, type = 'success') {
+    const box = document.getElementById('customMessageBox');
+    box.textContent = message;
+    box.className = `custom-message-box ${type}`;
+    box.classList.remove('hidden');
     setTimeout(() => {
-        messageBox.classList.remove('hidden');
-        messageBox.classList.add('show');
-    }, 10); 
-
-    setTimeout(() => {
-        messageBox.classList.remove('show');
-        setTimeout(() => {
-             messageBox.classList.add('hidden');
-        }, 300);
-    }, duration);
+        box.classList.add('hidden');
+    }, 3000);
 }
 
-// --- CORE NAVIGATION & AUTH STATE ---
-// This function runs automatically whenever a user logs in or out.
-onAuthStateChanged(auth, user => {
-    const isLoggedIn = !!user; // true if a user object exists, false otherwise
-    const currentPagePath = window.location.pathname.split('/').pop() || 'index.html';
-    
-    const protectedPages = ['home.html', 'profile.html', 'about.html']; 
-    const loginPages = ['index.html', 'register.html'];
+// --- Navigation Utilities (Unchanged) ---
+function navigateTo(path) {
+    window.location.href = path;
+}
 
-    if (isLoggedIn && loginPages.includes(currentPagePath)) {
-        // If a logged-in user tries to access a login page, redirect them to home.
-        window.location.replace('home.html'); // Use replace to prevent back navigation
-    } 
-    else if (!isLoggedIn && protectedPages.includes(currentPagePath)) {
-        // If a logged-out user tries to access a protected page, redirect them to the login page.
-        window.location.replace('index.html');
-    }
+// --- Authentication State Management ---
+// We use onAuthStateChange to monitor the user's login status in real-time.
+supabase.auth.onAuthStateChange((event, session) => {
+    console.log('Supabase Auth Event:', event);
+    const isAuthenticated = !!session;
+    const isLoginOrRegister = window.location.pathname.includes('index.html') || window.location.pathname.includes('register.html');
     
-    // If the user is logged in and on a protected page, update the drawer name.
-    if (isLoggedIn && protectedPages.includes(currentPagePath)) {
-        setDrawerHeaderName(user.uid);
+    // Logic to redirect unauthenticated users away from protected pages
+    if (isAuthenticated) {
+        if (isLoginOrRegister) {
+            navigateTo('home.html');
+        }
+    } else {
+        if (!isLoginOrRegister) {
+            // Only redirect if not already on the login page
+            navigateTo('index.html');
+        }
+    }
+
+    // Update drawer header with user email if available
+    const drawerTitle = document.getElementById('drawerTitle');
+    if (drawerTitle) {
+        // Use optional chaining for safety
+        drawerTitle.textContent = session?.user?.email || 'ResQ Menu';
     }
 });
 
-// --- REGISTRATION LOGIC (Firebase Auth + Firestore) ---
-const registerForm = document.getElementById('registerForm');
-if (registerForm) {
-    registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        
-        try {
-            // Step 1: Create the user in Firebase Authentication.
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
 
-            // Step 2: Create the profile data object from the form.
-            const userProfileData = {
-              uid: user.uid, // Store the unique user ID from Firebase Auth
-              fullname: document.getElementById('fullname').value,
-              email: email,
-              phone: document.getElementById('phone').value,
-              dob: document.getElementById('dob').value,
-              gender: document.getElementById('gender').value,
-              bloodgrp: document.getElementById('bloodgrp').value,
-              address: document.getElementById('address').value,
-              city: document.getElementById('city').value,
-              pincode: document.getElementById('pincode').value,
-              emergency1: document.getElementById('emergency1').value,
-              emergency2: document.getElementById('emergency2').value,
-              medical: document.getElementById('medical').value
-            };
+// =================================================================
+// SUPABASE AUTHENTICATION FUNCTIONS
+// =================================================================
 
-            // Step 3: Save this profile data to our Firestore database in a "users" collection.
-            await setDoc(doc(db, "users", user.uid), userProfileData);
-
-            showMessage("Registration successful! Please login.", 'success');
-            setTimeout(() => {
-                window.location.href = "index.html";
-            }, 1500);
-
-        } catch (error) {
-            console.error("Registration Error:", error);
-            // Provide a user-friendly error message, e.g., "auth/email-already-in-use".
-            showMessage(`Registration Failed: ${error.code}`, 'error');
-        }
-    });
-}
-
-// --- LOGIN LOGIC (Firebase Auth) ---
-const loginForm = document.getElementById('loginForm');
-if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-
-        try {
-            // This securely signs the user in using Firebase.
-            await signInWithEmailAndPassword(auth, email, password);
-            showMessage("Login successful!", 'success');
-            // The onAuthStateChanged function above will automatically handle the redirect to home.html.
-        } catch (error) {
-            console.error("Login Error:", error);
-            showMessage("Login Failed: Invalid email or password.", 'error');
-        }
-    });
-}
-
-// --- PROFILE PAGE LOGIC (Read from Firestore) ---
-const profileDetails = document.getElementById('profileDetails');
-if (profileDetails) {
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            // If a user is logged in, fetch their specific document from the "users" collection in Firestore.
-            const docRef = doc(db, "users", user.uid);
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                // If the document exists, display the data using the renderProfile function.
-                renderProfile(docSnap.data());
-            } else {
-                profileDetails.innerHTML = "<p>No profile data found. Please complete your registration.</p>";
-            }
-        }
-    });
-}
-
-function renderProfile(user) {
-    profileDetails.innerHTML = '';
-    const fields = [
-        { label: 'Full Name', key: 'fullname' },
-        { label: 'Email', key: 'email' },
-        { label: 'Phone Number', key: 'phone' },
-        { label: 'Date of Birth', key: 'dob' },
-        { label: 'Gender', key: 'gender' },
-        { label: 'Blood Group', key: 'bloodgrp' },
-        { label: 'Address', key: 'address' },
-        { label: 'City', key: 'city' },
-        { label: 'Pincode', key: 'pincode' },
-        { label: 'Emergency Contact 1', key: 'emergency1' },
-        { label: 'Emergency Contact 2', key: 'emergency2' },
-        { label: 'Medical Conditions', key: 'medical' }
-    ];
-    fields.forEach(field => {
-        if (user[field.key]) {
-            const item = document.createElement('div');
-            item.classList.add('profile-item');
-            item.innerHTML = `
-                <span class="profile-label">${field.label}:</span>
-                <span class="profile-value">${user[field.key]}</span>
-            `;
-            profileDetails.appendChild(item);
-        }
-    });
-}
-
-
-// --- DRAWER & LOGOUT LOGIC (Firebase Auth) ---
-const menuButton = document.getElementById('menuButton');
-const sideDrawer = document.getElementById('sideDrawer');
-const closeDrawer = document.getElementById('closeDrawer');
-const logoutButton = document.getElementById('logoutButton');
-const backdrop = document.getElementById('drawerBackdrop');
-
-async function setDrawerHeaderName(uid) {
-    const drawerTitleElement = document.getElementById('drawerTitle');
-    if (!drawerTitleElement) return;
-
-    // Fetch the user's profile from Firestore to get their name.
-    const docRef = doc(db, "users", uid);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-        const userData = docSnap.data();
-        const firstName = userData.fullname.split(' ')[0];
-        drawerTitleElement.textContent = `Hi ${firstName}!`;
-    }
-}
-
-if (menuButton) {
-    // This is your existing, working drawer logic.
-    function toggleDrawer() {
-        sideDrawer.classList.toggle('open');
-        backdrop.classList.toggle('active');
-        document.body.style.overflowY = sideDrawer.classList.contains('open') ? 'hidden' : 'auto';
-    }
-    menuButton.addEventListener('click', toggleDrawer);
-    closeDrawer.addEventListener('click', toggleDrawer);
-    backdrop.addEventListener('click', toggleDrawer);
-
-    logoutButton.addEventListener('click', async (e) => {
-        e.preventDefault();
-        try {
-            // This signs the user out of their Firebase session.
-            await signOut(auth);
-            showMessage("Logged out successfully.", 'success');
-            // The onAuthStateChanged function will automatically handle the redirect to index.html.
-        } catch (error) {
-            showMessage("Logout failed. Please try again.", 'error');
-        }
-    });
-}
-
-
-// --- Helper Functions (Date input, PWA Install Prompt) ---
-// These are unchanged and placed at the end for clarity.
-const dobInput = document.getElementById('dob');
-if (dobInput) {
-    dobInput.addEventListener('focus', () => { dobInput.type = 'date'; dobInput.removeAttribute('placeholder'); });
-    dobInput.addEventListener('blur', () => { if (!dobInput.value) { dobInput.type = 'text'; dobInput.setAttribute('placeholder', 'DD/MM/YYYY'); } });
-}
-
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
+/**
+ * Handles user registration with Supabase Auth and saves profile data.
+ * @param {Event} e The form submit event.
+ */
+async function handleRegistration(e) {
     e.preventDefault();
-    deferredPrompt = e;
-    if (localStorage.getItem('pwaPromptShown') !== 'true' && !window.matchMedia('(display-mode: standalone)').matches) {
-        showInstallPromotionModal(); 
+    const form = e.target;
+    const email = form.email.value;
+    const password = form.password.value;
+
+    // Data to save to the 'profiles' table after successful auth
+    const profileData = {
+        full_name: form.fullname.value,
+        phone_number: form.phone.value,
+        dob: form.dob.value || null, // Supabase expects null for empty dates
+        address: form.address.value,
+        city: form.city.value,
+        pincode: form.pincode.value,
+        emergency_contact_1: form.emergency1.value,
+        emergency_contact_2: form.emergency2.value,
+        medical_conditions: form.medical.value,
+    };
+
+    try {
+        // 1. Sign up the user (creates the user in auth.users)
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+            email,
+            password,
+        });
+
+        if (authError) throw authError;
+
+        // 2. Insert profile data into the 'profiles' table
+        // We use upsert here to handle cases where the RLS trigger might have already created a placeholder row.
+        // The RLS policy for INSERT will ensure the user can only insert a row with their own ID.
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+                id: authData.user.id, // Link to the Auth user's ID
+                ...profileData
+            }, { 
+                onConflict: 'id' // Conflict strategy is to update on matching ID
+            });
+
+        if (profileError) {
+            console.error('Profile save error:', profileError.message);
+            // NOTE: In a real app, you might want to delete the auth user if profile save fails
+            throw new Error("Registration succeeded but profile save failed. Please contact support.");
+        }
+
+        showMessage('Registration successful! Redirecting...', 'success');
+        // Redirection handled by the onAuthStateChange listener
+    } catch (error) {
+        console.error('Registration failed:', error.message);
+        showMessage(error.message, 'error');
     }
+}
+
+/**
+ * Handles user login.
+ * @param {Event} e The form submit event.
+ */
+async function handleLogin(e) {
+    e.preventDefault();
+    const form = e.target;
+    const email = form.username.value;
+    const password = form.password.value;
+
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (error) throw error;
+        
+        showMessage('Login successful! Welcome back.', 'success');
+        // Redirection handled by the onAuthStateChange listener
+    } catch (error) {
+        console.error('Login failed:', error.message);
+        showMessage(error.message, 'error');
+    }
+}
+
+/**
+ * Handles user logout.
+ */
+async function handleLogout() {
+    try {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+        showMessage('You have been logged out.', 'success');
+        // Redirection handled by the onAuthStateChange listener
+    } catch (error) {
+        console.error('Logout failed:', error.message);
+        showMessage('Logout failed.', 'error');
+    }
+}
+
+
+// =================================================================
+// SUPABASE DATABASE FUNCTIONS (FOR PROFILE DATA)
+// =================================================================
+
+/**
+ * Fetches the current user's profile data from the 'profiles' table.
+ * @returns {Object|null} The profile object or null on error/no data.
+ */
+async function fetchUserProfile() {
+    // Get the current user session (returns null if not logged in)
+    const user = (await supabase.auth.getSession()).data.session?.user;
+    if (!user) {
+        showMessage('User not authenticated.', 'error');
+        return null;
+    }
+
+    try {
+        // Query the 'profiles' table, secured by the RLS policy we set up.
+        // It will only return the row where the 'id' matches the authenticated user's ID.
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single(); // Expecting only one row
+
+        // PGRST116 is the error code for 'no rows found', which is expected 
+        // if the user is logged in but hasn't fully completed their profile yet.
+        if (error && error.code !== 'PGRST116') { 
+            throw error;
+        }
+
+        // Return the data if found, otherwise null
+        return data; 
+
+    } catch (error) {
+        console.error('Error fetching profile:', error.message);
+        showMessage('Failed to load profile data.', 'error');
+        return null;
+    }
+}
+
+/**
+ * Saves or updates the user's profile data.
+ * @param {Object} formData The data to save.
+ */
+async function saveUserProfile(formData) {
+    const user = (await supabase.auth.getSession()).data.session?.user;
+    if (!user) {
+        showMessage('Authentication required to save data.', 'error');
+        return false;
+    }
+
+    try {
+        // Use upsert to insert a new row or update an existing one based on the primary key (id)
+        // The RLS policy for UPDATE/INSERT handles security.
+        const { error } = await supabase
+            .from('profiles')
+            .upsert({
+                ...formData,
+                id: user.id // Ensure the user ID is always included for security/linking
+            }, { 
+                onConflict: 'id' 
+            });
+
+        if (error) throw error;
+
+        showMessage('Profile saved successfully!', 'success');
+        return true;
+    } catch (error) {
+        console.error('Error saving profile:', error.message);
+        showMessage('Failed to save profile data.', 'error');
+        return false;
+    }
+}
+
+// =================================================================
+// DOM EVENT LISTENERS AND INITIALIZATION
+// =================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Register Form Listener ---
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', handleRegistration);
+        // Special handler for DOB input to ensure mobile friendliness
+        setupDOBInput(registerForm.dob);
+    }
+
+    // --- Login Form Listener ---
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+
+    // --- Logout Button Listener ---
+    const logoutButton = document.getElementById('logoutButton');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', handleLogout);
+    }
+    
+    // --- Profile Page Initialization ---
+    if (window.location.pathname.includes('profile.html')) {
+        initializeProfilePage();
+    }
+
+    // --- Menu Drawer Logic ---
+    const menuButton = document.getElementById('menuButton');
+    const closeDrawer = document.getElementById('closeDrawer');
+    const sideDrawer = document.getElementById('sideDrawer');
+    const drawerBackdrop = document.getElementById('drawerBackdrop');
+
+    if (menuButton) {
+        menuButton.addEventListener('click', () => {
+            sideDrawer.classList.add('open');
+            drawerBackdrop.classList.add('active');
+        });
+    }
+
+    if (closeDrawer || drawerBackdrop) {
+        const closeHandler = () => {
+            sideDrawer.classList.remove('open');
+            drawerBackdrop.classList.remove('active');
+        };
+        if (closeDrawer) closeDrawer.addEventListener('click', closeHandler);
+        if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeHandler);
+    }
+
+    // PWA Install Prompt Logic
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (localStorage.getItem('pwaPromptShown') !== 'true' && !window.matchMedia('(display-mode: standalone)').matches) {
+            showInstallPromotionModal(); 
+        }
+    });
 });
 
+/**
+ * Sets up the DOB input field to use the native date picker on focus.
+ */
+function setupDOBInput(dobInput) {
+    if (!dobInput) return;
+    dobInput.addEventListener('focus', () => {
+        // Change type to 'date' only on focus to trigger the native date picker
+        if (dobInput.type !== 'date') {
+            dobInput.type = 'date';
+        }
+    });
+}
+
+// --- PWA Modal and Install Logic (Unchanged) ---
 function showInstallPromotionModal() {
     localStorage.setItem('pwaPromptShown', 'true');
     const modalHtml = `
@@ -265,4 +333,51 @@ function showInstallPromotionModal() {
         pwaModal.remove();
     });
     document.getElementById('dismissButton').addEventListener('click', () => { pwaModal.remove(); });
+}
+
+
+// --- PROFILE PAGE SPECIFIC LOGIC ---
+async function initializeProfilePage() {
+    const profileForm = document.getElementById('profileForm');
+    const profileData = await fetchUserProfile();
+    
+    if (profileData && profileForm) {
+        // Populate the form fields with fetched data
+        profileForm.fullname.value = profileData.full_name || '';
+        profileForm.phone.value = profileData.phone_number || '';
+        // Supabase date format (YYYY-MM-DD) works directly with input type="date"
+        profileForm.dob.value = profileData.dob || ''; 
+        profileForm.address.value = profileData.address || '';
+        profileForm.city.value = profileData.city || '';
+        profileForm.pincode.value = profileData.pincode || '';
+        profileForm.emergency1.value = profileData.emergency_contact_1 || '';
+        profileForm.emergency2.value = profileData.emergency_contact_2 || '';
+        profileForm.medical.value = profileData.medical_conditions || '';
+    }
+
+    if (profileForm) {
+        profileForm.addEventListener('submit', handleProfileUpdate);
+        // Ensure DOB input setup on the profile page as well
+        setupDOBInput(profileForm.dob); 
+    }
+}
+
+async function handleProfileUpdate(e) {
+    e.preventDefault();
+    const form = e.target;
+    
+    // Collect data to be saved
+    const formData = {
+        full_name: form.fullname.value,
+        phone_number: form.phone.value,
+        dob: form.dob.value || null,
+        address: form.address.value,
+        city: form.city.value,
+        pincode: form.pincode.value,
+        emergency_contact_1: form.emergency1.value,
+        emergency_contact_2: form.emergency2.value,
+        medical_conditions: form.medical.value,
+    };
+
+    await saveUserProfile(formData);
 }

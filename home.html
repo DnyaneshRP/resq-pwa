@@ -34,13 +34,33 @@
   </header>
   
   <div class="app">
-    <h1>🏠 Welcome!</h1>
-    <p>Your emergency contacts are linked. Stay Safe.</p>
-    <p>This is your PWA home page, available even when offline.</p>
+    <h1>Welcome Back!</h1>
+    
+    <div class="dashboard-card action-report">
+        <i class="fas fa-bullhorn card-icon"></i>
+        <h2>Report Emergency</h2>
+        <p>Quickly report an accident, fire, or medical crisis. Your GPS location will be automatically attached.</p>
+        <button class="action-btn primary-btn">Start New Report</button>
+    </div>
+
+    <div class="dashboard-card action-profile">
+        <i class="fas fa-user-shield card-icon"></i>
+        <h2>Review Profile</h2>
+        <p>Ensure your medical details and emergency contacts are up-to-date for first responders.</p>
+        <button class="action-btn secondary-btn" onclick="window.location.href='profile.html'">Go to Profile</button>
+    </div>
+
+    <div class="dashboard-card info-alerts">
+        <i class="fas fa-bell card-icon"></i>
+        <h2>General Alerts</h2>
+        <p>View the latest broadcast alerts and safety messages from the relief management team.</p>
+        <button class="action-btn tertiary-btn">Check Alerts</button>
+    </div>
   </div>
   
   <div id="customMessageBox" class="custom-message-box hidden"></div>
-  
+  <div id="loadingSpinner" class="loading-spinner"></div>
+
   <script type="module" src="app.js"></script>
 </body>
 </html>
