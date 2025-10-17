@@ -106,7 +106,7 @@ async function checkForMissingProfile(user) {
         pincode: metadata.pincode,
         emergency1: metadata.emergency1,
         emergency2: metadata.emergency2,
-        medical: metadata.medical // This is the correct field mapping
+        medical: metadata.medical // This is the correct field mapping from metadata
     };
 
     const { error: dbError } = await supabase
@@ -129,6 +129,9 @@ if (registerForm) {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         
+        // **FIX IMPLEMENTATION:** Isolate the medical value to guarantee the source is correct
+        const medicalValue = document.getElementById('medical').value;
+
         // Stage all form data for user_metadata
         const metadata = {
           fullname: document.getElementById('fullname').value,
@@ -141,8 +144,8 @@ if (registerForm) {
           pincode: document.getElementById('pincode').value,
           emergency1: document.getElementById('emergency1').value,
           emergency2: document.getElementById('emergency2').value,
-          // THIS IS THE CORRECT SOURCE: using the input field ID 'medical'
-          medical: document.getElementById('medical').value 
+          // Use the isolated, confirmed medical value variable
+          medical: medicalValue 
         };
 
         try {
@@ -177,6 +180,7 @@ if (registerForm) {
         }
     });
 }
+
 
 // --- LOGIN LOGIC (Supabase Auth) ---
 const loginForm = document.getElementById('loginForm');
