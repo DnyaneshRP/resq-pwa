@@ -2,7 +2,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.3/+esm';
 
 // =================================================================
-// YOUR SUPABASE CONFIGURATION (REPLACE WITH YOUR KEYS)
+// YOUR SUPABASE CONFIGURATION (VERIFIED)
 // =================================================================
 const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
@@ -77,7 +77,7 @@ async function checkForMissingProfile(user) {
     const userId = user.id;
     const metadata = user.user_metadata;
     
-    // Only proceed if we have metadata to insert
+    // Only proceed if we have metadata to insert (i.e., this user went through the registration form)
     if (!metadata || !metadata.fullname) return; 
 
     // 1. Check if profile already exists in the 'profiles' table
@@ -106,7 +106,7 @@ async function checkForMissingProfile(user) {
         pincode: metadata.pincode,
         emergency1: metadata.emergency1,
         emergency2: metadata.emergency2,
-        medical: metadata.medical
+        medical: metadata.medical // This is the correct field mapping
     };
 
     const { error: dbError } = await supabase
@@ -115,7 +115,6 @@ async function checkForMissingProfile(user) {
 
     if (dbError) {
          console.error("Profile Insertion Error:", dbError);
-         // Do not show an error to the user if it's transient, but log it.
     } else {
          showMessage("User profile created in the database!", 'success');
     }
@@ -142,7 +141,7 @@ if (registerForm) {
           pincode: document.getElementById('pincode').value,
           emergency1: document.getElementById('emergency1').value,
           emergency2: document.getElementById('emergency2').value,
-          // FIX: Ensure 'medical' is sourced from the correct input field ID
+          // THIS IS THE CORRECT SOURCE: using the input field ID 'medical'
           medical: document.getElementById('medical').value 
         };
 
@@ -164,7 +163,7 @@ if (registerForm) {
                 showMessage("Registration successful! Redirecting to home...", 'success');
             } else {
                  // Confirmation email sent. 
-                showMessage("Registration successful! Check your email to confirm your account.", 'success', 5000);
+                showMessage("Registration successful! Check your email to confirm your account, then log in.", 'success', 5000);
                 
                 // FIX: Explicitly redirect to the login page (index.html)
                 setTimeout(() => {
