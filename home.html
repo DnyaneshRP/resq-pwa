@@ -2,45 +2,97 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ResQ - Home</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home - ResQ</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#d32f2f">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
-<body class="home-page">
-
-  <div id="sideDrawer" class="side-drawer">
-    <div class="drawer-header">
-        <h3 id="drawerTitle">ResQ Menu</h3>
-        <span id="closeDrawer" class="close-btn">&times;</span>
-    </div>
-    <div class="drawer-content">
-        <a href="home.html" class="drawer-link"><i class="fas fa-home fa-fw"></i> Home</a>
-        <a href="profile.html" class="drawer-link"><i class="fas fa-user fa-fw"></i> My Profile</a>
-        <a href="about.html" class="drawer-link"><i class="fas fa-info-circle fa-fw"></i> About App</a>
-        <a href="#" id="logoutButton" class="drawer-link logout-link"><i class="fas fa-sign-out-alt fa-fw"></i> Logout</a>
-    </div>
-  </div>
-  
-  <div id="drawerBackdrop" class="drawer-backdrop"></div>
-  
-  <header class="header">
-    <div class="hamburger" id="menuButton">
-        <i class="fas fa-bars"></i>
-    </div>
-    <h2>ResQ Dashboard</h2>
+<body>
+  <header>
+    <button id="menuToggle">☰</button>
+    <h1>ResQ Dashboard</h1>
   </header>
-  
-  <div class="app">
-    <h1>🏠 Welcome!</h1>
-    <p>Your emergency contacts are linked. Stay Safe.</p>
-    <p>This is your PWA home page, available even when offline.</p>
-  </div>
-  
-  <div id="customMessageBox" class="custom-message-box hidden"></div>
-  
-  <script type="module" src="app.js"></script>
+
+  <nav id="drawer" class="drawer">
+    <a href="home.html">Home</a>
+    <a href="profile.html">Profile</a>
+    <a href="about.html">About</a>
+    <a href="#" id="logoutLink">Logout</a>
+  </nav>
+
+  <main>
+    <h2>Welcome to ResQ</h2>
+    <p>Your disaster-aid companion app.</p>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+    const supabase = createClient(
+      'https://sletyixovbshfotyemly.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsZXR5aXhvdmJzaGZvdHllbWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTMyNDMsImV4cCI6MjA3NjE2OTI0M30.lb70Matfyr3pX9aXobRoozqVkOJL8b2G2Ao-cE8ESjA'
+    )
+
+    const menuButton = document.getElementById('menuToggle')
+    const drawer = document.getElementById('drawer')
+
+    menuButton.addEventListener('click', () => {
+      drawer.classList.toggle('open')
+    })
+
+    document.getElementById('logoutLink').addEventListener('click', async () => {
+      await supabase.auth.signOut()
+      window.location.href = 'index.html'
+    })
+  </script>
+
+  <style>
+    header {
+      display: flex;
+      align-items: center;
+      background: #d32f2f;
+      color: white;
+      padding: 10px 15px;
+    }
+
+    #menuToggle {
+      font-size: 24px;
+      background: none;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-right: 15px;
+    }
+
+    .drawer {
+      position: fixed;
+      top: 0;
+      left: -220px;
+      width: 220px;
+      height: 100%;
+      background: #fff;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+      padding-top: 60px;
+      transition: left 0.3s ease;
+    }
+
+    .drawer.open {
+      left: 0;
+    }
+
+    .drawer a {
+      display: block;
+      padding: 12px 18px;
+      text-decoration: none;
+      color: #333;
+    }
+
+    .drawer a:hover {
+      background: #f2f2f2;
+    }
+
+    main {
+      padding: 20px;
+    }
+  </style>
 </body>
 </html>
