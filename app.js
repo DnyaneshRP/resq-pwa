@@ -94,7 +94,7 @@ async function handleRegistration(e) {
         if (authError) throw authError;
 
         // 2. Insert profile data into the 'profiles' table
-        // We use upsert here to handle cases where the RLS trigger might have already created a placeholder row.
+        // This should succeed now that the conflicting SQL trigger is dropped.
         const { error: profileError } = await supabase
             .from('profiles')
             .upsert({
@@ -106,7 +106,6 @@ async function handleRegistration(e) {
 
         if (profileError) {
             console.error('Profile save error:', profileError.message);
-            // This error should now be fixed by dropping the SQL trigger
             throw new Error("Registration succeeded but profile save failed. Please contact support.");
         }
 
@@ -199,10 +198,7 @@ async function fetchUserProfile() {
     }
 }
 
-/**
- * Saves or updates the user's profile data.
- * @param {Object} formData The data to save.
- */
+// NOTE: The saveUserProfile function is kept but no longer called by profile.html
 async function saveUserProfile(formData) {
     const user = (await supabase.auth.getSession()).data.session?.user;
     if (!user) {
@@ -211,23 +207,19 @@ async function saveUserProfile(formData) {
     }
 
     try {
-        // Use upsert to insert a new row or update an existing one based on the primary key (id)
         const { error } = await supabase
             .from('profiles')
             .upsert({
                 ...formData,
-                id: user.id // Ensure the user ID is always included for security/linking
+                id: user.id 
             }, { 
                 onConflict: 'id' 
             });
 
         if (error) throw error;
-
-        showMessage('Profile saved successfully!', 'success');
         return true;
     } catch (error) {
         console.error('Error saving profile:', error.message);
-        showMessage('Failed to save profile data.', 'error');
         return false;
     }
 }
@@ -259,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Profile Page Initialization ---
     if (window.location.pathname.includes('profile.html')) {
-        initializeProfilePage();
+        initializeProfilePage(); // Call the new read-only initialization
     }
 
     // --- Menu Drawer Logic ---
@@ -332,48 +324,29 @@ function showInstallPromotionModal() {
 }
 
 
-// --- PROFILE PAGE SPECIFIC LOGIC ---
+// --- PROFILE PAGE SPECIFIC LOGIC (Updated to be Read-Only) ---
 async function initializeProfilePage() {
-    const profileForm = document.getElementById('profileForm');
     const profileData = await fetchUserProfile();
     
-    if (profileData && profileForm) {
-        // Populate the form fields with fetched data
-        profileForm.fullname.value = profileData.full_name || '';
-        profileForm.phone.value = profileData.phone_number || '';
-        // Supabase date format (YYYY-MM-DD) works directly with input type="date"
-        profileForm.dob.value = profileData.dob || ''; 
-        profileForm.address.value = profileData.address || '';
-        profileForm.city.value = profileData.city || '';
-        profileForm.pincode.value = profileData.pincode || '';
-        profileForm.emergency1.value = profileData.emergency_contact_1 || '';
-        profileForm.emergency2.value = profileData.emergency_contact_2 || '';
-        profileForm.medical.value = profileData.medical_conditions || '';
+    if (profileData) {
+        // Populate the display fields with fetched data
+        document.getElementById('display-fullname').textContent = profileData.full_name || 'Not provided';
+        document.getElementById('display-phone').textContent = profileData.phone_number || 'Not provided';
+        document.getElementById('display-dob').textContent = profileData.dob || 'Not provided'; 
+        document.getElementById('display-address').textContent = profileData.address || 'Not provided';
+        
+        // Combine city and pincode for a neat display
+        const cityPincode = (profileData.city || '') + (profileData.pincode ? ` (${profileData.pincode})` : '');
+        document.getElementById('display-city-pincode').textContent = cityPincode || 'Not provided';
+        
+        document.getElementById('display-emergency1').textContent = profileData.emergency_contact_1 || 'Not provided';
+        document.getElementById('display-emergency2').textContent = profileData.emergency_contact_2 || 'Not provided';
+        document.getElementById('display-medical').textContent = profileData.medical_conditions || 'None known';
+    } else {
+         // Fallback text if no data is found after login
+         // Clear all display fields to prevent 'Loading...' from remaining
+        document.querySelectorAll('.info-value').forEach(el => {
+            el.textContent = 'Data unavailable. Please register or log in again.';
+        });
     }
-
-    if (profileForm) {
-        profileForm.addEventListener('submit', handleProfileUpdate);
-        // Ensure DOB input setup on the profile page as well
-        setupDOBInput(profileForm.dob); 
-    }
-}
-
-async function handleProfileUpdate(e) {
-    e.preventDefault();
-    const form = e.target;
-    
-    // Collect data to be saved
-    const formData = {
-        full_name: form.fullname.value,
-        phone_number: form.phone.value,
-        dob: form.dob.value || null,
-        address: form.address.value,
-        city: form.city.value,
-        pincode: form.pincode.value,
-        emergency_contact_1: form.emergency1.value,
-        emergency_contact_2: form.emergency2.value,
-        medical_conditions: form.medical.value,
-    };
-
-    await saveUserProfile(formData);
 }

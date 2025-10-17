@@ -6,7 +6,7 @@ body {
     background-color: #f0f2f5; /* Light grey background for native feel */
     color: #333;
     -webkit-tap-highlight-color: transparent;
-    font-size: 16px; /* Base font size */
+    font-size: 18px; /* FIX: Increased base font size */
 }
 
 /* ------------------------------------------- */
@@ -25,7 +25,7 @@ body {
     max-width: 450px; 
     width: 100%;
     margin: 0 auto;
-    /* FIX: Added horizontal padding for screen margins */
+    /* FIX: Added 15px horizontal padding for screen margins */
     padding: 0 15px; 
     padding-top: 70px; /* Space for fixed header on protected pages */
     box-sizing: border-box;
@@ -65,8 +65,8 @@ body {
     font-size: 1.5em;
 }
 
-/* Form Styles */
-.form-container, .profile-info {
+/* Form Styles (Used for Login/Register) */
+.form-container {
     background-color: white;
     padding: 25px;
     border-radius: 12px;
@@ -209,6 +209,11 @@ button:active {
 .drawer-header h3 {
     margin: 0;
     font-size: 1.1em;
+    /* FIX: Prevent long email from overflowing drawer */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; 
+    max-width: 180px; /* Limit width of text */
 }
 
 .close-btn {
@@ -265,6 +270,57 @@ button:active {
 .drawer-backdrop.active {
     display: block;
     opacity: 1;
+}
+
+/* ------------------------------------------- */
+/* --- Profile Page Display Styles --- */
+/* ------------------------------------------- */
+
+.profile-info-display {
+    background-color: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 25px;
+}
+.profile-info-display h1 {
+    font-size: 1.6em;
+    margin-top: 0;
+    margin-bottom: 25px;
+    color: #333;
+    text-align: center;
+    border-bottom: 2px solid #f0f2f5;
+    padding-bottom: 10px;
+}
+.info-group {
+    margin-bottom: 15px;
+    padding: 10px 0;
+    border-bottom: 1px dashed #eee;
+}
+.info-group:last-of-type {
+    border-bottom: none;
+}
+.info-group label {
+    display: block;
+    margin-bottom: 3px;
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9em;
+}
+.info-value {
+    display: block;
+    font-size: 1.1em;
+    color: #111;
+    word-wrap: break-word; 
+    line-height: 1.4;
+}
+.emergency-header, .medical-header {
+    margin-top: 30px;
+    margin-bottom: 10px;
+    font-size: 1.3em;
+    color: #d32f2f;
+    border-bottom: 1px solid #d32f2f;
+    padding-bottom: 5px;
 }
 
 /* ------------------------------------------- */

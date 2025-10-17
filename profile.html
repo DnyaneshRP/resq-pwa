@@ -34,57 +34,50 @@
   </header>
   
   <div class="app">
-    <div class="form-container">
-        <h1>Update Profile</h1>
-        <form id="profileForm">
-            
-            <div class="form-group">
-                <label for="fullname">Full Name:</label>
-                <input type="text" id="fullname" required autocomplete="name">
-            </div>
+    <div class="profile-info-display">
+        <h1>My Profile Information</h1>
+        
+        <div class="info-group">
+            <label>Full Name:</label>
+            <span id="display-fullname" class="info-value">Loading...</span>
+        </div>
 
-            <div class="form-group">
-                <label for="phone">Phone Number:</label>
-                <input type="tel" id="phone" required autocomplete="tel">
-            </div>
-            
-            <div class="form-group">
-                <label for="dob">Date of Birth (DOB):</label>
-                <input type="text" id="dob" placeholder="YYYY-MM-DD" autocomplete="bday">
-            </div>
+        <div class="info-group">
+            <label>Phone Number:</label>
+            <span id="display-phone" class="info-value">Loading...</span>
+        </div>
+        
+        <div class="info-group">
+            <label>Date of Birth (DOB):</label>
+            <span id="display-dob" class="info-value">Loading...</span>
+        </div>
 
-            <div class="form-group">
-                <label for="address">Address:</label>
-                <input type="text" id="address" required autocomplete="street-address">
-            </div>
-            
-            <div class="form-group">
-                <label for="city">City:</label>
-                <input type="text" id="city" required autocomplete="address-level2">
-            </div>
+        <div class="info-group">
+            <label>Address:</label>
+            <span id="display-address" class="info-value">Loading...</span>
+        </div>
+        
+        <div class="info-group">
+            <label>City & Pincode:</label>
+            <span id="display-city-pincode" class="info-value">Loading...</span>
+        </div>
 
-            <div class="form-group">
-                <label for="pincode">Pincode:</label>
-                <input type="text" id="pincode" required autocomplete="postal-code">
-            </div>
+        <h2 class="emergency-header">Emergency Contacts</h2>
+        <div class="info-group">
+            <label>Contact 1:</label>
+            <span id="display-emergency1" class="info-value">Loading...</span>
+        </div>
 
-            <div class="form-group">
-                <label for="emergency1">Emergency Contact 1 (Phone):</label>
-                <input type="tel" id="emergency1" required autocomplete="off">
-            </div>
+        <div class="info-group">
+            <label>Contact 2:</label>
+            <span id="display-emergency2" class="info-value">Loading...</span>
+        </div>
 
-            <div class="form-group">
-                <label for="emergency2">Emergency Contact 2 (Phone):</label>
-                <input type="tel" id="emergency2" autocomplete="off">
-            </div>
-
-            <div class="form-group">
-                <label for="medical">Known Medical Conditions/Allergies:</label>
-                <input type="text" id="medical" placeholder="e.g., Diabetic, Penicillin Allergy" autocomplete="off">
-            </div>
-
-            <button type="submit">Save Changes</button>
-        </form>
+        <h2 class="medical-header">Medical Information</h2>
+        <div class="info-group">
+            <label>Conditions/Allergies:</label>
+            <span id="display-medical" class="info-value">Loading...</span>
+        </div>
     </div>
   </div>
   
