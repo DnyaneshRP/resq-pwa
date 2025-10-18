@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ResQ - Home</title>
+  <title>ResQ - Report History</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#d32f2f">
@@ -18,8 +18,8 @@
     </div>
     <div class="drawer-content">
         <a href="home.html" class="drawer-link"><i class="fas fa-home fa-fw"></i> Home</a>
-        <a href="report.html" class="drawer-link"><i class="fas fa-exclamation-triangle fa-fw"></i> Report Incident</a>
-        <a href="history.html" class="drawer-link"><i class="fas fa-history fa-fw"></i> Report History</a>
+        <a href="report.html" class="drawer-link"><i class="fas fa-exclamation-triangle fa-fw"></i> Report Emergency</a>
+        <a href="history.html" class="drawer-link active-link"><i class="fas fa-history fa-fw"></i> Report History</a>
         <a href="profile.html" class="drawer-link"><i class="fas fa-user fa-fw"></i> My Profile</a>
         <a href="about.html" class="drawer-link"><i class="fas fa-info-circle fa-fw"></i> About App</a>
         <a href="#" id="logoutButton" class="drawer-link logout-link"><i class="fas fa-sign-out-alt fa-fw"></i> Logout</a>
@@ -27,35 +27,26 @@
   </div>
   
   <div id="drawerBackdrop" class="drawer-backdrop"></div>
-  
+
   <header class="header">
     <div class="hamburger" id="menuButton">
         <i class="fas fa-bars"></i>
     </div>
-    <h2>ResQ Dashboard</h2>
+    <h2>Report History</h2>
   </header>
   
   <div class="app">
-    <h1>🏠 Welcome!</h1>
-    <p>Your emergency contacts are linked. Stay Safe.</p>
-    
-    <div class="home-card-grid">
-        <a href="report.html" class="action-card primary-action">
-            <i class="fas fa-exclamation-triangle"></i>
-            <h3>Report Emergency</h3>
-            <p>Initiate immediate emergency report with location.</p>
-        </a>
-        
-        <a href="history.html" class="action-card secondary-action">
-            <i class="fas fa-history"></i>
-            <h3>View Reports History</h3>
-            <p>See all your past incident reports and their status.</p>
-        </a>
+    <h1>Your Past Reports</h1>
+    <p>Review the details and status of all your submitted emergency reports.</p>
+
+    <div id="reportsHistoryContainer" class="history-list">
+        <div class="text-center" style="margin-top: 50px;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #d32f2f;"></i>
+            <p>Loading report history...</p>
+        </div>
     </div>
-    
-    <p style="text-align: center; margin-top: 30px;">This is your PWA home page, available even when offline.</p>
   </div>
-  
+
   <div id="customMessageBox" class="custom-message-box hidden"></div>
   
   <script type="module" src="app.js"></script>

@@ -1,4 +1,4 @@
-const CACHE_NAME = "resq-cache-v4"; // INCREMENTED VERSION!
+const CACHE_NAME = "resq-cache-v6"; // INCREMENTED VERSION!
 const ASSETS = [
     '/',
     '/index.html',
@@ -6,11 +6,15 @@ const ASSETS = [
     '/home.html',
     '/profile.html', 
     '/about.html',
-    '/report.html', // NEW FILE
+    '/report.html', // ADDED
+    '/history.html', // ADDED
     '/style.css',
     '/app.js',
     '/manifest.json',
     '/icons/resq-192.png',
+    // You must add your audio files here too!
+    // '/countdown.mp3', 
+    // '/ting.mp3'
 ];
 
 // Installation: Cache all assets

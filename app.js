@@ -11,7 +11,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // --- Initialize Supabase Client ---
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- Global Utility: Custom Message Box ---
+// --- Global Utility: Custom Message Box & Sound Player ---
 function showMessage(message, type = 'success', duration = 3000) {
     const messageBox = document.getElementById('customMessageBox');
     if (!messageBox) return;
@@ -32,6 +32,16 @@ function showMessage(message, type = 'success', duration = 3000) {
     }, duration);
 }
 
+// Helper to play sound (Assumes audio elements with these IDs exist in HTML)
+function playSound(id) {
+    const audio = document.getElementById(id);
+    if (audio) {
+        audio.currentTime = 0; // Rewind to start
+        // Using .play().catch is a standard way to handle autoplay restrictions
+        audio.play().catch(e => console.log(`Audio play failed for ${id}:`, e));
+    }
+}
+
 
 // --- CORE NAVIGATION, AUTH STATE, AND PROFILE INSERTER ---
 supabase.auth.onAuthStateChange((event, session) => {
@@ -40,7 +50,8 @@ supabase.auth.onAuthStateChange((event, session) => {
     
     const currentPagePath = window.location.pathname.split('/').pop() || 'index.html';
     
-    const protectedPages = ['home.html', 'report.html', 'profile.html', 'about.html']; // UPDATED
+    // ADDED history.html
+    const protectedPages = ['home.html', 'report.html', 'profile.html', 'about.html', 'history.html']; 
     const loginPages = ['index.html', 'register.html'];
 
     if (isLoggedIn) {
@@ -72,6 +83,11 @@ supabase.auth.onAuthStateChange((event, session) => {
         // Automatically try to get location when report page loads
         if (currentPagePath === 'report.html' && document.getElementById('getLocationBtn')) {
             getGeolocation();
+        }
+        
+        // Fetch report history on the history page
+        if (currentPagePath === 'history.html' && document.getElementById('reportsHistoryContainer')) {
+             fetchReportHistory(user.id);
         }
     }
 });
@@ -111,7 +127,7 @@ async function checkForMissingProfile(user) {
         pincode: metadata.pincode,
         emergency1: metadata.emergency1,
         emergency2: metadata.emergency2,
-        medical: metadata.medical 
+        medical: metadata.medical // This is the correct field mapping from metadata
     };
 
     const { error: dbError } = await supabase
@@ -320,7 +336,6 @@ function getGeolocation() {
 
 if (getLocationBtn) {
     getLocationBtn.addEventListener('click', getGeolocation);
-    // Automatic call moved to onAuthStateChange for better protected page flow
 }
 
 // Submission Logic
@@ -345,22 +360,31 @@ if (emergencyReportForm) {
     });
 }
 
+// FIX: REMOVED DELAY HERE (Point 2)
 async function startCountdownAndSubmit() {
     // 1. Show Confirmation Modal
     if(countdownModal) countdownModal.classList.remove('hidden');
     let count = 3;
     if(countdownTimer) countdownTimer.textContent = count;
 
+    // Play initial sound (Point 2)
+    playSound('countdownSound'); 
+
     // 2. Start Countdown
     const countdownInterval = setInterval(() => {
         count--;
         if(countdownTimer) countdownTimer.textContent = count;
+        
+        // Play countdown sound on each tick (Point 2)
+        if (count > 0) { // Play only on 3, 2, 1
+           playSound('countdownSound'); 
+        }
 
         if (count === 0) {
             clearInterval(countdownInterval);
             if(countdownModal) countdownModal.classList.add('hidden');
             
-            // 3. Submit Report after countdown
+            // 3. Submit Report immediately after count reaches 0 (Point 2)
             submitEmergencyReport();
         }
     }, 1000);
@@ -369,6 +393,8 @@ async function startCountdownAndSubmit() {
 async function submitEmergencyReport() {
     const description = document.getElementById('description').value;
     const incidentType = document.getElementById('incidentType').value;
+    const incidentDetails = document.getElementById('incidentDetails').value; // NEW FIELD (Point 4)
+    const severityLevel = document.getElementById('severityLevel').value; // NEW FIELD (Point 4)
     const photoFile = document.getElementById('photo').files[0];
     const latitude = parseFloat(latitudeInput.value);
     const longitude = parseFloat(longitudeInput.value);
@@ -413,6 +439,8 @@ async function submitEmergencyReport() {
         user_id: user.id,
         description: description,
         incident_type: incidentType,
+        incident_details: incidentDetails, // NEW FIELD (Point 4)
+        severity_level: severityLevel, // NEW FIELD (Point 4)
         latitude: latitude,
         longitude: longitude,
         photo_url: photoUrl, // Will be null if no photo or upload failed
@@ -429,6 +457,8 @@ async function submitEmergencyReport() {
 
         // Step C: Success
         if(successModal) successModal.classList.remove('hidden');
+        playSound('successSound'); // Play success sound on popup (Point 2)
+        
         emergencyReportForm.reset(); // Clear form
         if(locationStatusInput) locationStatusInput.value = 'Location Cleared.';
         if(latitudeInput) latitudeInput.value = '';
@@ -447,6 +477,70 @@ if (closeSuccessBtn) {
     });
 }
 // --- End of EMERGENCY REPORTING LOGIC ---
+
+
+// --- NEW: REPORT HISTORY LOGIC (Point 3) ---
+const reportsHistoryContainer = document.getElementById('reportsHistoryContainer');
+
+async function fetchReportHistory(userId) {
+    if(!reportsHistoryContainer) return;
+    
+    reportsHistoryContainer.innerHTML = '<p class="loading-state">Fetching your report history...</p>';
+
+    const { data: reports, error } = await supabase
+        .from('emergency_reports')
+        .select('*')
+        .eq('user_id', userId)
+        .order('timestamp', { ascending: false }); // Show newest first
+
+    if (error) {
+        console.error("Report History Fetch Error:", error);
+        reportsHistoryContainer.innerHTML = '<p class="error-state">Error loading report history. Please try again.</p>';
+        return;
+    }
+
+    if (reports.length > 0) {
+        renderReportHistory(reports);
+    } else {
+        reportsHistoryContainer.innerHTML = '<p class="empty-state">No past reports found. Stay safe!</p>';
+    }
+}
+
+function renderReportHistory(reports) {
+    reportsHistoryContainer.innerHTML = '';
+    
+    reports.forEach(report => {
+        const reportDate = new Date(report.timestamp).toLocaleString();
+        
+        const card = document.createElement('div');
+        card.classList.add('report-card-history'); // Use specific history class
+        
+        // Conditional photo display
+        let photoHtml = report.photo_url ? `<img src="${report.photo_url}" alt="Incident Photo" class="report-photo">` : '';
+        
+        // Dynamically style status based on text
+        const statusClass = `status-${report.status.toLowerCase().replace(/ /g, '_')}`;
+
+        card.innerHTML = `
+            ${photoHtml}
+            <div class="report-header">
+                <h4>${report.incident_type}</h4>
+                <span class="report-status ${statusClass}">${report.status}</span>
+            </div>
+            
+            <p class="report-detail-line"><strong>Severity:</strong> ${report.severity_level || 'N/A'}</p>
+            <p class="report-detail-line"><strong>What happened:</strong> ${report.incident_details || 'No specific details provided.'}</p>
+            <p class="report-description"><strong>Additional Context:</strong> ${report.description || 'N/A'}</p>
+
+            <div class="report-footer">
+                <span class="report-datetime"><i class="fas fa-clock"></i> Reported: ${reportDate}</span>
+                <span class="report-location"><i class="fas fa-map-marker-alt"></i> Location: ${report.latitude ? `${report.latitude.toFixed(4)}, ${report.longitude.toFixed(4)}` : 'N/A'}</span>
+            </div>
+        `;
+        reportsHistoryContainer.appendChild(card);
+    });
+}
+// --- END OF REPORT HISTORY LOGIC ---
 
 
 // --- DRAWER & LOGOUT LOGIC (Supabase) ---

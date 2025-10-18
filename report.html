@@ -18,7 +18,8 @@
     </div>
     <div class="drawer-content">
         <a href="home.html" class="drawer-link"><i class="fas fa-home fa-fw"></i> Home</a>
-        <a href="report.html" class="drawer-link active-link"><i class="fas fa-bullhorn fa-fw"></i> Report Emergency</a>
+        <a href="report.html" class="drawer-link active-link"><i class="fas fa-exclamation-triangle fa-fw"></i> Report Emergency</a>
+        <a href="history.html" class="drawer-link"><i class="fas fa-history fa-fw"></i> Report History</a>
         <a href="profile.html" class="drawer-link"><i class="fas fa-user fa-fw"></i> My Profile</a>
         <a href="about.html" class="drawer-link"><i class="fas fa-info-circle fa-fw"></i> About App</a>
         <a href="#" id="logoutButton" class="drawer-link logout-link"><i class="fas fa-sign-out-alt fa-fw"></i> Logout</a>
@@ -31,36 +32,52 @@
     <div class="hamburger" id="menuButton">
         <i class="fas fa-bars"></i>
     </div>
-    <h2>Emergency Report</h2>
+    <h2>Report Emergency</h2>
   </header>
   
   <div class="app">
-    <div class="form-container" style="box-shadow: none; padding: 15px;">
-        <h1>🚨 Report Incident</h1>
-        <p class="text-center" style="margin-bottom: 20px;">Provide accurate details to help responders quickly.</p>
+    <h1>Report Incident</h1>
+    <p>Please provide essential details and share your location to get immediate help.</p>
 
+    <div class="report-form-card"> 
         <form id="emergencyReportForm">
             
             <div class="form-group">
-                <label for="incidentType">Type of Incident (Mandatory):</label>
+                <label for="incidentType">Type of Incident:</label>
                 <select id="incidentType" required>
                     <option value="">Select Incident Type</option>
                     <option value="Medical">Medical Emergency</option>
-                    <option value="Accident">Accident/Injury</option>
+                    <option value="Accident">Accident/Collision</option>
                     <option value="Fire">Fire</option>
-                    <option value="Crime">Crime/Security</option>
+                    <option value="Crime">Crime/Security Threat</option>
                     <option value="Other">Other</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="description">Incident Description (Mandatory):</label>
-                <textarea id="description" rows="4" required placeholder="Briefly describe the emergency (e.g., 'Car accident with injuries on highway 5')"></textarea>
+                <label for="incidentDetails">Incident Details (What exactly happened?):</label>
+                <textarea id="incidentDetails" rows="3" placeholder="e.g., Car overturned on the highway, Person collapsed, Smoke coming from the 3rd floor..." required></textarea>
             </div>
 
             <div class="form-group">
-                <label>Current Location (Mandatory - GPS):</label>
-                <input type="text" id="locationStatus" value="Fetching location..." disabled>
+                <label for="severityLevel">Severity Level:</label>
+                <select id="severityLevel" required>
+                    <option value="">Select Severity</option>
+                    <option value="Critical">Critical (Life-threatening)</option>
+                    <option value="Serious">Serious (Requires immediate hospital care)</option>
+                    <option value="Moderate">Moderate (Non-life threatening, needs attention)</option>
+                    <option value="Minor">Minor (First aid needed)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Additional Context/Info:</label>
+                <textarea id="description" rows="3" placeholder="Any additional context, e.g., location landmarks, number of people involved, visible obstacles..."></textarea>
+            </div>
+
+            <div class="form-group location-group">
+                <label>Current Location (Mandatory):</label>
+                <input type="text" id="locationStatus" value="Not acquired." disabled>
                 <input type="hidden" id="latitude">
                 <input type="hidden" id="longitude">
                 <button type="button" id="getLocationBtn" class="secondary-btn" style="width: auto; padding: 10px 15px; margin-top: 5px;">
@@ -96,6 +113,9 @@
     </div>
   </div>
   
+  <audio id="countdownSound" src="countdown.mp3" preload="auto"></audio>
+  <audio id="successSound" src="ting.mp3" preload="auto"></audio>
+
   <div id="customMessageBox" class="custom-message-box hidden"></div>
 
   <script type="module" src="app.js"></script>
