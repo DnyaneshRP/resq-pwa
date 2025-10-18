@@ -18,6 +18,7 @@
     </div>
     <div class="drawer-content">
         <a href="home.html" class="drawer-link"><i class="fas fa-home fa-fw"></i> Home</a>
+        <a href="report.html" class="drawer-link"><i class="fas fa-bullhorn fa-fw"></i> Report Emergency</a>
         <a href="profile.html" class="drawer-link"><i class="fas fa-user fa-fw"></i> My Profile</a>
         <a href="about.html" class="drawer-link"><i class="fas fa-info-circle fa-fw"></i> About App</a>
         <a href="#" id="logoutButton" class="drawer-link logout-link"><i class="fas fa-sign-out-alt fa-fw"></i> Logout</a>
@@ -35,12 +36,24 @@
   
   <div class="app">
     <h1>🏠 Welcome!</h1>
-    <p>Your emergency contacts are linked. Stay Safe.</p>
-    <p>This is your PWA home page, available even when offline.</p>
-  </div>
+    <p>Tap the card below to report an incident immediately. Your profile details will be sent automatically.</p>
+    
+    <a href="report.html" class="report-card-link">
+        <div class="report-card">
+            <i class="fas fa-exclamation-triangle report-icon"></i>
+            <div>
+                <h2>REPORT NEW EMERGENCY</h2>
+                <p>Submit location, photos, and details now.</p>
+            </div>
+            <i class="fas fa-chevron-right"></i>
+        </div>
+    </a>
+    
+    <p style="margin-top: 20px;">Your emergency contacts are linked. Stay Safe.</p>
+</div>
   
   <div id="customMessageBox" class="custom-message-box hidden"></div>
-  
+
   <script type="module" src="app.js"></script>
 </body>
 </html>

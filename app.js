@@ -40,7 +40,7 @@ supabase.auth.onAuthStateChange((event, session) => {
     
     const currentPagePath = window.location.pathname.split('/').pop() || 'index.html';
     
-    const protectedPages = ['home.html', 'profile.html', 'about.html']; 
+    const protectedPages = ['home.html', 'report.html', 'profile.html', 'about.html']; // UPDATED
     const loginPages = ['index.html', 'register.html'];
 
     if (isLoggedIn) {
@@ -67,6 +67,11 @@ supabase.auth.onAuthStateChange((event, session) => {
         // Fetch profile data only on the profile page
         if (currentPagePath === 'profile.html' && document.getElementById('profileDetails')) {
              fetchUserProfile(user.id);
+        }
+        
+        // Automatically try to get location when report page loads
+        if (currentPagePath === 'report.html' && document.getElementById('getLocationBtn')) {
+            getGeolocation();
         }
     }
 });
@@ -106,7 +111,7 @@ async function checkForMissingProfile(user) {
         pincode: metadata.pincode,
         emergency1: metadata.emergency1,
         emergency2: metadata.emergency2,
-        medical: metadata.medical // This is the correct field mapping from metadata
+        medical: metadata.medical 
     };
 
     const { error: dbError } = await supabase
@@ -267,6 +272,183 @@ function renderProfile(user) {
 }
 
 
+// --- EMERGENCY REPORTING LOGIC ---
+
+// Geolocation Functions
+const getLocationBtn = document.getElementById('getLocationBtn');
+const locationStatusInput = document.getElementById('locationStatus');
+const latitudeInput = document.getElementById('latitude');
+const longitudeInput = document.getElementById('longitude');
+
+function getGeolocation() {
+    if (!navigator.geolocation) {
+        if(locationStatusInput) locationStatusInput.value = 'Geolocation not supported.';
+        showMessage('Geolocation is not supported by your browser.', 'error');
+        return;
+    }
+
+    if(locationStatusInput) locationStatusInput.value = 'Fetching location...';
+    if(getLocationBtn) getLocationBtn.disabled = true;
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            
+            if(latitudeInput) latitudeInput.value = lat;
+            if(longitudeInput) longitudeInput.value = lon;
+            if(locationStatusInput) {
+                locationStatusInput.value = `Location captured (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+                locationStatusInput.style.backgroundColor = '#e8f5e9'; // Light green background
+            }
+            if(getLocationBtn) getLocationBtn.disabled = false;
+            showMessage('Location captured successfully!', 'success');
+        },
+        (error) => {
+            if(locationStatusInput) {
+                locationStatusInput.value = 'Location failed.';
+                locationStatusInput.style.backgroundColor = '#ffebee'; // Light red background
+            }
+            if(latitudeInput) latitudeInput.value = '';
+            if(longitudeInput) longitudeInput.value = '';
+            if(getLocationBtn) getLocationBtn.disabled = false;
+            showMessage(`Error getting location: ${error.message}`, 'error', 5000);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } // High accuracy settings
+    );
+}
+
+if (getLocationBtn) {
+    getLocationBtn.addEventListener('click', getGeolocation);
+    // Automatic call moved to onAuthStateChange for better protected page flow
+}
+
+// Submission Logic
+const emergencyReportForm = document.getElementById('emergencyReportForm');
+const countdownModal = document.getElementById('countdownModal');
+const successModal = document.getElementById('successModal');
+const countdownTimer = document.getElementById('countdownTimer');
+const closeSuccessBtn = document.getElementById('closeSuccessBtn');
+
+if (emergencyReportForm) {
+    emergencyReportForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Basic validation check
+        if (!latitudeInput.value || !longitudeInput.value) {
+            showMessage("Location is mandatory. Please click 'Get Location'.", 'error', 5000);
+            return;
+        }
+
+        // Show confirmation and countdown
+        await startCountdownAndSubmit();
+    });
+}
+
+async function startCountdownAndSubmit() {
+    // 1. Show Confirmation Modal
+    if(countdownModal) countdownModal.classList.remove('hidden');
+    let count = 3;
+    if(countdownTimer) countdownTimer.textContent = count;
+
+    // 2. Start Countdown
+    const countdownInterval = setInterval(() => {
+        count--;
+        if(countdownTimer) countdownTimer.textContent = count;
+
+        if (count === 0) {
+            clearInterval(countdownInterval);
+            if(countdownModal) countdownModal.classList.add('hidden');
+            
+            // 3. Submit Report after countdown
+            submitEmergencyReport();
+        }
+    }, 1000);
+}
+
+async function submitEmergencyReport() {
+    const description = document.getElementById('description').value;
+    const incidentType = document.getElementById('incidentType').value;
+    const photoFile = document.getElementById('photo').files[0];
+    const latitude = parseFloat(latitudeInput.value);
+    const longitude = parseFloat(longitudeInput.value);
+
+    // Get the current user ID for linking the report
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        showMessage('You must be logged in to report an emergency.', 'error');
+        return;
+    }
+
+    let photoUrl = null;
+    
+    // Step A: Upload Photo (if present)
+    if (photoFile) {
+        try {
+            const fileExt = photoFile.name.split('.').pop();
+            const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+            
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('emergency_photos') 
+                .upload(fileName, photoFile);
+
+            if (uploadError) throw uploadError;
+            
+            // Get public URL for the uploaded photo
+            const { data: publicURLData } = supabase.storage
+                .from('emergency_photos')
+                .getPublicUrl(fileName);
+            
+            photoUrl = publicURLData.publicUrl;
+
+        } catch (error) {
+            console.error('Photo Upload Error:', error);
+            showMessage('Photo upload failed. Submitting report without photo.', 'error', 5000);
+            // Continue submission without photo
+        }
+    }
+
+    // Step B: Submit Report Data to 'emergency_reports' table
+    const reportData = {
+        user_id: user.id,
+        description: description,
+        incident_type: incidentType,
+        latitude: latitude,
+        longitude: longitude,
+        photo_url: photoUrl, // Will be null if no photo or upload failed
+        timestamp: new Date().toISOString(),
+        status: 'Reported' // Default status for admin dashboard
+    };
+
+    try {
+        const { error: insertError } = await supabase
+            .from('emergency_reports') 
+            .insert([reportData]);
+
+        if (insertError) throw insertError;
+
+        // Step C: Success
+        if(successModal) successModal.classList.remove('hidden');
+        emergencyReportForm.reset(); // Clear form
+        if(locationStatusInput) locationStatusInput.value = 'Location Cleared.';
+        if(latitudeInput) latitudeInput.value = '';
+        if(longitudeInput) longitudeInput.value = '';
+
+    } catch (error) {
+        console.error('Report Submission Error:', error);
+        showMessage(`Report Submission Failed: ${error.message}`, 'error', 6000);
+    }
+}
+
+if (closeSuccessBtn) {
+    closeSuccessBtn.addEventListener('click', () => {
+        if(successModal) successModal.classList.add('hidden');
+        window.location.replace('home.html'); // Redirect to home page
+    });
+}
+// --- End of EMERGENCY REPORTING LOGIC ---
+
+
 // --- DRAWER & LOGOUT LOGIC (Supabase) ---
 const menuButton = document.getElementById('menuButton');
 const sideDrawer = document.getElementById('sideDrawer');
@@ -339,8 +521,8 @@ function showInstallPromotionModal() {
     localStorage.setItem('pwaPromptShown', 'true');
     const modalHtml = `
         <div id="pwaModal" class="pwa-modal-overlay">
-            <div class="pwa-modal-content">
-                <i class="fas fa-heartbeat pwa-icon"></i>
+            <div class=\"pwa-modal-content\">
+                <i class=\"fas fa-heartbeat pwa-icon\"></i>
                 <h2>Install ResQ - Your Safety App</h2>
                 <p>Install the ResQ app to get quick access to emergency features and use it even when you're offline. Get the full app experience!</p>
                 <button id="installButton" class="pwa-install-btn">Install App Now</button>
