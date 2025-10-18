@@ -12,9 +12,9 @@ const ASSETS = [
     '/app.js',
     '/manifest.json',
     '/icons/resq-192.png',
-    // You must add your audio files here too!
-    // '/countdown.mp3', 
-    // '/ting.mp3'
+    // Audio files: MUST be added to enable offline countdown/success sounds in report.html
+    '/countdown.mp3', 
+    '/ting.mp3'
 ];
 
 // Installation: Cache all assets

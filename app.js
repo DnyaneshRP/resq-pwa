@@ -19,613 +19,618 @@ function showMessage(message, type = 'success', duration = 3000) {
     messageBox.className = `custom-message-box hidden ${type}`;
     messageBox.textContent = message;
 
+    // Show
     setTimeout(() => {
         messageBox.classList.remove('hidden');
         messageBox.classList.add('show');
-    }, 10); 
+    }, 10); // Small delay to trigger transition
 
+    // Hide
     setTimeout(() => {
         messageBox.classList.remove('show');
         setTimeout(() => {
-             messageBox.classList.add('hidden');
-        }, 300);
+            messageBox.classList.add('hidden');
+        }, 300); // Wait for transition to finish before setting display: none
     }, duration);
 }
 
-// Helper to play sound (Assumes audio elements with these IDs exist in HTML)
 function playSound(id) {
     const audio = document.getElementById(id);
     if (audio) {
-        audio.currentTime = 0; // Rewind to start
-        // Using .play().catch is a standard way to handle autoplay restrictions
-        audio.play().catch(e => console.log(`Audio play failed for ${id}:`, e));
+        // Stop and rewind to play again immediately
+        audio.pause();
+        audio.currentTime = 0;
+        audio.play().catch(error => {
+            // This is common for mobile browsers requiring a user gesture
+            console.warn('Audio playback prevented by browser:', error);
+        });
+    }
+}
+
+// --- Global Utility: Drawer Menu ---
+function setupDrawerMenu() {
+    const menuButton = document.getElementById('menuButton');
+    const sideDrawer = document.getElementById('sideDrawer');
+    const closeDrawer = document.getElementById('closeDrawer');
+    const drawerBackdrop = document.getElementById('drawerBackdrop');
+    const logoutButton = document.getElementById('logoutButton');
+
+    if (menuButton) {
+        menuButton.addEventListener('click', () => {
+            sideDrawer.classList.add('open');
+            drawerBackdrop.classList.add('active');
+        });
+    }
+
+    if (closeDrawer) {
+        closeDrawer.addEventListener('click', () => {
+            sideDrawer.classList.remove('open');
+            drawerBackdrop.classList.remove('active');
+        });
+    }
+
+    if (drawerBackdrop) {
+        drawerBackdrop.addEventListener('click', () => {
+            sideDrawer.classList.remove('open');
+            drawerBackdrop.classList.remove('active');
+        });
+    }
+    
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const { error } = await supabase.auth.signOut();
+            localStorage.clear();
+            if (error) {
+                showMessage('Logout failed: ' + error.message, 'error');
+            } else {
+                // Clear all caches and reload to index/login page
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(
+                        cacheNames.map(cacheName => caches.delete(cacheName))
+                    );
+                }
+                showMessage('Logged out successfully.', 'success');
+                window.location.href = 'index.html';
+            }
+        });
     }
 }
 
 
-// --- CORE NAVIGATION, AUTH STATE, AND PROFILE INSERTER ---
-supabase.auth.onAuthStateChange((event, session) => {
-    const isLoggedIn = !!session;
-    const user = session?.user || null;
+// --- Global Utility: Check Authentication ---
+async function checkAuth() {
+    const { data: { session } } = await supabase.auth.getSession();
     
-    const currentPagePath = window.location.pathname.split('/').pop() || 'index.html';
-    
-    // ADDED history.html
-    const protectedPages = ['home.html', 'report.html', 'profile.html', 'about.html', 'history.html']; 
-    const loginPages = ['index.html', 'register.html'];
-
-    if (isLoggedIn) {
-        // If the user is authenticated, ensure their profile is in the database
-        checkForMissingProfile(user); 
-
-        if (loginPages.includes(currentPagePath)) {
-            // Logged-in user accessing login/register page
-            window.location.replace('home.html'); 
-            return;
+    if (window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/register.html') || window.location.pathname.endsWith('/')) {
+        // On login/register pages
+        if (session) {
+            window.location.href = 'home.html'; // Already logged in, redirect to home
         }
-    } 
-    
-    // Handle redirection for unauthenticated users
-    if (!isLoggedIn && protectedPages.includes(currentPagePath)) {
-        window.location.replace('index.html');
-        return;
-    }
-    
-    // Logic for Protected Pages
-    if (isLoggedIn && protectedPages.includes(currentPagePath)) {
-        setDrawerHeaderName(user.id); 
-        
-        // Fetch profile data only on the profile page
-        if (currentPagePath === 'profile.html' && document.getElementById('profileDetails')) {
-             fetchUserProfile(user.id);
-        }
-        
-        // Automatically try to get location when report page loads
-        if (currentPagePath === 'report.html' && document.getElementById('getLocationBtn')) {
-            getGeolocation();
-        }
-        
-        // Fetch report history on the history page
-        if (currentPagePath === 'history.html' && document.getElementById('reportsHistoryContainer')) {
-             fetchReportHistory(user.id);
-        }
-    }
-});
-
-
-// --- FUNCTION: Inserts profile data upon first successful sign-in/login ---
-async function checkForMissingProfile(user) {
-    const userId = user.id;
-    const metadata = user.user_metadata;
-    
-    // Only proceed if we have metadata to insert (i.e., this user went through the registration form)
-    if (!metadata || !metadata.fullname) return; 
-
-    // 1. Check if profile already exists in the 'profiles' table
-    const { data: profileCheck } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .single();
-
-    if (profileCheck) {
-        // Profile exists, no action needed
-        return; 
-    }
-
-    // 2. Profile does NOT exist. Insert it using the data we stored in user_metadata.
-    const userProfileData = {
-        id: userId,
-        fullname: metadata.fullname,
-        email: user.email, // Use email from the main user object
-        phone: metadata.phone,
-        dob: metadata.dob,
-        gender: metadata.gender,
-        bloodgrp: metadata.bloodgrp,
-        address: metadata.address,
-        city: metadata.city,
-        pincode: metadata.pincode,
-        emergency1: metadata.emergency1,
-        emergency2: metadata.emergency2,
-        medical: metadata.medical // This is the correct field mapping from metadata
-    };
-
-    const { error: dbError } = await supabase
-        .from('profiles')
-        .insert([userProfileData]);
-
-    if (dbError) {
-         console.error("Profile Insertion Error:", dbError);
     } else {
-         showMessage("User profile created in the database!", 'success');
+        // On protected pages
+        if (!session) {
+            window.location.href = 'index.html'; // Not logged in, redirect to login
+        } else {
+            // Session exists, check if user data is stored locally (for offline use)
+            if (!localStorage.getItem('userId')) {
+                localStorage.setItem('userId', session.user.id);
+                // Optional: Fetch and store profile details here if needed on login, but for speed, we'll fetch on profile.html
+            }
+        }
     }
 }
 
+// --- Geolocation Utility ---
+function getLocation(callback) {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                // Reverse Geocoding to get human-readable address
+                // Mock address for simplicity
+                const locationText = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
+                
+                callback({ success: true, lat, lon, locationText });
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+                const errorMessage = "Location not available. Please ensure location services are enabled.";
+                callback({ success: false, errorMessage });
+            },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+    } else {
+        callback({ success: false, errorMessage: "Geolocation is not supported by this browser." });
+    }
+}
 
-// --- REGISTRATION LOGIC (Supabase Auth + Metadata) ---
-const registerForm = document.getElementById('registerForm');
-if (registerForm) {
-    registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
+// --- Page Specific Logic Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    setupDrawerMenu();
+    setupPWAInstallPrompt();
+    
+    // =================================================================
+    // LOGIN PAGE (index.html)
+    // =================================================================
+    if (window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/')) {
+        const loginForm = document.getElementById('loginForm');
         
-        // **FIX IMPLEMENTATION:** Isolate the medical value to guarantee the source is correct
-        const medicalValue = document.getElementById('medical').value;
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                
+                showMessage('Logging in...', 'success', 2000);
+                
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-        // Stage all form data for user_metadata
-        const metadata = {
-          fullname: document.getElementById('fullname').value,
-          phone: document.getElementById('phone').value,
-          dob: document.getElementById('dob').value,
-          gender: document.getElementById('gender').value,
-          bloodgrp: document.getElementById('bloodgrp').value,
-          address: document.getElementById('address').value,
-          city: document.getElementById('city').value,
-          pincode: document.getElementById('pincode').value,
-          emergency1: document.getElementById('emergency1').value,
-          emergency2: document.getElementById('emergency2').value,
-          // Use the isolated, confirmed medical value variable
-          medical: medicalValue 
-        };
-
-        try {
-            // Step 1: Create the user in Supabase Authentication and save metadata
-            const { data, error: authError } = await supabase.auth.signUp({
-                email: email,
-                password: password,
-                options: {
-                    data: metadata // Store profile data securely in Auth metadata
+                if (error) {
+                    showMessage('Login Failed: ' + error.message, 'error', 5000);
+                } else if (data.session) {
+                    localStorage.setItem('userId', data.user.id);
+                    // Fetch and store profile for offline access
+                    await fetchAndStoreProfile(data.user.id); 
+                    showMessage('Login Successful! Redirecting...', 'success', 1000);
+                    setTimeout(() => {
+                        window.location.href = 'home.html';
+                    }, 1000);
                 }
             });
-
-            if (authError) throw authError;
-
-            // Step 2: Handle post-signup state
-            if (data.user) {
-                // User auto-logged in. onAuthStateChange will handle profile insert and redirect.
-                showMessage("Registration successful! Redirecting to home...", 'success');
-            } else {
-                 // Confirmation email sent. 
-                showMessage("Registration successful! Check your email to confirm your account, then log in.", 'success', 5000);
+        }
+    }
+    
+    // =================================================================
+    // REGISTER PAGE (register.html)
+    // =================================================================
+    if (window.location.pathname.endsWith('/register.html')) {
+        const registerForm = document.getElementById('registerForm');
+        
+        if (registerForm) {
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
                 
-                // FIX: Explicitly redirect to the login page (index.html)
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const fullname = document.getElementById('fullname').value;
+                const phone = document.getElementById('phone').value;
+                const dob = document.getElementById('dob').value;
+                const address = document.getElementById('address').value;
+                const city = document.getElementById('city').value;
+                const pincode = document.getElementById('pincode').value;
+                const emergency1 = document.getElementById('emergency1').value;
+                const emergency2 = document.getElementById('emergency2').value || null;
+                const medical = document.getElementById('medical').value || null;
+                
+                showMessage('Registering...', 'success', 2000);
+                
+                // 1. Sign up the user
+                const { data: authData, error: authError } = await supabase.auth.signUp({ 
+                    email, 
+                    password,
+                    options: {
+                        data: { full_name: fullname }
+                    }
+                });
+                
+                if (authError) {
+                    showMessage('Registration Failed: ' + authError.message, 'error', 5000);
+                    return;
+                }
+                
+                const userId = authData.user.id;
+                
+                // 2. Insert profile details
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .insert([
+                        { 
+                            id: userId,
+                            full_name: fullname, 
+                            phone: phone, 
+                            dob: dob, 
+                            address: address, 
+                            city: city, 
+                            pincode: pincode, 
+                            emergency_contact_1: emergency1, 
+                            emergency_contact_2: emergency2, 
+                            medical_conditions: medical
+                        }
+                    ]);
+                    
+                if (profileError) {
+                    // This is a critical error, log and inform the user
+                    console.error('Profile Insert Error:', profileError);
+                    showMessage('Registration completed, but failed to save profile details: ' + profileError.message, 'error', 8000);
+                    return;
+                }
+                
+                localStorage.setItem('userId', userId);
+                showMessage('Registration successful! Redirecting to Home...', 'success', 1000);
                 setTimeout(() => {
-                    window.location.replace("index.html"); 
-                }, 3000); // 3 seconds delay to read the message
-            }
-
-        } catch (error) {
-            console.error("Registration Error:", error);
-            showMessage(`Registration Failed: ${error.message || error.toString()}`, 'error');
-        }
-    });
-}
-
-
-// --- LOGIN LOGIC (Supabase Auth) ---
-const loginForm = document.getElementById('loginForm');
-if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-
-        try {
-            const { error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password,
+                    window.location.href = 'home.html';
+                }, 1000);
             });
-            
-            if (error) throw error;
-            
-            // onAuthStateChange handles profile creation and redirect
-
-            showMessage("Login successful!", 'success');
-
-        } catch (error) {
-            console.error("Login Error:", error);
-            showMessage("Login Failed: Invalid credentials or unconfirmed email.", 'error');
         }
-    });
-}
-
-
-// --- PROFILE PAGE LOGIC (Read from Supabase Database) ---
-const profileDetails = document.getElementById('profileDetails');
-
-async function fetchUserProfile(userId) {
-    profileDetails.innerHTML = 'Loading user data...'; 
-    
-    // Fetch profile from the 'profiles' table
-    const { data: userProfiles, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId) 
-        .single(); 
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 means "No rows found"
-        console.error("Profile Fetch Error:", error);
-        profileDetails.innerHTML = "<p>Error loading profile data.</p>";
-        return;
-    }
-    
-    if (userProfiles) {
-        renderProfile(userProfiles);
-    } else {
-        profileDetails.innerHTML = "<p>No profile data found. Please complete your registration.</p>";
-    }
-}
-
-
-function renderProfile(user) {
-    profileDetails.innerHTML = '';
-    const fields = [
-        { label: 'Full Name', key: 'fullname' },
-        { label: 'Email', key: 'email' },
-        { label: 'Phone Number', key: 'phone' },
-        { label: 'Date of Birth', key: 'dob' },
-        { label: 'Gender', key: 'gender' },
-        { label: 'Blood Group', key: 'bloodgrp' },
-        { label: 'Address', key: 'address' },
-        { label: 'City', key: 'city' },
-        { label: 'Pincode', key: 'pincode' },
-        { label: 'Emergency Contact 1', key: 'emergency1' },
-        { label: 'Emergency Contact 2', key: 'emergency2' },
-        { label: 'Medical Conditions', key: 'medical' }
-    ];
-    fields.forEach(field => {
-        if (user[field.key]) {
-            const item = document.createElement('div');
-            item.classList.add('profile-item');
-            item.innerHTML = `
-                <span class="profile-label">${field.label}:</span>
-                <span class="profile-value">${user[field.key]}</span>
-            `;
-            profileDetails.appendChild(item);
-        }
-    });
-}
-
-
-// --- EMERGENCY REPORTING LOGIC ---
-
-// Geolocation Functions
-const getLocationBtn = document.getElementById('getLocationBtn');
-const locationStatusInput = document.getElementById('locationStatus');
-const latitudeInput = document.getElementById('latitude');
-const longitudeInput = document.getElementById('longitude');
-
-function getGeolocation() {
-    if (!navigator.geolocation) {
-        if(locationStatusInput) locationStatusInput.value = 'Geolocation not supported.';
-        showMessage('Geolocation is not supported by your browser.', 'error');
-        return;
     }
 
-    if(locationStatusInput) locationStatusInput.value = 'Fetching location...';
-    if(getLocationBtn) getLocationBtn.disabled = true;
-
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            
-            if(latitudeInput) latitudeInput.value = lat;
-            if(longitudeInput) longitudeInput.value = lon;
-            if(locationStatusInput) {
-                locationStatusInput.value = `Location captured (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
-                locationStatusInput.style.backgroundColor = '#e8f5e9'; // Light green background
+    // =================================================================
+    // PROFILE PAGE (profile.html)
+    // =================================================================
+    if (window.location.pathname.endsWith('/profile.html')) {
+        const profileForm = document.getElementById('profileForm');
+        
+        // Function to fetch and display profile data
+        async function loadProfile() {
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                showMessage('User not logged in. Redirecting...', 'error', 3000);
+                setTimeout(() => window.location.href = 'index.html', 3000);
+                return;
             }
-            if(getLocationBtn) getLocationBtn.disabled = false;
-            showMessage('Location captured successfully!', 'success');
-        },
-        (error) => {
-            if(locationStatusInput) {
-                locationStatusInput.value = 'Location failed.';
-                locationStatusInput.style.backgroundColor = '#ffebee'; // Light red background
+
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .single();
+                
+            if (error) {
+                showMessage('Failed to load profile: ' + error.message, 'error', 5000);
+                return;
             }
-            if(latitudeInput) latitudeInput.value = '';
-            if(longitudeInput) longitudeInput.value = '';
-            if(getLocationBtn) getLocationBtn.disabled = false;
-            showMessage(`Error getting location: ${error.message}`, 'error', 5000);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } // High accuracy settings
-    );
-}
-
-if (getLocationBtn) {
-    getLocationBtn.addEventListener('click', getGeolocation);
-}
-
-// Submission Logic
-const emergencyReportForm = document.getElementById('emergencyReportForm');
-const countdownModal = document.getElementById('countdownModal');
-const successModal = document.getElementById('successModal');
-const countdownTimer = document.getElementById('countdownTimer');
-const closeSuccessBtn = document.getElementById('closeSuccessBtn');
-
-if (emergencyReportForm) {
-    emergencyReportForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        // Basic validation check
-        if (!latitudeInput.value || !longitudeInput.value) {
-            showMessage("Location is mandatory. Please click 'Get Location'.", 'error', 5000);
-            return;
-        }
-
-        // Show confirmation and countdown
-        await startCountdownAndSubmit();
-    });
-}
-
-// FIX: REMOVED DELAY HERE (Point 2)
-async function startCountdownAndSubmit() {
-    // 1. Show Confirmation Modal
-    if(countdownModal) countdownModal.classList.remove('hidden');
-    let count = 3;
-    if(countdownTimer) countdownTimer.textContent = count;
-
-    // Play initial sound (Point 2)
-    playSound('countdownSound'); 
-
-    // 2. Start Countdown
-    const countdownInterval = setInterval(() => {
-        count--;
-        if(countdownTimer) countdownTimer.textContent = count;
-        
-        // Play countdown sound on each tick (Point 2)
-        if (count > 0) { // Play only on 3, 2, 1
-           playSound('countdownSound'); 
-        }
-
-        if (count === 0) {
-            clearInterval(countdownInterval);
-            if(countdownModal) countdownModal.classList.add('hidden');
             
-            // 3. Submit Report immediately after count reaches 0 (Point 2)
-            submitEmergencyReport();
+            if (data) {
+                // Populate the form fields with fetched data
+                document.getElementById('fullname').value = data.full_name || '';
+                // The user's email is not in the `profiles` table in this logic, skip or fetch from auth
+                // document.getElementById('email').value = data.email || ''; 
+                document.getElementById('phone').value = data.phone || '';
+                document.getElementById('dob').value = data.dob || '';
+                document.getElementById('address').value = data.address || '';
+                document.getElementById('city').value = data.city || '';
+                document.getElementById('pincode').value = data.pincode || '';
+                document.getElementById('emergency1').value = data.emergency_contact_1 || '';
+                document.getElementById('emergency2').value = data.emergency_contact_2 || '';
+                document.getElementById('medical').value = data.medical_conditions || '';
+                
+                // Store locally for offline/quick access
+                localStorage.setItem('profileData', JSON.stringify(data));
+            }
         }
-    }, 1000);
-}
+        
+        // Load profile on page load
+        loadProfile();
 
-async function submitEmergencyReport() {
-    const description = document.getElementById('description').value;
-    const incidentType = document.getElementById('incidentType').value;
-    const incidentDetails = document.getElementById('incidentDetails').value; // NEW FIELD (Point 4)
-    const severityLevel = document.getElementById('severityLevel').value; // NEW FIELD (Point 4)
-    const photoFile = document.getElementById('photo').files[0];
-    const latitude = parseFloat(latitudeInput.value);
-    const longitude = parseFloat(longitudeInput.value);
-
-    // Get the current user ID for linking the report
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        showMessage('You must be logged in to report an emergency.', 'error');
-        return;
+        // Handle profile update form submission
+        if (profileForm) {
+            profileForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const userId = localStorage.getItem('userId');
+                
+                const updatedData = {
+                    full_name: document.getElementById('fullname').value,
+                    phone: document.getElementById('phone').value,
+                    dob: document.getElementById('dob').value,
+                    address: document.getElementById('address').value,
+                    city: document.getElementById('city').value,
+                    pincode: document.getElementById('pincode').value,
+                    emergency_contact_1: document.getElementById('emergency1').value,
+                    emergency_contact_2: document.getElementById('emergency2').value || null,
+                    medical_conditions: document.getElementById('medical').value || null
+                };
+                
+                showMessage('Updating profile...', 'success', 2000);
+                
+                const { error } = await supabase
+                    .from('profiles')
+                    .update(updatedData)
+                    .eq('id', userId);
+                    
+                if (error) {
+                    showMessage('Profile Update Failed: ' + error.message, 'error', 5000);
+                } else {
+                    // Update local storage after successful update
+                    localStorage.setItem('profileData', JSON.stringify({...updatedData, id: userId}));
+                    showMessage('Profile updated successfully!', 'success', 3000);
+                }
+            });
+        }
     }
 
-    let photoUrl = null;
+    // =================================================================
+    // REPORT EMERGENCY PAGE (report.html)
+    // =================================================================
+    if (window.location.pathname.endsWith('/report.html')) {
+        const reportForm = document.getElementById('reportForm');
+        const countdownModal = document.getElementById('countdownModal');
+        const successModal = document.getElementById('successModal');
+        const countdownTimer = document.getElementById('countdownTimer');
+        const getLocationBtn = document.getElementById('getLocationBtn');
+        const locationTextEl = document.getElementById('locationText');
+        const closeSuccessBtn = document.getElementById('closeSuccessBtn');
+
+        let isFetchingLocation = false;
+        
+        // Initial location fetch on load
+        locationTextEl.value = 'Fetching Location...';
+        getLocation((result) => {
+            if (result.success) {
+                locationTextEl.value = result.locationText;
+                document.getElementById('latitude').value = result.lat;
+                document.getElementById('longitude').value = result.lon;
+                showMessage('Location acquired successfully.', 'success', 3000);
+            } else {
+                locationTextEl.value = result.errorMessage;
+                showMessage(result.errorMessage, 'error', 5000);
+            }
+            isFetchingLocation = false;
+        });
+
+        // Manual location fetch button listener
+        if (getLocationBtn) {
+            getLocationBtn.addEventListener('click', () => {
+                if (isFetchingLocation) return;
+                isFetchingLocation = true;
+                locationTextEl.value = 'Fetching Location...';
+                document.getElementById('latitude').value = '';
+                document.getElementById('longitude').value = '';
+
+                getLocation((result) => {
+                    if (result.success) {
+                        locationTextEl.value = result.locationText;
+                        document.getElementById('latitude').value = result.lat;
+                        document.getElementById('longitude').value = result.lon;
+                        showMessage('Location updated successfully.', 'success', 3000);
+                    } else {
+                        locationTextEl.value = result.errorMessage;
+                        showMessage(result.errorMessage, 'error', 5000);
+                    }
+                    isFetchingLocation = false;
+                });
+            });
+        }
+        
+        // Listener for closing success modal
+        if (closeSuccessBtn) {
+            closeSuccessBtn.addEventListener('click', () => {
+                successModal.classList.add('hidden');
+            });
+        }
+
+        // --- FIXED Report Submission Logic ---
+        if (reportForm) {
+            reportForm.addEventListener('submit', async function(event) {
+                // FIX: Prevent default form submission and stop immediate propagation 
+                event.preventDefault();
+                event.stopImmediatePropagation(); 
+
+                const incidentType = document.getElementById('incidentType').value;
+                const locationText = document.getElementById('locationText').value;
+
+                // FIX: Enforce input validation. 
+                if (!incidentType || incidentType === '') {
+                    showMessage('Please select an incident type.', 'error', 4000);
+                    return;
+                }
+                
+                if (!locationText || locationText === 'Fetching Location...' || locationText.includes('Location not available')) {
+                    showMessage('Please wait for a valid location or click "Get Location" to try again.', 'error', 5000);
+                    return;
+                }
+
+                // FIX: Show Countdown Modal and play sound immediately
+                countdownModal.classList.remove('hidden');
+                playSound('countdownSound');
+
+                // 2. Start Countdown (3, 2, 1)
+                let count = 3;
+                countdownTimer.textContent = count;
+
+                const countdownInterval = setInterval(async () => {
+                    count--;
+                    countdownTimer.textContent = count;
+                    
+                    if (count > 0) {
+                        playSound('countdownSound'); // Re-play sound for 2 and 1
+                    }
+
+                    if (count <= 0) {
+                        clearInterval(countdownInterval);
+                        
+                        // 3. Process Submission
+                        const incidentDetails = document.getElementById('incidentDetails').value;
+                        const latitude = document.getElementById('latitude').value;
+                        const longitude = document.getElementById('longitude').value;
+                        const photoFile = document.getElementById('photo').files[0];
+                        
+                        let photoUrl = null;
+
+                        try {
+                             // Handle file upload (requires Supabase storage bucket setup)
+                            if (photoFile) {
+                                showMessage('Uploading photo...', 'success', 1000);
+                                const filePath = `${localStorage.getItem('userId')}/${Date.now()}-${photoFile.name}`;
+                                const { data: uploadData, error: uploadError } = await supabase.storage
+                                    .from('incident_photos') // Assuming a bucket named 'incident_photos'
+                                    .upload(filePath, photoFile);
+                                    
+                                if (uploadError) {
+                                    console.error('Photo Upload Error:', uploadError.message);
+                                    // Continue submission without photo
+                                } else {
+                                     // Get public URL 
+                                     photoUrl = `${SUPABASE_URL}/storage/v1/object/public/incident_photos/${uploadData.path}`;
+                                }
+                            }
+                            
+                            // Submit report to Supabase
+                            const { error: submissionError } = await supabase.from('reports').insert([
+                                { 
+                                    user_id: localStorage.getItem('userId'), 
+                                    type: incidentType, 
+                                    details: incidentDetails, 
+                                    location: locationText, 
+                                    lat: latitude, 
+                                    lon: longitude,
+                                    photo_url: photoUrl
+                                }
+                            ]);
+                            
+                            if (submissionError) {
+                                console.error('Submission Error:', submissionError.message);
+                                showMessage(`Failed to submit report: ${submissionError.message}`, 'error', 5000);
+                            } else {
+                                // 4. Hide Countdown & Show Success Modal
+                                countdownModal.classList.add('hidden');
+                                successModal.classList.remove('hidden');
+                                playSound('successSound'); // Play success sound
+                                
+                                // Clear form inputs and re-fetch location
+                                reportForm.reset();
+                                locationTextEl.value = 'Fetching Location...'; 
+                                getLocation((result) => {
+                                    if (result.success) {
+                                        locationTextEl.value = result.locationText;
+                                        document.getElementById('latitude').value = result.lat;
+                                        document.getElementById('longitude').value = result.lon;
+                                    } else {
+                                        locationTextEl.value = result.errorMessage;
+                                    }
+                                });
+                                
+                                // Auto-hide success modal after 5 seconds
+                                setTimeout(() => {
+                                    successModal.classList.add('hidden');
+                                }, 5000);
+                            }
+                        } catch (e) {
+                            console.error('Fatal submission error:', e);
+                            showMessage('An unexpected error occurred during submission.', 'error', 5000);
+                        } finally {
+                             // Ensure modal hides on any error path
+                            countdownModal.classList.add('hidden'); 
+                        }
+                    }
+                }, 1000);
+            });
+        }
+    }
     
-    // Step A: Upload Photo (if present)
-    if (photoFile) {
-        try {
-            const fileExt = photoFile.name.split('.').pop();
-            const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+    // =================================================================
+    // HISTORY PAGE (history.html)
+    // =================================================================
+    if (window.location.pathname.endsWith('/history.html')) {
+        async function loadReportsHistory() {
+            const userId = localStorage.getItem('userId');
+            const reportsList = document.getElementById('reportsHistoryContainer');
             
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('emergency_photos') 
-                .upload(fileName, photoFile);
+            if (!userId) {
+                reportsList.innerHTML = '<p class="text-center" style="color:#f44336;">Please log in to view history.</p>';
+                return;
+            }
+            
+            reportsList.innerHTML = '<div class="text-center" style="margin-top: 50px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #d32f2f;"></i><p>Loading reports...</p></div>';
 
-            if (uploadError) throw uploadError;
+            const { data, error } = await supabase
+                .from('reports')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+                
+            if (error) {
+                reportsList.innerHTML = `<p class="text-center" style="color:#f44336;">Failed to load history: ${error.message}</p>`;
+                showMessage('Failed to load history: ' + error.message, 'error', 5000);
+                return;
+            }
             
-            // Get public URL for the uploaded photo
-            const { data: publicURLData } = supabase.storage
-                .from('emergency_photos')
-                .getPublicUrl(fileName);
-            
-            photoUrl = publicURLData.publicUrl;
-
-        } catch (error) {
-            console.error('Photo Upload Error:', error);
-            showMessage('Photo upload failed. Submitting report without photo.', 'error', 5000);
-            // Continue submission without photo
+            if (data && data.length > 0) {
+                reportsList.innerHTML = data.map(report => {
+                    const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
+                    const statusText = report.status || 'Pending';
+                    const date = new Date(report.created_at).toLocaleString();
+                    
+                    return `
+                        <div class="report-card-history">
+                            <div class="report-header">
+                                <h4>${report.type}</h4>
+                                <span class="report-status ${statusClass}">${statusText}</span>
+                            </div>
+                            <p><strong>Location:</strong> ${report.location}</p>
+                            <p><strong>Time:</strong> ${date}</p>
+                            <p><strong>Details:</strong> ${report.details || 'N/A'}</p>
+                            ${report.photo_url ? `<p><a href="${report.photo_url}" target="_blank" style="color:#d32f2f; font-weight: 600;">View Attached Photo</a></p>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                reportsList.innerHTML = '<p class="text-center">You have no previous emergency reports.</p>';
+            }
         }
-    }
-
-    // Step B: Submit Report Data to 'emergency_reports' table
-    const reportData = {
-        user_id: user.id,
-        description: description,
-        incident_type: incidentType,
-        incident_details: incidentDetails, // NEW FIELD (Point 4)
-        severity_level: severityLevel, // NEW FIELD (Point 4)
-        latitude: latitude,
-        longitude: longitude,
-        photo_url: photoUrl, // Will be null if no photo or upload failed
-        timestamp: new Date().toISOString(),
-        status: 'Reported' // Default status for admin dashboard
-    };
-
-    try {
-        const { error: insertError } = await supabase
-            .from('emergency_reports') 
-            .insert([reportData]);
-
-        if (insertError) throw insertError;
-
-        // Step C: Success
-        if(successModal) successModal.classList.remove('hidden');
-        playSound('successSound'); // Play success sound on popup (Point 2)
         
-        emergencyReportForm.reset(); // Clear form
-        if(locationStatusInput) locationStatusInput.value = 'Location Cleared.';
-        if(latitudeInput) latitudeInput.value = '';
-        if(longitudeInput) longitudeInput.value = '';
-
-    } catch (error) {
-        console.error('Report Submission Error:', error);
-        showMessage(`Report Submission Failed: ${error.message}`, 'error', 6000);
-    }
-}
-
-if (closeSuccessBtn) {
-    closeSuccessBtn.addEventListener('click', () => {
-        if(successModal) successModal.classList.add('hidden');
-        window.location.replace('home.html'); // Redirect to home page
-    });
-}
-// --- End of EMERGENCY REPORTING LOGIC ---
-
-
-// --- NEW: REPORT HISTORY LOGIC (Point 3) ---
-const reportsHistoryContainer = document.getElementById('reportsHistoryContainer');
-
-async function fetchReportHistory(userId) {
-    if(!reportsHistoryContainer) return;
-    
-    reportsHistoryContainer.innerHTML = '<p class="loading-state">Fetching your report history...</p>';
-
-    const { data: reports, error } = await supabase
-        .from('emergency_reports')
-        .select('*')
-        .eq('user_id', userId)
-        .order('timestamp', { ascending: false }); // Show newest first
-
-    if (error) {
-        console.error("Report History Fetch Error:", error);
-        reportsHistoryContainer.innerHTML = '<p class="error-state">Error loading report history. Please try again.</p>';
-        return;
-    }
-
-    if (reports.length > 0) {
-        renderReportHistory(reports);
-    } else {
-        reportsHistoryContainer.innerHTML = '<p class="empty-state">No past reports found. Stay safe!</p>';
-    }
-}
-
-function renderReportHistory(reports) {
-    reportsHistoryContainer.innerHTML = '';
-    
-    reports.forEach(report => {
-        const reportDate = new Date(report.timestamp).toLocaleString();
-        
-        const card = document.createElement('div');
-        card.classList.add('report-card-history'); // Use specific history class
-        
-        // Conditional photo display
-        let photoHtml = report.photo_url ? `<img src="${report.photo_url}" alt="Incident Photo" class="report-photo">` : '';
-        
-        // Dynamically style status based on text
-        const statusClass = `status-${report.status.toLowerCase().replace(/ /g, '_')}`;
-
-        card.innerHTML = `
-            ${photoHtml}
-            <div class="report-header">
-                <h4>${report.incident_type}</h4>
-                <span class="report-status ${statusClass}">${report.status}</span>
-            </div>
-            
-            <p class="report-detail-line"><strong>Severity:</strong> ${report.severity_level || 'N/A'}</p>
-            <p class="report-detail-line"><strong>What happened:</strong> ${report.incident_details || 'No specific details provided.'}</p>
-            <p class="report-description"><strong>Additional Context:</strong> ${report.description || 'N/A'}</p>
-
-            <div class="report-footer">
-                <span class="report-datetime"><i class="fas fa-clock"></i> Reported: ${reportDate}</span>
-                <span class="report-location"><i class="fas fa-map-marker-alt"></i> Location: ${report.latitude ? `${report.latitude.toFixed(4)}, ${report.longitude.toFixed(4)}` : 'N/A'}</span>
-            </div>
-        `;
-        reportsHistoryContainer.appendChild(card);
-    });
-}
-// --- END OF REPORT HISTORY LOGIC ---
-
-
-// --- DRAWER & LOGOUT LOGIC (Supabase) ---
-const menuButton = document.getElementById('menuButton');
-const sideDrawer = document.getElementById('sideDrawer');
-const closeDrawer = document.getElementById('closeDrawer');
-const logoutButton = document.getElementById('logoutButton');
-const backdrop = document.getElementById('drawerBackdrop');
-
-async function setDrawerHeaderName(userId) {
-    const drawerTitleElement = document.getElementById('drawerTitle');
-    if (!drawerTitleElement) return;
-
-    const { data } = await supabase
-        .from('profiles')
-        .select('fullname')
-        .eq('id', userId)
-        .single();
-        
-    if (data && data.fullname) {
-        const firstName = data.fullname.split(' ')[0];
-        drawerTitleElement.textContent = `Hi ${firstName}!`;
-    } else {
-         drawerTitleElement.textContent = `ResQ Menu`; 
-    }
-}
-
-if (menuButton) {
-    function toggleDrawer() {
-        sideDrawer.classList.toggle('open');
-        backdrop.classList.toggle('active');
-        document.body.style.overflowY = sideDrawer.classList.contains('open') ? 'hidden' : 'auto';
-    }
-    menuButton.addEventListener('click', toggleDrawer);
-    closeDrawer.addEventListener('click', toggleDrawer);
-    backdrop.addEventListener('click', toggleDrawer);
-
-    logoutButton.addEventListener('click', async (e) => {
-        e.preventDefault();
-        try {
-            const { error } = await supabase.auth.signOut();
-            
-            if (error) throw error;
-            
-            showMessage("Logged out successfully.", 'success');
-
-        } catch (error) {
-            console.error("Logout Error:", error);
-            showMessage("Logout failed. Please try again.", 'error');
-        }
-    });
-}
-
-
-// --- Helper Functions (Date input, PWA Install Prompt) ---
-const dobInput = document.getElementById('dob');
-if (dobInput) {
-    dobInput.addEventListener('focus', () => { dobInput.type = 'date'; dobInput.removeAttribute('placeholder'); });
-    dobInput.addEventListener('blur', () => { if (!dobInput.value) { dobInput.type = 'text'; dobInput.setAttribute('placeholder', 'DD/MM/YYYY'); } });
-}
-
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    if (localStorage.getItem('pwaPromptShown') !== 'true' && !window.matchMedia('(display-mode: standalone)').matches) {
-        showInstallPromotionModal(); 
+        loadReportsHistory();
     }
 });
+
+
+// --- PWA Installation Logic ---
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent the default browser prompt
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    deferredPrompt = e;
+    
+    // Check if we should show our custom install promotion
+    if (!localStorage.getItem('pwaPromptShown')) {
+        showInstallPromotionModal();
+    }
+});
+
+function setupPWAInstallPrompt() {
+    const installButton = document.getElementById('installButton');
+    if (installButton) {
+        installButton.addEventListener('click', () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    } else {
+                        console.log('User dismissed the install prompt');
+                    }
+                    deferredPrompt = null;
+                    const pwaModal = document.getElementById('pwaModal');
+                    if (pwaModal) pwaModal.remove();
+                });
+            }
+        });
+    }
+}
 
 function showInstallPromotionModal() {
     localStorage.setItem('pwaPromptShown', 'true');
     const modalHtml = `
-        <div id="pwaModal" class="pwa-modal-overlay">
-            <div class=\"pwa-modal-content\">
-                <i class=\"fas fa-heartbeat pwa-icon\"></i>
+        <div id="pwaModal" class="modal-overlay">
+            <div class="modal-content" style="text-align: center;">
+                <i class="fas fa-heartbeat pwa-icon" style="font-size: 3em; color: #d32f2f; margin-bottom: 15px;"></i>
                 <h2>Install ResQ - Your Safety App</h2>
                 <p>Install the ResQ app to get quick access to emergency features and use it even when you're offline. Get the full app experience!</p>
-                <button id="installButton" class="pwa-install-btn">Install App Now</button>
-                <button id="dismissButton" class="pwa-dismiss-btn">Not now, continue to website</button>
+                <button id="installButton" class="primary-btn" style="width: 100%; margin: 15px 0;">Install App Now</button>
+                <button id="dismissButton" class="secondary-btn" style="width: 100%;">Not now, continue to website</button>
             </div>
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     const pwaModal = document.getElementById('pwaModal');
+    
     document.getElementById('installButton').addEventListener('click', () => {
         if (deferredPrompt) {
             deferredPrompt.prompt();
@@ -640,7 +645,30 @@ function showInstallPromotionModal() {
             });
         }
     });
+    
     document.getElementById('dismissButton').addEventListener('click', () => {
         pwaModal.remove();
     });
+}
+
+// Function to fetch and store profile data (called after successful login/register)
+async function fetchAndStoreProfile(userId) {
+     try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+        if (!error && data) {
+            // Remove sensitive or unnecessary fields before storing locally
+            delete data.id; 
+            delete data.created_at; 
+            localStorage.setItem('profileData', JSON.stringify(data));
+        } else {
+            console.error('Failed to fetch profile for local storage:', error ? error.message : 'No data');
+        }
+    } catch (e) {
+        console.error('Error fetching profile for local storage:', e);
+    }
 }
