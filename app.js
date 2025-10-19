@@ -124,18 +124,20 @@ async function checkAuth() {
     }
 }
 
-// --- Geolocation Utility (REVERTED to getCurrentPosition) ---
+// --- Geolocation Utility (Using getCurrentPosition) ---
 function getLocation(callback) {
+    console.log("Attempting to get location..."); // Added Log
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => {
+                console.log("Geolocation success:", position); // Added Log
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
                 const locationText = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
                 callback({ success: true, lat, lon, locationText });
             },
             (error) => {
-                console.error("Geolocation error:", error);
+                console.error("Geolocation error:", error); // Added Log
                 let errorMessage = "Location not available. Ensure services are enabled.";
                 if (error.code === error.PERMISSION_DENIED) {
                     errorMessage = "PERMISSION DENIED: Allow location access.";
@@ -149,6 +151,7 @@ function getLocation(callback) {
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
         );
     } else {
+        console.log("Geolocation not supported by this browser."); // Added Log
         callback({ success: false, errorMessage: "Geolocation not supported by this browser." });
     }
 }
@@ -461,8 +464,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const successModal = document.getElementById('successModal');
         const countdownTimer = document.getElementById('countdownTimer');
         const getLocationBtn = document.getElementById('getLocationBtn');
-        const locationTextEl = document.getElementById('location'); 
-        // Get references to hidden lat/lon inputs
+        const locationTextEl = document.getElementById('location'); // The visible location text input
+        // FIX: Ensure hidden inputs are consistently retrieved
         const latitudeInput = document.getElementById('latitude'); 
         const longitudeInput = document.getElementById('longitude'); 
         const closeSuccessBtn = document.getElementById('closeSuccessBtn');
@@ -490,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${SUPABASE_URL}/storage/v1/object/public/${REPORT_BUCKET}/${uploadData.path}`;
         }
 
-        // Location handling function (uses reverted getCurrentPosition)
+        // Location handling function (uses getCurrentPosition)
         function handleLocationFetch() {
             if (isFetchingLocation) return;
             isFetchingLocation = true;
@@ -499,9 +502,11 @@ document.addEventListener('DOMContentLoaded', () => {
             longitudeInput.value = '';
             currentLat = null;
             currentLon = null;
+            console.log("handleLocationFetch called"); // Added Log
 
             getLocation((result) => {
                 if (result.success) {
+                    console.log("Location Success - Updating fields"); // Added Log
                     locationTextEl.value = result.locationText;
                     latitudeInput.value = result.lat; // Update hidden input
                     longitudeInput.value = result.lon; // Update hidden input
@@ -509,6 +514,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentLon = result.lon;
                     showMessage('Location acquired successfully.', 'success', 3000);
                 } else {
+                    console.log("Location Error - Updating fields"); // Added Log
                     locationTextEl.value = result.errorMessage;
                     showMessage(result.errorMessage, 'error', 5000);
                 }
@@ -532,11 +538,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 reportForm.reset();
                 currentLat = null;
                 currentLon = null;
-                // Re-attempt location fetch after a successful report submission
-                locationTextEl.value = 'Not acquired.'; 
+                locationTextEl.value = 'Not acquired.'; // Set back to initial state
                 latitudeInput.value = '';
                 longitudeInput.value = '';
-                // handleLocationFetch(); // Optional: Re-fetch automatically
                 document.getElementById('submitReportBtn').disabled = false;
             });
         }
@@ -562,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 // CRUCIAL CHECK: Ensure lat/lon were successfully acquired before submitting
-                if (currentLat === null || currentLon === null || locationTextEl.value.includes('Location not available') || locationTextEl.value.includes('PERMISSION DENIED') || locationTextEl.value.includes('TIMEOUT')) {
+                if (currentLat === null || currentLon === null || locationTextEl.value.includes('Location not available') || locationTextEl.value.includes('PERMISSION DENIED') || locationTextEl.value.includes('TIMEOUT') || locationTextEl.value.includes('Fetching Location')) {
                     showMessage('Valid location is required. Click "Get Location" or ensure permissions are granted.', 'error', 7000);
                     document.getElementById('submitReportBtn').disabled = false;
                     return;
