@@ -11,7 +11,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // --- Initialize Supabase Client ---
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// FIX 1: Define the photo bucket name as a constant and use the correct name
+// Define the photo bucket name as a constant
 const REPORT_BUCKET = 'emergency_photos'; 
 
 // --- Global Utility: Custom Message Box & Sound Player ---
@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPWAInstallPrompt();
     
     // =================================================================
-    // LOGIN PAGE (index.html) - FIXED LOGIN CHECK
+    // LOGIN PAGE (index.html)
     // =================================================================
     if (window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/')) {
         const loginForm = document.getElementById('loginForm');
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // =================================================================
-    // REGISTER PAGE (register.html) - FIXED COLUMN NAMES
+    // REGISTER PAGE (register.html)
     // =================================================================
     if (window.location.pathname.endsWith('/register.html')) {
         const registerForm = document.getElementById('registerForm');
@@ -346,18 +346,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     .insert([
                         { 
                             id: userId,
-                            fullname: fullname,             // FIXED
-                            email: email,                   // ADDED
+                            fullname: fullname,             
+                            email: email,                   
                             phone: phone, 
                             dob: dob, 
-                            gender: gender,                 // ADDED
-                            bloodgrp: bloodgrp,             // ADDED
+                            gender: gender,                 
+                            bloodgrp: bloodgrp,             
                             address: address, 
                             city: city, 
                             pincode: pincode, 
-                            emergency1: emergency1,         // FIXED
-                            emergency2: emergency2,         // FIXED
-                            medical: medical                // FIXED
+                            emergency1: emergency1,         
+                            emergency2: emergency2,         
+                            medical: medical                
                         }
                     ]);
                     
@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // PROFILE PAGE (profile.html) - FIXED DISPLAY LOGIC AND COLUMN NAMES
+    // PROFILE PAGE (profile.html)
     // =================================================================
     if (window.location.pathname.endsWith('/profile.html')) {
         
@@ -462,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // REPORT EMERGENCY PAGE (report.html) - FIXED: SEVERITY, PHOTO BUCKET
+    // REPORT EMERGENCY PAGE (report.html) - LOCATION FIX APPLIED HERE
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm'); 
@@ -470,14 +470,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const successModal = document.getElementById('successModal');
         const countdownTimer = document.getElementById('countdownTimer');
         const getLocationBtn = document.getElementById('getLocationBtn');
-        const locationTextEl = document.getElementById('location'); 
+        const locationTextEl = document.getElementById('location'); // The target input field
         const closeSuccessBtn = document.getElementById('closeSuccessBtn');
 
         let isFetchingLocation = false;
         let currentLat = null; 
         let currentLon = null; 
         
-        // Helper function to upload image (FIX 1: Using REPORT_BUCKET constant)
+        // Helper function to upload image (Using REPORT_BUCKET constant)
         async function uploadImage(file, userId) {
             const fileExt = file.name.split('.').pop();
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -498,43 +498,35 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${SUPABASE_URL}/storage/v1/object/public/${REPORT_BUCKET}/${uploadData.path}`;
         }
 
-        // Initial location fetch on load
-        locationTextEl.value = 'Fetching Location...';
-        getLocation((result) => {
-            if (result.success) {
-                locationTextEl.value = result.locationText;
-                currentLat = result.lat;
-                currentLon = result.lon;
-                showMessage('Location acquired successfully.', 'success', 3000);
-            } else {
-                locationTextEl.value = result.errorMessage;
-                showMessage(result.errorMessage, 'error', 5000);
-            }
-            isFetchingLocation = false;
-        });
+        // Location handling function (used for initial load and button click)
+        function handleLocationFetch() {
+            if (isFetchingLocation) return;
+            isFetchingLocation = true;
+            locationTextEl.value = 'Fetching Location...';
+            currentLat = null;
+            currentLon = null;
+
+            getLocation((result) => {
+                if (result.success) {
+                    locationTextEl.value = result.locationText;
+                    currentLat = result.lat;
+                    currentLon = result.lon;
+                    showMessage('Location acquired successfully.', 'success', 3000);
+                } else {
+                    locationTextEl.value = result.errorMessage;
+                    showMessage(result.errorMessage, 'error', 5000);
+                }
+                isFetchingLocation = false;
+            });
+        }
+
+        // FIX: Call the location function immediately on DOM load
+        handleLocationFetch();
+
 
         // Manual location fetch button listener
         if (getLocationBtn) {
-            getLocationBtn.addEventListener('click', () => {
-                if (isFetchingLocation) return;
-                isFetchingLocation = true;
-                locationTextEl.value = 'Fetching Location...';
-                currentLat = null;
-                currentLon = null;
-
-                getLocation((result) => {
-                    if (result.success) {
-                        locationTextEl.value = result.locationText;
-                        currentLat = result.lat;
-                        currentLon = result.lon;
-                        showMessage('Location updated successfully.', 'success', 3000);
-                    } else {
-                        locationTextEl.value = result.errorMessage;
-                        showMessage(result.errorMessage, 'error', 5000);
-                    }
-                    isFetchingLocation = false;
-                });
-            });
+            getLocationBtn.addEventListener('click', handleLocationFetch);
         }
         
         // Listener for closing success modal
@@ -545,22 +537,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 reportForm.reset();
                 currentLat = null;
                 currentLon = null;
-                locationTextEl.value = 'Location Cleared';
+                locationTextEl.value = 'Not acquired.'; // Set back to initial state
                 document.getElementById('submitReportBtn').disabled = false;
             });
         }
 
 
-        // --- REPORT SUBMISSION LOGIC (FIXED FOR SEVERITY & PHOTO BUCKET) ---
+        // --- REPORT SUBMISSION LOGIC ---
         if (reportForm) {
             reportForm.addEventListener('submit', async function(event) {
                 event.preventDefault();
                 event.stopImmediatePropagation(); 
 
                 const incidentType = document.getElementById('incidentType').value;
-                const description = document.getElementById('description').value; 
-                // FIX 2: Capture severity value from report.html
+                const incidentDetails = document.getElementById('incidentDetails').value; 
                 const severity = document.getElementById('severity').value; 
+                const additionalContext = document.getElementById('description').value; 
                 
                 document.getElementById('submitReportBtn').disabled = true;
 
@@ -613,14 +605,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 { 
                                     user_id: localStorage.getItem('userId'), 
                                     incident_type: incidentType, 
-                                    incident_details: description, 
-                                    // FIX 3: Include severity in the insertion
+                                    incident_details: incidentDetails, 
                                     severity: severity, 
                                     latitude: currentLat, 
                                     longitude: currentLon, 
                                     photo_url: photoUrl,
                                     status: 'Reported', 
-                                    additional_context: locationTextEl.value 
+                                    additional_context: additionalContext 
                                 }
                             ]);
                             
@@ -659,7 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // =================================================================
-    // HISTORY PAGE (history.html) - FIXED TABLE AND COLUMNS
+    // HISTORY PAGE (history.html)
     // =================================================================
     if (window.location.pathname.endsWith('/history.html')) {
         async function loadReportsHistory() {
@@ -675,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { data, error } = await supabase
                 .from('emergency_reports') 
-                .select('timestamp, incident_type, incident_details, additional_context, photo_url, status, severity') // Added severity to select
+                .select('timestamp, incident_type, incident_details, additional_context, photo_url, status, severity') 
                 .eq('user_id', userId)
                 .order('timestamp', { ascending: false });
                 
