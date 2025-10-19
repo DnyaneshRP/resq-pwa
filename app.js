@@ -330,9 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const closeSuccessBtn = document.getElementById('closeSuccessBtn');
         const locationBtn = document.getElementById('getLocationBtn');
         const locationInput = document.getElementById('location');
-
-        // <<< THE FIX: Ensure success modal is hidden immediately on page load
-        successModal?.classList.add('hidden');
         
         // Store current latitude and longitude globally for the page
         let currentLat = null;
@@ -446,9 +443,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1000);
         }
 
-        // 4. Main Form Submission Handler (Fixing the immediate submission issue)
+        // 4. Main Form Submission Handler 
         reportForm?.addEventListener('submit', (e) => {
-            e.preventDefault(); // *** PREVENTS IMMEDIATE SUBMISSION/RELOAD ***
+            e.preventDefault(); // *** CRITICAL: PREVENTS IMMEDIATE SUBMISSION/RELOAD ***
 
             // Basic Form Validation (check required fields)
             const incidentType = document.getElementById('incidentType').value;
