@@ -580,3 +580,8 @@ button:disabled {
     background-color: #388E3C;
     box-shadow: 0 2px #388E3C;
 }
+
+/* --- Utility Class --- */
+.hidden {
+    display: none !important;
+}

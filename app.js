@@ -148,6 +148,68 @@ function getLocation(callback) {
     }
 }
 
+// Function to fetch and store profile data (called after successful login/register)
+async function fetchAndStoreProfile(userId) {
+     try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+        if (!error && data) {
+            // Remove sensitive or unnecessary fields before storing locally
+            delete data.id; 
+            delete data.created_at; 
+            localStorage.setItem('profileData', JSON.stringify(data));
+        } else {
+            console.error('Failed to fetch profile for local storage:', error ? error.message : 'No data');
+        }
+    } catch (e) {
+        console.error('Error fetching profile for local storage:', e);
+    }
+}
+
+// --- PWA Install Prompt Setup ---
+let deferredPrompt;
+
+function setupPWAInstallPrompt() {
+    const pwaModal = document.getElementById('pwaModal');
+    
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent Chrome 76 and later from showing the mini-infobar
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        deferredPrompt = e;
+        // Show the modal to the user
+        if (pwaModal) {
+             pwaModal.classList.remove('hidden');
+        }
+    });
+
+    if (pwaModal) {
+        document.getElementById('installButton').addEventListener('click', () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    } else {
+                        console.log('User dismissed the install prompt');
+                    }
+                    deferredPrompt = null;
+                    pwaModal.classList.add('hidden'); // Hide modal instead of remove
+                });
+            }
+        });
+        
+        document.getElementById('dismissButton').addEventListener('click', () => {
+            pwaModal.classList.add('hidden'); // Hide modal
+        });
+    }
+}
+
+
 // --- Page Specific Logic Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
@@ -194,7 +256,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (registerForm) {
             registerForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
                 const email = document.getElementById('email').value;
                 const password = document.getElementById('password').value;
                 const fullname = document.getElementById('fullname').value;
@@ -206,31 +267,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 const emergency1 = document.getElementById('emergency1').value;
                 const emergency2 = document.getElementById('emergency2').value || null;
                 const medical = document.getElementById('medical').value || null;
-                
+
                 showMessage('Registering...', 'success', 2000);
-                
+
                 // 1. Sign up the user
                 const { data: authData, error: authError } = await supabase.auth.signUp({ 
                     email, 
-                    password,
-                    options: {
-                        data: { full_name: fullname }
-                    }
+                    password, 
+                    options: { 
+                        data: { full_name: fullname } 
+                    } 
                 });
-                
+
                 if (authError) {
                     showMessage('Registration Failed: ' + authError.message, 'error', 5000);
                     return;
                 }
-                
+
                 const userId = authData.user.id;
-                
+
                 // 2. Insert profile details
                 const { error: profileError } = await supabase
                     .from('profiles')
                     .insert([
                         { 
-                            id: userId,
+                            id: userId, 
                             full_name: fullname, 
                             phone: phone, 
                             dob: dob, 
@@ -238,437 +299,193 @@ document.addEventListener('DOMContentLoaded', () => {
                             city: city, 
                             pincode: pincode, 
                             emergency_contact_1: emergency1, 
-                            emergency_contact_2: emergency2, 
+                            emergency_contact_2: emergency2,
                             medical_conditions: medical
                         }
                     ]);
-                    
+
                 if (profileError) {
-                    // This is a critical error, log and inform the user
-                    console.error('Profile Insert Error:', profileError);
-                    showMessage('Registration completed, but failed to save profile details: ' + profileError.message, 'error', 8000);
+                    console.error('Profile insertion failed:', profileError.message);
+                    showMessage('Registration failed (Profile error). Please try again.', 'error', 5000);
                     return;
                 }
-                
-                localStorage.setItem('userId', userId);
-                showMessage('Registration successful! Redirecting to Home...', 'success', 1000);
+
+                showMessage('Registration Successful! Please log in.', 'success', 3000);
                 setTimeout(() => {
-                    window.location.href = 'home.html';
-                }, 1000);
+                    window.location.href = 'index.html';
+                }, 3000);
+
             });
         }
     }
 
     // =================================================================
-    // PROFILE PAGE (profile.html)
-    // =================================================================
-    if (window.location.pathname.endsWith('/profile.html')) {
-        const profileForm = document.getElementById('profileForm');
-        
-        // Function to fetch and display profile data
-        async function loadProfile() {
-            const userId = localStorage.getItem('userId');
-            if (!userId) {
-                showMessage('User not logged in. Redirecting...', 'error', 3000);
-                setTimeout(() => window.location.href = 'index.html', 3000);
-                return;
-            }
-
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
-                
-            if (error) {
-                showMessage('Failed to load profile: ' + error.message, 'error', 5000);
-                return;
-            }
-            
-            if (data) {
-                // Populate the form fields with fetched data
-                document.getElementById('fullname').value = data.full_name || '';
-                // The user's email is not in the `profiles` table in this logic, skip or fetch from auth
-                // document.getElementById('email').value = data.email || ''; 
-                document.getElementById('phone').value = data.phone || '';
-                document.getElementById('dob').value = data.dob || '';
-                document.getElementById('address').value = data.address || '';
-                document.getElementById('city').value = data.city || '';
-                document.getElementById('pincode').value = data.pincode || '';
-                document.getElementById('emergency1').value = data.emergency_contact_1 || '';
-                document.getElementById('emergency2').value = data.emergency_contact_2 || '';
-                document.getElementById('medical').value = data.medical_conditions || '';
-                
-                // Store locally for offline/quick access
-                localStorage.setItem('profileData', JSON.stringify(data));
-            }
-        }
-        
-        // Load profile on page load
-        loadProfile();
-
-        // Handle profile update form submission
-        if (profileForm) {
-            profileForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const userId = localStorage.getItem('userId');
-                
-                const updatedData = {
-                    full_name: document.getElementById('fullname').value,
-                    phone: document.getElementById('phone').value,
-                    dob: document.getElementById('dob').value,
-                    address: document.getElementById('address').value,
-                    city: document.getElementById('city').value,
-                    pincode: document.getElementById('pincode').value,
-                    emergency_contact_1: document.getElementById('emergency1').value,
-                    emergency_contact_2: document.getElementById('emergency2').value || null,
-                    medical_conditions: document.getElementById('medical').value || null
-                };
-                
-                showMessage('Updating profile...', 'success', 2000);
-                
-                const { error } = await supabase
-                    .from('profiles')
-                    .update(updatedData)
-                    .eq('id', userId);
-                    
-                if (error) {
-                    showMessage('Profile Update Failed: ' + error.message, 'error', 5000);
-                } else {
-                    // Update local storage after successful update
-                    localStorage.setItem('profileData', JSON.stringify({...updatedData, id: userId}));
-                    showMessage('Profile updated successfully!', 'success', 3000);
-                }
-            });
-        }
-    }
-
-    // =================================================================
-    // REPORT EMERGENCY PAGE (report.html)
+    // REPORT PAGE (report.html)
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
-        const reportForm = document.getElementById('reportForm');
+        const reportForm = document.getElementById('emergencyReportForm');
+        const submitBtn = document.getElementById('submitReportBtn');
         const countdownModal = document.getElementById('countdownModal');
         const successModal = document.getElementById('successModal');
-        const countdownTimer = document.getElementById('countdownTimer');
-        const getLocationBtn = document.getElementById('getLocationBtn');
-        const locationTextEl = document.getElementById('locationText');
         const closeSuccessBtn = document.getElementById('closeSuccessBtn');
+        const locationBtn = document.getElementById('getLocationBtn');
+        const locationInput = document.getElementById('location');
 
-        let isFetchingLocation = false;
+        // Store current latitude and longitude globally for the page
+        let currentLat = null;
+        let currentLon = null;
         
-        // Initial location fetch on load
-        locationTextEl.value = 'Fetching Location...';
-        getLocation((result) => {
-            if (result.success) {
-                locationTextEl.value = result.locationText;
-                document.getElementById('latitude').value = result.lat;
-                document.getElementById('longitude').value = result.lon;
-                showMessage('Location acquired successfully.', 'success', 3000);
-            } else {
-                locationTextEl.value = result.errorMessage;
-                showMessage(result.errorMessage, 'error', 5000);
-            }
-            isFetchingLocation = false;
-        });
+        // Helper function to upload image to Supabase Storage
+        async function uploadImage(file, userId) {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+            const filePath = `${userId}/${fileName}`;
 
-        // Manual location fetch button listener
-        if (getLocationBtn) {
-            getLocationBtn.addEventListener('click', () => {
-                if (isFetchingLocation) return;
-                isFetchingLocation = true;
-                locationTextEl.value = 'Fetching Location...';
-                document.getElementById('latitude').value = '';
-                document.getElementById('longitude').value = '';
+            // Show a temporary message for upload start
+            showMessage('Uploading photo...', 'info', 2000);
 
-                getLocation((result) => {
-                    if (result.success) {
-                        locationTextEl.value = result.locationText;
-                        document.getElementById('latitude').value = result.lat;
-                        document.getElementById('longitude').value = result.lon;
-                        showMessage('Location updated successfully.', 'success', 3000);
-                    } else {
-                        locationTextEl.value = result.errorMessage;
-                        showMessage(result.errorMessage, 'error', 5000);
-                    }
-                    isFetchingLocation = false;
-                });
-            });
-        }
-        
-        // Listener for closing success modal
-        if (closeSuccessBtn) {
-            closeSuccessBtn.addEventListener('click', () => {
-                successModal.classList.add('hidden');
-            });
-        }
+            const { data, error } = await supabase.storage
+                .from('report_photos')
+                .upload(filePath, file);
 
-        // --- FIXED Report Submission Logic ---
-        if (reportForm) {
-            reportForm.addEventListener('submit', async function(event) {
-                // FIX: Prevent default form submission and stop immediate propagation 
-                event.preventDefault();
-                event.stopImmediatePropagation(); 
-
-                const incidentType = document.getElementById('incidentType').value;
-                const locationText = document.getElementById('locationText').value;
-
-                // FIX: Enforce input validation. 
-                if (!incidentType || incidentType === '') {
-                    showMessage('Please select an incident type.', 'error', 4000);
-                    return;
-                }
-                
-                if (!locationText || locationText === 'Fetching Location...' || locationText.includes('Location not available')) {
-                    showMessage('Please wait for a valid location or click "Get Location" to try again.', 'error', 5000);
-                    return;
-                }
-
-                // FIX: Show Countdown Modal and play sound immediately
-                countdownModal.classList.remove('hidden');
-                playSound('countdownSound');
-
-                // 2. Start Countdown (3, 2, 1)
-                let count = 3;
-                countdownTimer.textContent = count;
-
-                const countdownInterval = setInterval(async () => {
-                    count--;
-                    countdownTimer.textContent = count;
-                    
-                    if (count > 0) {
-                        playSound('countdownSound'); // Re-play sound for 2 and 1
-                    }
-
-                    if (count <= 0) {
-                        clearInterval(countdownInterval);
-                        
-                        // 3. Process Submission
-                        const incidentDetails = document.getElementById('incidentDetails').value;
-                        const latitude = document.getElementById('latitude').value;
-                        const longitude = document.getElementById('longitude').value;
-                        const photoFile = document.getElementById('photo').files[0];
-                        
-                        let photoUrl = null;
-
-                        try {
-                             // Handle file upload (requires Supabase storage bucket setup)
-                            if (photoFile) {
-                                showMessage('Uploading photo...', 'success', 1000);
-                                const filePath = `${localStorage.getItem('userId')}/${Date.now()}-${photoFile.name}`;
-                                const { data: uploadData, error: uploadError } = await supabase.storage
-                                    .from('incident_photos') // Assuming a bucket named 'incident_photos'
-                                    .upload(filePath, photoFile);
-                                    
-                                if (uploadError) {
-                                    console.error('Photo Upload Error:', uploadError.message);
-                                    // Continue submission without photo
-                                } else {
-                                     // Get public URL 
-                                     photoUrl = `${SUPABASE_URL}/storage/v1/object/public/incident_photos/${uploadData.path}`;
-                                }
-                            }
-                            
-                            // Submit report to Supabase
-                            const { error: submissionError } = await supabase.from('reports').insert([
-                                { 
-                                    user_id: localStorage.getItem('userId'), 
-                                    type: incidentType, 
-                                    details: incidentDetails, 
-                                    location: locationText, 
-                                    lat: latitude, 
-                                    lon: longitude,
-                                    photo_url: photoUrl
-                                }
-                            ]);
-                            
-                            if (submissionError) {
-                                console.error('Submission Error:', submissionError.message);
-                                showMessage(`Failed to submit report: ${submissionError.message}`, 'error', 5000);
-                            } else {
-                                // 4. Hide Countdown & Show Success Modal
-                                countdownModal.classList.add('hidden');
-                                successModal.classList.remove('hidden');
-                                playSound('successSound'); // Play success sound
-                                
-                                // Clear form inputs and re-fetch location
-                                reportForm.reset();
-                                locationTextEl.value = 'Fetching Location...'; 
-                                getLocation((result) => {
-                                    if (result.success) {
-                                        locationTextEl.value = result.locationText;
-                                        document.getElementById('latitude').value = result.lat;
-                                        document.getElementById('longitude').value = result.lon;
-                                    } else {
-                                        locationTextEl.value = result.errorMessage;
-                                    }
-                                });
-                                
-                                // Auto-hide success modal after 5 seconds
-                                setTimeout(() => {
-                                    successModal.classList.add('hidden');
-                                }, 5000);
-                            }
-                        } catch (e) {
-                            console.error('Fatal submission error:', e);
-                            showMessage('An unexpected error occurred during submission.', 'error', 5000);
-                        } finally {
-                             // Ensure modal hides on any error path
-                            countdownModal.classList.add('hidden'); 
-                        }
-                    }
-                }, 1000);
-            });
-        }
-    }
-    
-    // =================================================================
-    // HISTORY PAGE (history.html)
-    // =================================================================
-    if (window.location.pathname.endsWith('/history.html')) {
-        async function loadReportsHistory() {
-            const userId = localStorage.getItem('userId');
-            const reportsList = document.getElementById('reportsHistoryContainer');
-            
-            if (!userId) {
-                reportsList.innerHTML = '<p class="text-center" style="color:#f44336;">Please log in to view history.</p>';
-                return;
-            }
-            
-            reportsList.innerHTML = '<div class="text-center" style="margin-top: 50px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #d32f2f;"></i><p>Loading reports...</p></div>';
-
-            const { data, error } = await supabase
-                .from('reports')
-                .select('*')
-                .eq('user_id', userId)
-                .order('created_at', { ascending: false });
-                
             if (error) {
-                reportsList.innerHTML = `<p class="text-center" style="color:#f44336;">Failed to load history: ${error.message}</p>`;
-                showMessage('Failed to load history: ' + error.message, 'error', 5000);
+                console.error('Image upload failed:', error);
+                showMessage('Photo upload failed.', 'error', 3000);
+                return null;
+            }
+            // Return the full path/key which can be used to construct the URL
+            return filePath;
+        }
+
+        // 1. Get Location Handler
+        locationBtn?.addEventListener('click', () => {
+            locationInput.value = 'Finding location...';
+            locationBtn.disabled = true;
+            showMessage('Attempting to get location...', 'info');
+
+            getLocation(({ success, lat, lon, locationText, errorMessage }) => {
+                locationBtn.disabled = false;
+                if (success) {
+                    currentLat = lat;
+                    currentLon = lon;
+                    locationInput.value = locationText;
+                    showMessage('Location found.', 'success');
+                } else {
+                    locationInput.value = 'Location not available';
+                    showMessage(errorMessage, 'error', 5000);
+                }
+            });
+        });
+
+        // 2. Submission Finalizer - This runs AFTER the countdown
+        async function submitEmergencyReport(formData) {
+            const userId = localStorage.getItem('userId');
+            let photoUrl = null;
+            const photoFile = formData.get('photo');
+
+            if (photoFile && photoFile.size > 0) {
+                photoUrl = await uploadImage(photoFile, userId);
+            }
+
+            const reportData = {
+                user_id: userId,
+                incident_type: formData.get('incidentType'),
+                description: formData.get('description'),
+                latitude: currentLat,
+                longitude: currentLon,
+                location_text: formData.get('location'),
+                photo_url: photoUrl, // Store path or null
+                status: 'pending' // Initial status
+            };
+
+            const { error } = await supabase
+                .from('emergency_reports')
+                .insert([reportData]);
+
+            countdownModal.classList.add('hidden'); // Hide countdown modal
+
+            if (error) {
+                console.error('Report submission failed:', error);
+                showMessage('Failed to submit report. Offline saving is not yet implemented.', 'error', 5000);
+                submitBtn.disabled = false; // Re-enable button on failure
+            } else {
+                playSound('successSound'); // <<< Plays the success sound
+                successModal.classList.remove('hidden'); // Show success modal
+                showMessage('Report submitted successfully!', 'success', 5000);
+            }
+        }
+
+        // 3. Countdown Logic
+        function startCountdown(formData) {
+            let count = 3;
+            const countdownTimerDisplay = document.getElementById('countdownTimer');
+            const countdownMessageDisplay = document.getElementById('countdownMessage');
+            countdownModal.classList.remove('hidden');
+
+            // Set initial display
+            countdownTimerDisplay.textContent = count;
+            countdownMessageDisplay.textContent = 'Report sending in...';
+            playSound('countdownSound'); // <<< Play initial countdown sound
+
+            const interval = setInterval(() => {
+                count--;
+                countdownTimerDisplay.textContent = count;
+                
+                if (count > 0) {
+                    playSound('countdownSound'); // <<< Play countdown sound on each tick
+                } else {
+                    clearInterval(interval);
+                    countdownMessageDisplay.textContent = 'Sending...';
+                    // Call the final submission function after countdown
+                    submitEmergencyReport(formData);
+                }
+            }, 1000);
+        }
+
+        // 4. Main Form Submission Handler (Fixing the immediate submission issue)
+        reportForm?.addEventListener('submit', (e) => {
+            e.preventDefault(); // *** THE KEY FIX: PREVENTS IMMEDIATE SUBMISSION/RELOAD ***
+
+            // Basic Form Validation (check required fields)
+            const incidentType = document.getElementById('incidentType').value;
+            const description = document.getElementById('description').value;
+
+            if (!currentLat || !currentLon) {
+                showMessage('Please fetch your current location before submitting.', 'error', 5000);
+                // Optionally auto-trigger location fetch here
+                // locationBtn.click();
                 return;
             }
-            
-            if (data && data.length > 0) {
-                reportsList.innerHTML = data.map(report => {
-                    const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
-                    const statusText = report.status || 'Pending';
-                    const date = new Date(report.created_at).toLocaleString();
-                    
-                    return `
-                        <div class="report-card-history">
-                            <div class="report-header">
-                                <h4>${report.type}</h4>
-                                <span class="report-status ${statusClass}">${statusText}</span>
-                            </div>
-                            <p><strong>Location:</strong> ${report.location}</p>
-                            <p><strong>Time:</strong> ${date}</p>
-                            <p><strong>Details:</strong> ${report.details || 'N/A'}</p>
-                            ${report.photo_url ? `<p><a href="${report.photo_url}" target="_blank" style="color:#d32f2f; font-weight: 600;">View Attached Photo</a></p>` : ''}
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                reportsList.innerHTML = '<p class="text-center">You have no previous emergency reports.</p>';
+
+            if (!incidentType || incidentType === '') {
+                showMessage('Please select an Incident Type.', 'error', 5000);
+                return;
             }
-        }
-        
-        loadReportsHistory();
-    }
-});
-
-
-// --- PWA Installation Logic ---
-let deferredPrompt;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent the default browser prompt
-    e.preventDefault();
-    // Stash the event so it can be triggered later.
-    deferredPrompt = e;
-    
-    // Check if we should show our custom install promotion
-    if (!localStorage.getItem('pwaPromptShown')) {
-        showInstallPromotionModal();
-    }
-});
-
-function setupPWAInstallPrompt() {
-    const installButton = document.getElementById('installButton');
-    if (installButton) {
-        installButton.addEventListener('click', () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the install prompt');
-                    } else {
-                        console.log('User dismissed the install prompt');
-                    }
-                    deferredPrompt = null;
-                    const pwaModal = document.getElementById('pwaModal');
-                    if (pwaModal) pwaModal.remove();
-                });
+            if (!description || description.trim() === '') {
+                 showMessage('Please add a Description.', 'error', 5000);
+                return;
             }
+
+            // Temporarily disable the button to prevent multiple submissions
+            submitBtn.disabled = true; 
+
+            // Create FormData object to easily get all form values including file
+            const formData = new FormData(reportForm);
+
+            // Start the delayed submission (countdown)
+            startCountdown(formData);
+        });
+
+        // 5. Close Success Modal
+        closeSuccessBtn?.addEventListener('click', () => {
+            successModal.classList.add('hidden');
+            // Reset state
+            reportForm.reset();
+            locationInput.value = '';
+            currentLat = null;
+            currentLon = null;
+            submitBtn.disabled = false; // Re-enable the submit button
         });
     }
-}
 
-function showInstallPromotionModal() {
-    localStorage.setItem('pwaPromptShown', 'true');
-    const modalHtml = `
-        <div id="pwaModal" class="modal-overlay">
-            <div class="modal-content" style="text-align: center;">
-                <i class="fas fa-heartbeat pwa-icon" style="font-size: 3em; color: #d32f2f; margin-bottom: 15px;"></i>
-                <h2>Install ResQ - Your Safety App</h2>
-                <p>Install the ResQ app to get quick access to emergency features and use it even when you're offline. Get the full app experience!</p>
-                <button id="installButton" class="primary-btn" style="width: 100%; margin: 15px 0;">Install App Now</button>
-                <button id="dismissButton" class="secondary-btn" style="width: 100%;">Not now, continue to website</button>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    const pwaModal = document.getElementById('pwaModal');
-    
-    document.getElementById('installButton').addEventListener('click', () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((choiceResult) => {
-                if (choiceResult.outcome === 'accepted') {
-                    console.log('User accepted the install prompt');
-                } else {
-                    console.log('User dismissed the install prompt');
-                }
-                deferredPrompt = null;
-                pwaModal.remove();
-            });
-        }
-    });
-    
-    document.getElementById('dismissButton').addEventListener('click', () => {
-        pwaModal.remove();
-    });
-}
-
-// Function to fetch and store profile data (called after successful login/register)
-async function fetchAndStoreProfile(userId) {
-     try {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
-            
-        if (!error && data) {
-            // Remove sensitive or unnecessary fields before storing locally
-            delete data.id; 
-            delete data.created_at; 
-            localStorage.setItem('profileData', JSON.stringify(data));
-        } else {
-            console.error('Failed to fetch profile for local storage:', error ? error.message : 'No data');
-        }
-    } catch (e) {
-        console.error('Error fetching profile for local storage:', e);
-    }
-}
+}); // End of DOMContentLoaded
