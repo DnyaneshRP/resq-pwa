@@ -483,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage('Uploading photo...', 'info', 2000);
 
             const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('incident_photos') 
+                .from('emergency_photos') 
                 .upload(filePath, file);
                 
             if (uploadError) {
@@ -492,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return null;
             }
             // Supabase returns a path; construct the full public URL
-            return `${SUPABASE_URL}/storage/v1/object/public/incident_photos/${uploadData.path}`;
+            return `${SUPABASE_URL}/storage/v1/object/public/emergency_photos/${uploadData.path}`;
         }
 
         // Initial location fetch on load
