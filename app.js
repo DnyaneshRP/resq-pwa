@@ -486,10 +486,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             if (uploadError) {
                 console.error('Photo Upload Error:', uploadError.message);
-                showMessage('Photo upload failed.', 'error', 3000);
+                showMessage('Photo upload failed. Check Storage RLS and Bucket name.', 'error', 5000);
                 return null;
             }
-            return `${SUPABASE_URL}/storage/v1/object/public/${REPORT_BUCKET}/${uploadData.path}`;
+            // Generate the public URL correctly
+            const { data: { publicUrl } } = supabase.storage.from(REPORT_BUCKET).getPublicUrl(filePath);
+            return publicUrl;
         }
 
         function handleLocationFetch() {
@@ -517,6 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // Attempt to fetch location on page load
         handleLocationFetch();
 
         if (getLocationBtn) {
@@ -543,11 +546,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 event.preventDefault();
                 event.stopImmediatePropagation(); 
 
-                const userId = localStorage.getItem('userId');
+                // NEW: Get the session directly from Supabase, not just localStorage
+                const { data: { session } } = await supabase.auth.getSession();
+                const userId = session?.user?.id;
                 
                 if (!userId) {
-                    showMessage('Error: You are not logged in. Please log out and log back in.', 'error', 5000);
-                    checkAuth(); 
+                    showMessage('Error: You are not logged in or session expired. Redirecting...', 'error', 5000);
+                    // Force a full re-auth check
+                    setTimeout(checkAuth, 1000); 
                     return; 
                 }
                 
@@ -555,7 +561,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const descriptionValue = document.getElementById('description').value; 
                 const severity = document.getElementById('severity').value; 
                 
-                // Map the description to both relevant DB columns
                 const incidentDetails = descriptionValue;
                 const additionalContext = descriptionValue;
                 
@@ -567,7 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 
-                // CRUCIAL CHECK: Ensure lat/lon were successfully acquired before submitting
+                // CRUCIAL CHECK: Ensure lat/lon were successfully acquired
                 if (currentLat === null || currentLon === null || locationTextEl.value.includes('Location not available') || locationTextEl.value.includes('PERMISSION DENIED') || locationTextEl.value.includes('TIMEOUT') || locationTextEl.value.includes('Fetching Location')) {
                     showMessage('Valid location is required. Click "Get Location" or ensure permissions are granted.', 'error', 7000);
                     document.getElementById('submitReportBtn').disabled = false;
@@ -600,20 +605,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         try {
                             if (photoFile) {
+                                // IMPORTANT: Check for Photo Upload RLS if this is the failure point
                                 photoUrl = await uploadImage(photoFile, userId); 
                             }
                             
+                            // If photo upload failed and it was intended, abort insertion
                             if (photoFile && !photoUrl) {
                                 throw new Error("Photo upload failed, stopping report submission.");
                             }
 
                             const { error: submissionError } = await supabase.from('emergency_reports').insert([
                                 { 
-                                    user_id: userId, 
+                                    user_id: userId, // Guaranteed correct session user ID
                                     incident_type: incidentType, 
                                     incident_details: incidentDetails, 
-                                    // FIX APPLIED HERE: Changed 'severity' to 'severity_level' to match DB
-                                    severity_level: severity, 
+                                    severity_level: severity, // Correct column name
                                     latitude: currentLat, 
                                     longitude: currentLon, 
                                     photo_url: photoUrl,
@@ -624,8 +630,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             if (submissionError) {
                                 console.error('Submission Error:', submissionError.message);
-                                // Provide a clearer message if it's a Supabase error
-                                showMessage(`Report submission failed! Please check your network connection and Supabase RLS. (Error: ${submissionError.code || submissionError.message})`, 'error', 7000);
+                                // The pgrst204 error should now be gone if RLS is truly correct
+                                showMessage(`Report submission failed! Check Supabase policies again. (Error: ${submissionError.code || submissionError.message})`, 'error', 7000);
                             } else {
                                 countdownModal.classList.add('hidden');
                                 successModal.classList.remove('hidden');
@@ -684,7 +690,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
                     const statusText = report.status || 'Pending';
                     const date = new Date(report.timestamp).toLocaleString();
-                    // FIX FOR HISTORY: Changed report.severity to report.severity_level
                     const severityHtml = report.severity_level ? `<p class="severity-tag">Severity: ${report.severity_level}</p>` : '';
                     
                     return `
