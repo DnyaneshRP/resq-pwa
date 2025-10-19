@@ -11,6 +11,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // --- Initialize Supabase Client ---
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// FIX 1: Define the photo bucket name as a constant and use the correct name
+const REPORT_BUCKET = 'emergency_photos'; 
+
 // --- Global Utility: Custom Message Box & Sound Player ---
 function showMessage(message, type = 'success', duration = 3000) {
     const messageBox = document.getElementById('customMessageBox');
@@ -459,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // REPORT EMERGENCY PAGE (report.html) - FIXED TABLE AND COLUMNS
+    // REPORT EMERGENCY PAGE (report.html) - FIXED: SEVERITY, PHOTO BUCKET
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm'); 
@@ -474,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentLat = null; 
         let currentLon = null; 
         
-        // Helper function to upload image 
+        // Helper function to upload image (FIX 1: Using REPORT_BUCKET constant)
         async function uploadImage(file, userId) {
             const fileExt = file.name.split('.').pop();
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -483,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage('Uploading photo...', 'info', 2000);
 
             const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('emergency_photos') 
+                .from(REPORT_BUCKET) 
                 .upload(filePath, file);
                 
             if (uploadError) {
@@ -492,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return null;
             }
             // Supabase returns a path; construct the full public URL
-            return `${SUPABASE_URL}/storage/v1/object/public/emergency_photos/${uploadData.path}`;
+            return `${SUPABASE_URL}/storage/v1/object/public/${REPORT_BUCKET}/${uploadData.path}`;
         }
 
         // Initial location fetch on load
@@ -548,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
 
-        // --- REPORT SUBMISSION LOGIC (FIXED FOR SCHEMA) ---
+        // --- REPORT SUBMISSION LOGIC (FIXED FOR SEVERITY & PHOTO BUCKET) ---
         if (reportForm) {
             reportForm.addEventListener('submit', async function(event) {
                 event.preventDefault();
@@ -556,6 +559,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const incidentType = document.getElementById('incidentType').value;
                 const description = document.getElementById('description').value; 
+                // FIX 2: Capture severity value from report.html
+                const severity = document.getElementById('severity').value; 
                 
                 document.getElementById('submitReportBtn').disabled = true;
 
@@ -609,6 +614,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     user_id: localStorage.getItem('userId'), 
                                     incident_type: incidentType, 
                                     incident_details: description, 
+                                    // FIX 3: Include severity in the insertion
+                                    severity: severity, 
                                     latitude: currentLat, 
                                     longitude: currentLon, 
                                     photo_url: photoUrl,
@@ -640,7 +647,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             showMessage('An unexpected error occurred during submission.', 'error', 5000);
                         } finally {
                             countdownModal.classList.add('hidden'); 
-                            if (!successModal.classList.contains('hidden')) {
+                            if (document.getElementById('submitReportBtn').disabled) {
+                                // Only re-enable if success modal is hidden or on error path
                                 document.getElementById('submitReportBtn').disabled = false; 
                             }
                         }
@@ -667,7 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { data, error } = await supabase
                 .from('emergency_reports') 
-                .select('timestamp, incident_type, incident_details, additional_context, photo_url, status')
+                .select('timestamp, incident_type, incident_details, additional_context, photo_url, status, severity') // Added severity to select
                 .eq('user_id', userId)
                 .order('timestamp', { ascending: false });
                 
@@ -682,6 +690,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
                     const statusText = report.status || 'Pending';
                     const date = new Date(report.timestamp).toLocaleString();
+                    const severityHtml = report.severity ? `<p class="severity-tag">Severity: ${report.severity}</p>` : '';
                     
                     return `
                         <div class="report-card-history">
@@ -689,6 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <h4>${report.incident_type}</h4>
                                 <span class="report-status ${statusClass}">${statusText}</span>
                             </div>
+                            ${severityHtml}
                             <p><strong>Location:</strong> ${report.additional_context || 'N/A'}</p>
                             <p><strong>Time:</strong> ${date}</p>
                             <p><strong>Details:</strong> ${report.incident_details || 'N/A'}</p>
