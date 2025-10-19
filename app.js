@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // REPORT EMERGENCY PAGE (report.html) - SUBMISSION FIX APPLIED HERE
+    // REPORT EMERGENCY PAGE (report.html) - SUBMISSION FIX APPLIED
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm'); 
@@ -543,8 +543,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 event.preventDefault();
                 event.stopImmediatePropagation(); 
 
+                const userId = localStorage.getItem('userId');
+                
+                if (!userId) {
+                    showMessage('Error: You are not logged in. Please log out and log back in.', 'error', 5000);
+                    checkAuth(); 
+                    return; 
+                }
+                
                 const incidentType = document.getElementById('incidentType').value;
-                // FIX: Use the correct ID 'description' for the textarea
                 const descriptionValue = document.getElementById('description').value; 
                 const severity = document.getElementById('severity').value; 
                 
@@ -567,6 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                // If all checks pass, start the visual countdown
                 countdownModal.classList.remove('hidden');
                 playSound('countdownSound');
                 document.getElementById('countdownMessage').textContent = 'Report sending in...';
@@ -592,32 +600,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         try {
                             if (photoFile) {
-                                photoUrl = await uploadImage(photoFile, localStorage.getItem('userId'));
+                                photoUrl = await uploadImage(photoFile, userId); 
                             }
                             
-                            // Check if photo upload failed and prevent submission if required (optional, but good)
                             if (photoFile && !photoUrl) {
                                 throw new Error("Photo upload failed, stopping report submission.");
                             }
 
                             const { error: submissionError } = await supabase.from('emergency_reports').insert([
                                 { 
-                                    user_id: localStorage.getItem('userId'), 
+                                    user_id: userId, 
                                     incident_type: incidentType, 
-                                    incident_details: incidentDetails, // Uses corrected variable
-                                    severity: severity, 
+                                    incident_details: incidentDetails, 
+                                    // FIX APPLIED HERE: Changed 'severity' to 'severity_level' to match DB
+                                    severity_level: severity, 
                                     latitude: currentLat, 
                                     longitude: currentLon, 
                                     photo_url: photoUrl,
                                     status: 'Reported', 
-                                    additional_context: additionalContext // Uses corrected variable
+                                    additional_context: additionalContext 
                                 }
                             ]);
                             
                             if (submissionError) {
                                 console.error('Submission Error:', submissionError.message);
-                                showMessage(`Report submission failed! Check Supabase RLS. (Error: ${submissionError.code})`, 'error', 7000);
-                                document.getElementById('submitReportBtn').disabled = false;
+                                // Provide a clearer message if it's a Supabase error
+                                showMessage(`Report submission failed! Please check your network connection and Supabase RLS. (Error: ${submissionError.code || submissionError.message})`, 'error', 7000);
                             } else {
                                 countdownModal.classList.add('hidden');
                                 successModal.classList.remove('hidden');
@@ -661,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { data, error } = await supabase
                 .from('emergency_reports') 
-                .select('timestamp, incident_type, incident_details, additional_context, photo_url, status, severity') 
+                .select('timestamp, incident_type, incident_details, additional_context, photo_url, status, severity_level') 
                 .eq('user_id', userId)
                 .order('timestamp', { ascending: false });
                 
@@ -676,7 +684,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
                     const statusText = report.status || 'Pending';
                     const date = new Date(report.timestamp).toLocaleString();
-                    const severityHtml = report.severity ? `<p class="severity-tag">Severity: ${report.severity}</p>` : '';
+                    // FIX FOR HISTORY: Changed report.severity to report.severity_level
+                    const severityHtml = report.severity_level ? `<p class="severity-tag">Severity: ${report.severity_level}</p>` : '';
                     
                     return `
                         <div class="report-card-history">
