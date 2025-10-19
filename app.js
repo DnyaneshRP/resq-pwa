@@ -5,7 +5,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // YOUR SUPABASE CONFIGURATION (VERIFIED)
 // =================================================================
 const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImexd8X6:MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
 // =================================================================
 
 // --- Initialize Supabase Client ---
@@ -489,7 +489,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 showMessage('Photo upload failed. Check Storage RLS and Bucket name.', 'error', 5000);
                 return null;
             }
-            // Generate the public URL correctly
+            
+            // Use getPublicUrl which correctly handles the URL construction 
             const { data: { publicUrl } } = supabase.storage.from(REPORT_BUCKET).getPublicUrl(filePath);
             return publicUrl;
         }
@@ -546,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 event.preventDefault();
                 event.stopImmediatePropagation(); 
 
-                // NEW: Get the session directly from Supabase, not just localStorage
+                // Get the session directly from Supabase
                 const { data: { session } } = await supabase.auth.getSession();
                 const userId = session?.user?.id;
                 
@@ -581,7 +582,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // If all checks pass, start the visual countdown
                 countdownModal.classList.remove('hidden');
-                playSound('countdownSound');
+                
+                // Play sound (only if you want it to play every second, otherwise use playSound inside the interval)
+                // For a single long tone that must be stopped:
+                const countdownAudio = document.getElementById('countdownSound');
+                countdownAudio.play().catch(error => console.warn('Audio playback error:', error));
+
                 document.getElementById('countdownMessage').textContent = 'Report sending in...';
 
 
@@ -592,12 +598,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     count--;
                     countdownTimer.textContent = count;
                     
-                    if (count > 0) {
-                        playSound('countdownSound'); 
-                    }
-
                     if (count <= 0) {
                         clearInterval(countdownInterval);
+                        
+                        // ✨ FIX: Stop the countdown audio immediately 
+                        if (countdownAudio) {
+                            countdownAudio.pause();
+                            countdownAudio.currentTime = 0; // Rewind for next use
+                        }
+                        
                         document.getElementById('countdownMessage').textContent = 'Sending...';
 
                         const photoFile = document.getElementById('photo').files[0];
@@ -605,21 +614,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         try {
                             if (photoFile) {
-                                // IMPORTANT: Check for Photo Upload RLS if this is the failure point
                                 photoUrl = await uploadImage(photoFile, userId); 
                             }
                             
-                            // If photo upload failed and it was intended, abort insertion
                             if (photoFile && !photoUrl) {
                                 throw new Error("Photo upload failed, stopping report submission.");
                             }
 
                             const { error: submissionError } = await supabase.from('emergency_reports').insert([
                                 { 
-                                    user_id: userId, // Guaranteed correct session user ID
+                                    user_id: userId, 
                                     incident_type: incidentType, 
                                     incident_details: incidentDetails, 
-                                    severity_level: severity, // Correct column name
+                                    severity_level: severity, 
                                     latitude: currentLat, 
                                     longitude: currentLon, 
                                     photo_url: photoUrl,
@@ -630,18 +637,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             if (submissionError) {
                                 console.error('Submission Error:', submissionError.message);
-                                // The pgrst204 error should now be gone if RLS is truly correct
-                                showMessage(`Report submission failed! Check Supabase policies again. (Error: ${submissionError.code || submissionError.message})`, 'error', 7000);
+                                showMessage(`Report submission failed! (Error: ${submissionError.code || submissionError.message})`, 'error', 7000);
                             } else {
                                 countdownModal.classList.add('hidden');
                                 successModal.classList.remove('hidden');
                                 playSound('successSound'); 
                                 showMessage('Report submitted successfully!', 'success', 5000);
                                 
+                                // Reset after success
                                 setTimeout(() => {
                                     successModal.classList.add('hidden');
                                     reportForm.reset();
                                     document.getElementById('submitReportBtn').disabled = false;
+                                    handleLocationFetch(); // Re-fetch location after successful submission
                                 }, 5000);
                             }
                         } catch (e) {
