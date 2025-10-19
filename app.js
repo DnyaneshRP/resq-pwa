@@ -5,7 +5,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // YOUR SUPABASE CONFIGURATION (VERIFIED)
 // =================================================================
 const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImexd8X6:MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
 // =================================================================
 
 // --- Initialize Supabase Client ---
@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // REPORT EMERGENCY PAGE (report.html) - SUBMISSION FIX APPLIED
+    // REPORT EMERGENCY PAGE (report.html) - SINGLE AUDIO PLAYBACK FIX
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm'); 
@@ -583,28 +583,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 // If all checks pass, start the visual countdown
                 countdownModal.classList.remove('hidden');
                 
-                // Play sound (only if you want it to play every second, otherwise use playSound inside the interval)
-                // For a single long tone that must be stopped:
+                // FIX: Play the 3-beep sound only ONCE at the start
                 const countdownAudio = document.getElementById('countdownSound');
                 countdownAudio.play().catch(error => console.warn('Audio playback error:', error));
 
                 document.getElementById('countdownMessage').textContent = 'Report sending in...';
 
-
                 let count = 3;
-                countdownTimer.textContent = count;
+                countdownTimer.textContent = count; 
 
                 const countdownInterval = setInterval(async () => {
-                    count--;
-                    countdownTimer.textContent = count;
+                    count--; // 3 -> 2, 2 -> 1, 1 -> 0
                     
+                    if (count >= 0) {
+                        countdownTimer.textContent = count; // Visual update for 3, 2, 1, 0
+                    }
+                    
+                    // The sound plays for 3 seconds based on the single play at the start.
+                    // NO `playSound()` call here.
+
                     if (count <= 0) {
                         clearInterval(countdownInterval);
                         
-                        // ✨ FIX: Stop the countdown audio immediately 
+                        // Stop and rewind the audio explicitly just in case its tail was still playing
                         if (countdownAudio) {
                             countdownAudio.pause();
-                            countdownAudio.currentTime = 0; // Rewind for next use
+                            countdownAudio.currentTime = 0; 
                         }
                         
                         document.getElementById('countdownMessage').textContent = 'Sending...';
@@ -617,6 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 photoUrl = await uploadImage(photoFile, userId); 
                             }
                             
+                            // If photo upload failed and it was intended, abort insertion
                             if (photoFile && !photoUrl) {
                                 throw new Error("Photo upload failed, stopping report submission.");
                             }
@@ -695,6 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (data && data.length > 0) {
                 reportsList.innerHTML = data.map(report => {
+                    // Correcting status class assignment
                     const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
                     const statusText = report.status || 'Pending';
                     const date = new Date(report.timestamp).toLocaleString();
