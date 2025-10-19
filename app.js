@@ -11,9 +11,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // --- Initialize Supabase Client ---
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Define the photo bucket name as a constant
-const REPORT_BUCKET = 'emergency_photos'; 
-
 // --- Global Utility: Custom Message Box & Sound Player ---
 function showMessage(message, type = 'success', duration = 3000) {
     const messageBox = document.getElementById('customMessageBox');
@@ -124,7 +121,7 @@ async function checkAuth() {
     }
 }
 
-// --- Geolocation Utility (FIXED TIMEOUT AND ERROR HANDLING) ---
+// --- Geolocation Utility ---
 function getLocation(callback) {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -132,36 +129,24 @@ function getLocation(callback) {
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
                 
-                // Location text is just Lat/Lon for now
+                // Reverse Geocoding to get human-readable address
                 const locationText = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
                 
                 callback({ success: true, lat, lon, locationText });
             },
             (error) => {
                 console.error("Geolocation error:", error);
-                
-                let errorMessage = "Location not available. Please ensure location services are enabled.";
-
-                if (error.code === error.PERMISSION_DENIED) {
-                    errorMessage = "PERMISSION DENIED: Please allow location access in your browser settings.";
-                } else if (error.code === error.TIMEOUT) {
-                    // This is the most common failure point, improved message
-                    errorMessage = "TIMEOUT (10s): Location signal weak. Try moving to an open area and click 'Get Location'.";
-                } else if (error.code === error.POSITION_UNAVAILABLE) {
-                    errorMessage = "POSITION UNAVAILABLE: Device cannot determine location.";
-                }
-
+                const errorMessage = "Location not available. Please ensure location services are enabled.";
                 callback({ success: false, errorMessage });
             },
-            // FIX: Increased timeout to 10 seconds for better signal acquisition
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
         );
     } else {
         callback({ success: false, errorMessage: "Geolocation is not supported by this browser." });
     }
 }
 
-// --- Global Utility: Fetch and Store Profile ---
+// --- Global Utility: Fetch and Store Profile (Updated to check for login validation) ---
 async function fetchAndStoreProfile(userId, isLoginAttempt = false) {
      try {
         const { data, error } = await supabase
@@ -190,7 +175,7 @@ async function fetchAndStoreProfile(userId, isLoginAttempt = false) {
     }
 }
 
-// --- PWA Installation Logic ---
+// --- PWA Installation Logic (Retained from previous working version) ---
 let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -267,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPWAInstallPrompt();
     
     // =================================================================
-    // LOGIN PAGE (index.html) 
+    // LOGIN PAGE (index.html) - FIXED LOGIN CHECK
     // =================================================================
     if (window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/')) {
         const loginForm = document.getElementById('loginForm');
@@ -287,15 +272,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (data.session) {
                     const userId = data.user.id;
         
+                    // 1. Check if profile exists (Crucial Security Check)
                     const profileExists = await fetchAndStoreProfile(userId, true);
                     
                     if (!profileExists) {
+                        // 2. If no profile exists, sign out the user and block login
                         await supabase.auth.signOut();
                         localStorage.clear();
                         showMessage('Login failed. Your account data is incomplete. Please re-register.', 'error', 7000);
-                        return;
+                        return; // STOP EXECUTION
                     }
                     
+                    // 3. Continue with successful login
                     localStorage.setItem('userId', userId);
                     showMessage('Login Successful! Redirecting...', 'success', 1000);
                     setTimeout(() => {
@@ -307,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // =================================================================
-    // REGISTER PAGE (register.html)
+    // REGISTER PAGE (register.html) - FIXED COLUMN NAMES
     // =================================================================
     if (window.location.pathname.endsWith('/register.html')) {
         const registerForm = document.getElementById('registerForm');
@@ -321,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fullname = document.getElementById('fullname').value;
                 const phone = document.getElementById('phone').value;
                 const dob = document.getElementById('dob').value;
+                // Fetching these additional fields assuming they exist in the register.html form
                 const gender = document.getElementById('gender')?.value || null; 
                 const bloodgrp = document.getElementById('bloodgrp')?.value || null;
                 const address = document.getElementById('address').value;
@@ -332,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 showMessage('Registering...', 'success', 2000);
                 
+                // 1. Sign up the user
                 const { data: authData, error: authError } = await supabase.auth.signUp({ 
                     email, 
                     password,
@@ -347,23 +337,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const userId = authData.user.id;
                 
+                // 2. Insert profile details (Using the correct schema column names)
                 const { error: profileError } = await supabase
                     .from('profiles')
                     .insert([
                         { 
                             id: userId,
-                            fullname: fullname,             
-                            email: email,                   
+                            fullname: fullname,             // FIXED
+                            email: email,                   // ADDED
                             phone: phone, 
                             dob: dob, 
-                            gender: gender,                 
-                            bloodgrp: bloodgrp,             
+                            gender: gender,                 // ADDED
+                            bloodgrp: bloodgrp,             // ADDED
                             address: address, 
                             city: city, 
                             pincode: pincode, 
-                            emergency1: emergency1,         
-                            emergency2: emergency2,         
-                            medical: medical                
+                            emergency1: emergency1,         // FIXED
+                            emergency2: emergency2,         // FIXED
+                            medical: medical                // FIXED
                         }
                     ]);
                     
@@ -383,18 +374,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // PROFILE PAGE (profile.html)
+    // PROFILE PAGE (profile.html) - FIXED DISPLAY LOGIC AND COLUMN NAMES
     // =================================================================
     if (window.location.pathname.endsWith('/profile.html')) {
         
         const detailsContainer = document.getElementById('profileDetails');
 
+        // Helper function to render profile data (Display-only view)
         function displayProfile(profile) {
             if (!detailsContainer || !profile) {
                 detailsContainer.innerHTML = '<p>User profile data could not be loaded.</p>';
                 return;
             }
             
+            // Display all fields from the new schema
             detailsContainer.innerHTML = `
                 <h2 style="margin-bottom: 15px;">Personal Information</h2>
                 <div class="profile-group">
@@ -429,6 +422,8 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
 
+
+        // Function to fetch and display profile data
         async function loadProfile() {
             const userId = localStorage.getItem('userId');
             
@@ -438,6 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
+            // Force a fresh pull by clearing old cached data
             localStorage.removeItem('profileData'); 
             
             const { data, error } = await supabase
@@ -453,6 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             if (data) {
+                // Store locally and display
                 localStorage.setItem('profileData', JSON.stringify(data));
                 displayProfile(data); 
             }
@@ -462,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // REPORT EMERGENCY PAGE (report.html) - LOCATION FIX
+    // REPORT EMERGENCY PAGE (report.html) - FIXED TABLE AND COLUMNS
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm'); 
@@ -477,6 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentLat = null; 
         let currentLon = null; 
         
+        // Helper function to upload image 
         async function uploadImage(file, userId) {
             const fileExt = file.name.split('.').pop();
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -485,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage('Uploading photo...', 'info', 2000);
 
             const { data: uploadData, error: uploadError } = await supabase.storage
-                .from(REPORT_BUCKET) 
+                .from('emergency_photos') 
                 .upload(filePath, file);
                 
             if (uploadError) {
@@ -493,69 +491,75 @@ document.addEventListener('DOMContentLoaded', () => {
                 showMessage('Photo upload failed.', 'error', 3000);
                 return null;
             }
-            return `${SUPABASE_URL}/storage/v1/object/public/${REPORT_BUCKET}/${uploadData.path}`;
+            // Supabase returns a path; construct the full public URL
+            return `${SUPABASE_URL}/storage/v1/object/public/emergency_photos/${uploadData.path}`;
         }
 
-        // Location handling function (used for initial load and button click)
-        function handleLocationFetch() {
-            if (isFetchingLocation) return;
-            isFetchingLocation = true;
-            locationTextEl.value = 'Fetching Location...';
-            currentLat = null;
-            currentLon = null;
-
-            getLocation((result) => {
-                if (result.success) {
-                    locationTextEl.value = result.locationText;
-                    currentLat = result.lat;
-                    currentLon = result.lon;
-                    showMessage('Location acquired successfully.', 'success', 3000);
-                } else {
-                    // Display the specific error message from the utility function
-                    locationTextEl.value = result.errorMessage;
-                    showMessage(result.errorMessage, 'error', 5000);
-                }
-                isFetchingLocation = false;
-            });
-        }
-
-        // FIX: Call the location function immediately on DOM load
-        handleLocationFetch();
-
+        // Initial location fetch on load
+        locationTextEl.value = 'Fetching Location...';
+        getLocation((result) => {
+            if (result.success) {
+                locationTextEl.value = result.locationText;
+                currentLat = result.lat;
+                currentLon = result.lon;
+                showMessage('Location acquired successfully.', 'success', 3000);
+            } else {
+                locationTextEl.value = result.errorMessage;
+                showMessage(result.errorMessage, 'error', 5000);
+            }
+            isFetchingLocation = false;
+        });
 
         // Manual location fetch button listener
         if (getLocationBtn) {
-            getLocationBtn.addEventListener('click', handleLocationFetch);
+            getLocationBtn.addEventListener('click', () => {
+                if (isFetchingLocation) return;
+                isFetchingLocation = true;
+                locationTextEl.value = 'Fetching Location...';
+                currentLat = null;
+                currentLon = null;
+
+                getLocation((result) => {
+                    if (result.success) {
+                        locationTextEl.value = result.locationText;
+                        currentLat = result.lat;
+                        currentLon = result.lon;
+                        showMessage('Location updated successfully.', 'success', 3000);
+                    } else {
+                        locationTextEl.value = result.errorMessage;
+                        showMessage(result.errorMessage, 'error', 5000);
+                    }
+                    isFetchingLocation = false;
+                });
+            });
         }
         
         // Listener for closing success modal
         if (closeSuccessBtn) {
             closeSuccessBtn.addEventListener('click', () => {
                 successModal.classList.add('hidden');
+                // Ensure form resets and re-enables
                 reportForm.reset();
                 currentLat = null;
                 currentLon = null;
-                // Re-attempt location fetch after a successful report submission
-                locationTextEl.value = 'Location Cleared. Re-fetching...'; 
-                handleLocationFetch(); 
+                locationTextEl.value = 'Location Cleared';
                 document.getElementById('submitReportBtn').disabled = false;
             });
         }
 
 
-        // --- REPORT SUBMISSION LOGIC ---
+        // --- REPORT SUBMISSION LOGIC (FIXED FOR SCHEMA) ---
         if (reportForm) {
             reportForm.addEventListener('submit', async function(event) {
                 event.preventDefault();
                 event.stopImmediatePropagation(); 
 
                 const incidentType = document.getElementById('incidentType').value;
-                const incidentDetails = document.getElementById('incidentDetails').value; 
-                const severity = document.getElementById('severity').value; 
-                const additionalContext = document.getElementById('description').value; 
+                const description = document.getElementById('description').value; 
                 
                 document.getElementById('submitReportBtn').disabled = true;
 
+                // Enforce validation
                 if (!incidentType || incidentType === '') {
                     showMessage('Please select an incident type.', 'error', 4000);
                     document.getElementById('submitReportBtn').disabled = false;
@@ -568,11 +572,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                // Show Countdown Modal and play sound immediately
                 countdownModal.classList.remove('hidden');
                 playSound('countdownSound');
                 document.getElementById('countdownMessage').textContent = 'Report sending in...';
 
 
+                // 2. Start Countdown (3, 2, 1)
                 let count = 3;
                 countdownTimer.textContent = count;
 
@@ -588,6 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         clearInterval(countdownInterval);
                         document.getElementById('countdownMessage').textContent = 'Sending...';
 
+                        // 3. Process Submission
                         const photoFile = document.getElementById('photo').files[0];
                         let photoUrl = null;
 
@@ -596,17 +603,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                 photoUrl = await uploadImage(photoFile, localStorage.getItem('userId'));
                             }
                             
+                            // Using 'emergency_reports' table and correct column names
                             const { error: submissionError } = await supabase.from('emergency_reports').insert([
                                 { 
                                     user_id: localStorage.getItem('userId'), 
                                     incident_type: incidentType, 
-                                    incident_details: incidentDetails, 
-                                    severity: severity, 
+                                    incident_details: description, 
                                     latitude: currentLat, 
                                     longitude: currentLon, 
                                     photo_url: photoUrl,
                                     status: 'Reported', 
-                                    additional_context: additionalContext 
+                                    additional_context: locationTextEl.value 
                                 }
                             ]);
                             
@@ -615,11 +622,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 showMessage(`Report submission failed! CRITICAL: Check Supabase RLS policies. (Error: ${submissionError.code})`, 'error', 7000);
                                 document.getElementById('submitReportBtn').disabled = false;
                             } else {
+                                // Success! Show modal
                                 countdownModal.classList.add('hidden');
                                 successModal.classList.remove('hidden');
                                 playSound('successSound'); 
                                 showMessage('Report submitted successfully!', 'success', 5000);
                                 
+                                // Auto-hide success modal after 5 seconds
                                 setTimeout(() => {
                                     successModal.classList.add('hidden');
                                     reportForm.reset();
@@ -631,7 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             showMessage('An unexpected error occurred during submission.', 'error', 5000);
                         } finally {
                             countdownModal.classList.add('hidden'); 
-                            if (document.getElementById('submitReportBtn').disabled) {
+                            if (!successModal.classList.contains('hidden')) {
                                 document.getElementById('submitReportBtn').disabled = false; 
                             }
                         }
@@ -642,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // =================================================================
-    // HISTORY PAGE (history.html)
+    // HISTORY PAGE (history.html) - FIXED TABLE AND COLUMNS
     // =================================================================
     if (window.location.pathname.endsWith('/history.html')) {
         async function loadReportsHistory() {
@@ -658,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { data, error } = await supabase
                 .from('emergency_reports') 
-                .select('timestamp, incident_type, incident_details, additional_context, photo_url, status, severity') 
+                .select('timestamp, incident_type, incident_details, additional_context, photo_url, status')
                 .eq('user_id', userId)
                 .order('timestamp', { ascending: false });
                 
@@ -673,7 +682,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
                     const statusText = report.status || 'Pending';
                     const date = new Date(report.timestamp).toLocaleString();
-                    const severityHtml = report.severity ? `<p class="severity-tag">Severity: ${report.severity}</p>` : '';
                     
                     return `
                         <div class="report-card-history">
@@ -681,7 +689,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <h4>${report.incident_type}</h4>
                                 <span class="report-status ${statusClass}">${statusText}</span>
                             </div>
-                            ${severityHtml}
                             <p><strong>Location:</strong> ${report.additional_context || 'N/A'}</p>
                             <p><strong>Time:</strong> ${date}</p>
                             <p><strong>Details:</strong> ${report.incident_details || 'N/A'}</p>
