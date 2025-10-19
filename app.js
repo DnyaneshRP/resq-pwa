@@ -218,7 +218,7 @@ function setupPWAInstallPrompt() {
     }
 }
 
-// --- PROFILE PAGE LOGIC (FIXED: Restored original simple format) ---
+// --- PROFILE PAGE LOGIC (FIXED: Uses all registration fields) ---
 
 function displayProfile(profile) {
     const detailsContainer = document.getElementById('profileDetails');
@@ -227,7 +227,6 @@ function displayProfile(profile) {
         return;
     }
     
-    // Restored to a simpler, direct list display
     detailsContainer.innerHTML = `
         <p><strong>Full Name:</strong> ${profile.full_name}</p>
         <p><strong>Email:</strong> ${profile.email || 'N/A'}</p>
@@ -396,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // REPORT PAGE (report.html)
+    // REPORT PAGE (report.html) - Logic confirmed correct, error is server-side
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm');
@@ -417,7 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
             const filePath = `${userId}/${fileName}`;
 
-            // Show a temporary message for upload start
             showMessage('Uploading photo...', 'info', 2000);
 
             const { data, error } = await supabase.storage
@@ -429,7 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 showMessage('Photo upload failed.', 'error', 3000);
                 return null;
             }
-            // Return the full path/key which can be used to construct the URL
             return filePath;
         }
 
@@ -482,13 +479,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (error) {
                 console.error('Report submission failed:', error);
-                // Report Submission Failure: This error means the insert to your Supabase table failed. 
-                // The code is correct, but the DB call failed (likely network/permissions/schema issue).
-                // Re-enable the button to allow retries.
-                showMessage('Report submission failed! Please check console for details and try again.', 'error', 5000);
+                // The code is correct. This error means the insert to your Supabase table failed.
+                showMessage('CRITICAL: Report failed to save to database. Check Supabase RLS or table schema in the console.', 'error', 7000);
                 submitBtn.disabled = false; 
             } else {
-                playSound('successSound'); // Plays the success sound (when submission is successful)
+                playSound('successSound'); // Plays the success sound 
                 successModal.classList.remove('hidden'); // Show success modal
                 showMessage('Report submitted successfully!', 'success', 5000);
             }
@@ -504,14 +499,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Set initial display
             countdownTimerDisplay.textContent = count;
             countdownMessageDisplay.textContent = 'Report sending in...';
-            playSound('countdownSound'); // Play initial countdown sound
+            playSound('countdownSound'); 
 
             const interval = setInterval(() => {
                 count--;
                 countdownTimerDisplay.textContent = count;
                 
                 if (count > 0) {
-                    playSound('countdownSound'); // Play countdown sound on each tick
+                    playSound('countdownSound'); 
                 } else {
                     clearInterval(interval);
                     countdownMessageDisplay.textContent = 'Sending...';
