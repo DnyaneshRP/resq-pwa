@@ -581,7 +581,11 @@ button:disabled {
     box-shadow: 0 2px #388E3C;
 }
 
-/* --- Utility Class --- */
+/* --- Utility Class (MUST BE PRESENT) --- */
 .hidden {
+    display: none !important;
+}
+/* Ensure the backdrop is correctly hidden by default */
+.modal-overlay.hidden {
     display: none !important;
 }

@@ -331,6 +331,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const locationBtn = document.getElementById('getLocationBtn');
         const locationInput = document.getElementById('location');
 
+        // <<< THE FIX: Ensure success modal is hidden immediately on page load
+        successModal?.classList.add('hidden');
+        
         // Store current latitude and longitude globally for the page
         let currentLat = null;
         let currentLon = null;
@@ -406,10 +409,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (error) {
                 console.error('Report submission failed:', error);
+                // In a real PWA, you would save to IndexedDB here for offline sync
                 showMessage('Failed to submit report. Offline saving is not yet implemented.', 'error', 5000);
                 submitBtn.disabled = false; // Re-enable button on failure
             } else {
-                playSound('successSound'); // <<< Plays the success sound
+                playSound('successSound'); // Plays the success sound
                 successModal.classList.remove('hidden'); // Show success modal
                 showMessage('Report submitted successfully!', 'success', 5000);
             }
@@ -425,14 +429,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Set initial display
             countdownTimerDisplay.textContent = count;
             countdownMessageDisplay.textContent = 'Report sending in...';
-            playSound('countdownSound'); // <<< Play initial countdown sound
+            playSound('countdownSound'); // Play initial countdown sound
 
             const interval = setInterval(() => {
                 count--;
                 countdownTimerDisplay.textContent = count;
                 
                 if (count > 0) {
-                    playSound('countdownSound'); // <<< Play countdown sound on each tick
+                    playSound('countdownSound'); // Play countdown sound on each tick
                 } else {
                     clearInterval(interval);
                     countdownMessageDisplay.textContent = 'Sending...';
@@ -444,7 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 4. Main Form Submission Handler (Fixing the immediate submission issue)
         reportForm?.addEventListener('submit', (e) => {
-            e.preventDefault(); // *** THE KEY FIX: PREVENTS IMMEDIATE SUBMISSION/RELOAD ***
+            e.preventDefault(); // *** PREVENTS IMMEDIATE SUBMISSION/RELOAD ***
 
             // Basic Form Validation (check required fields)
             const incidentType = document.getElementById('incidentType').value;
@@ -452,8 +456,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!currentLat || !currentLon) {
                 showMessage('Please fetch your current location before submitting.', 'error', 5000);
-                // Optionally auto-trigger location fetch here
-                // locationBtn.click();
                 return;
             }
 
