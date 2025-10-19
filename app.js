@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // =================================================================
-    // REGISTER PAGE (register.html)
+    // REGISTER PAGE (register.html) - UPDATED FOR NEW SCHEMA
     // =================================================================
     if (window.location.pathname.endsWith('/register.html')) {
         const registerForm = document.getElementById('registerForm');
@@ -295,6 +295,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fullname = document.getElementById('fullname').value;
                 const phone = document.getElementById('phone').value;
                 const dob = document.getElementById('dob').value;
+                // Note: Assuming 'gender' and 'bloodgrp' are NOT in the form, 
+                // so we insert null, aligning with the schema's NULL constraint.
+                const gender = document.getElementById('gender')?.value || null; 
+                const bloodgrp = document.getElementById('bloodgrp')?.value || null;
                 const address = document.getElementById('address').value;
                 const city = document.getElementById('city').value;
                 const pincode = document.getElementById('pincode').value;
@@ -309,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     email, 
                     password,
                     options: {
-                        data: { full_name: fullname }
+                        data: { full_name: fullname } // Storing in auth user metadata for convenience
                     }
                 });
                 
@@ -320,26 +324,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const userId = authData.user.id;
                 
-                // 2. Insert profile details
+                // 2. Insert profile details (using the correct schema column names)
                 const { error: profileError } = await supabase
                     .from('profiles')
                     .insert([
                         { 
                             id: userId,
-                            full_name: fullname, 
+                            fullname: fullname,             // UPDATED
+                            email: email,                   // ADDED
                             phone: phone, 
                             dob: dob, 
+                            gender: gender,                 // ADDED
+                            bloodgrp: bloodgrp,             // ADDED
                             address: address, 
                             city: city, 
                             pincode: pincode, 
-                            emergency_contact_1: emergency1, 
-                            emergency_contact_2: emergency2, 
-                            medical_conditions: medical
+                            emergency1: emergency1,         // UPDATED
+                            emergency2: emergency2,         // UPDATED
+                            medical: medical                // UPDATED
                         }
                     ]);
                     
                 if (profileError) {
-                    // This is a critical error, log and inform the user
                     console.error('Profile Insert Error:', profileError);
                     showMessage('Registration completed, but failed to save profile details: ' + profileError.message, 'error', 8000);
                     return;
@@ -355,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // PROFILE PAGE (profile.html)
+    // PROFILE PAGE (profile.html) - UPDATED FOR NEW SCHEMA DISPLAY
     // =================================================================
     if (window.location.pathname.endsWith('/profile.html')) {
         
@@ -368,22 +374,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            // This display format reflects all registration fields
+            // Display all fields from the new schema
             detailsContainer.innerHTML = `
-                <p><strong>Full Name:</strong> ${profile.full_name || 'N/A'}</p>
-                <p><strong>Phone:</strong> ${profile.phone || 'N/A'}</p>
-                <p><strong>Date of Birth:</strong> ${profile.dob || 'N/A'}</p>
+                <div class="profile-group">
+                    <p><strong>Full Name:</strong> ${profile.fullname || 'N/A'}</p>
+                    <p><strong>Email:</strong> ${profile.email || 'N/A'}</p>
+                    <p><strong>Phone:</strong> ${profile.phone || 'N/A'}</p>
+                    <p><strong>Date of Birth:</strong> ${profile.dob || 'N/A'}</p>
+                    <p><strong>Gender:</strong> ${profile.gender || 'N/A'}</p>
+                    <p><strong>Blood Group:</strong> ${profile.bloodgrp || 'N/A'}</p>
+                </div>
                 
                 <h2 style="margin-top: 15px;">Address</h2>
-                <p>${profile.address || 'N/A'}</p>
-                <p>${profile.city || 'N/A'} - ${profile.pincode || 'N/A'}</p>
+                <div class="profile-group">
+                    <p>${profile.address || 'N/A'}</p>
+                    <p>${profile.city || 'N/A'} - ${profile.pincode || 'N/A'}</p>
+                </div>
                 
                 <h2 style="margin-top: 15px;">Emergency Contacts</h2>
-                <p><strong>Contact 1:</strong> ${profile.emergency_contact_1 || 'N/A'}</p>
-                <p><strong>Contact 2:</strong> ${profile.emergency_contact_2 || 'N/A'}</p>
+                <div class="profile-group">
+                    <p><strong>Contact 1:</strong> ${profile.emergency1 || 'N/A'}</p>
+                    <p><strong>Contact 2:</strong> ${profile.emergency2 || 'N/A'}</p>
+                </div>
                 
                 <h2 style="margin-top: 15px;">Medical Information</h2>
-                <p><strong>Conditions:</strong> ${profile.medical_conditions || 'None specified.'}</p>
+                <div class="profile-group">
+                    <p><strong>Conditions:</strong> ${profile.medical || 'None specified.'}</p>
+                </div>
                 
                 <button id="editProfileBtn" class="primary-btn" style="margin-top: 20px;">
                     <i class="fas fa-edit"></i> Edit Profile (Placeholder)
@@ -425,13 +442,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             if (data) {
-                // Fetch email from Supabase Auth user object (since email isn't in 'profiles' table)
-                const { data: { user } } = await supabase.auth.getUser();
-                const fullProfile = {...data, email: user?.email || 'N/A'};
-                
-                // Update local storage and display
-                localStorage.setItem('profileData', JSON.stringify(fullProfile));
-                displayProfile(fullProfile); 
+                // Store locally and display
+                localStorage.setItem('profileData', JSON.stringify(data));
+                displayProfile(data); 
             }
         }
         
@@ -440,6 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // =================================================================
     // REPORT EMERGENCY PAGE (report.html)
+    // (Retains fix from previous step to use 'emergency_reports' table)
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm'); 
@@ -583,17 +597,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                 photoUrl = await uploadImage(photoFile, localStorage.getItem('userId'));
                             }
                             
-                            // *** FIX APPLIED HERE: Using 'emergency_reports' table and correct column names ***
+                            // Using 'emergency_reports' table and correct column names
                             const { error: submissionError } = await supabase.from('emergency_reports').insert([
                                 { 
                                     user_id: localStorage.getItem('userId'), 
-                                    incident_type: incidentType, // Mapped 'type' -> 'incident_type'
-                                    incident_details: description, // Mapped 'details' -> 'incident_details'
-                                    latitude: currentLat, // Mapped 'lat' -> 'latitude'
-                                    longitude: currentLon, // Mapped 'lon' -> 'longitude'
+                                    incident_type: incidentType, 
+                                    incident_details: description, 
+                                    latitude: currentLat, 
+                                    longitude: currentLon, 
                                     photo_url: photoUrl,
-                                    status: 'Reported', // Set to schema default
-                                    additional_context: locationTextEl.value // Using location text for context
+                                    status: 'Reported', 
+                                    additional_context: locationTextEl.value 
                                 }
                             ]);
                             
@@ -607,9 +621,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 successModal.classList.remove('hidden');
                                 playSound('successSound'); 
                                 showMessage('Report submitted successfully!', 'success', 5000);
-                                
-                                // Reset location display (form reset happens on modal close)
-                                locationTextEl.value = 'Fetching Location...'; 
                                 
                                 // Auto-hide success modal after 5 seconds
                                 setTimeout(() => {
@@ -634,7 +645,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // =================================================================
-    // HISTORY PAGE (history.html) - Note: This still targets 'reports' for now.
+    // HISTORY PAGE (history.html)
+    // (Assuming history needs to display from 'emergency_reports' now)
     // =================================================================
     if (window.location.pathname.endsWith('/history.html')) {
         async function loadReportsHistory() {
@@ -648,12 +660,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             reportsList.innerHTML = '<div class="text-center" style="margin-top: 50px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #d32f2f;"></i><p>Loading reports...</p></div>';
 
-            // *** Note: This section assumes you will rename your reports table to 'reports' or adjust this section too. I am leaving it as 'reports' for now as that was the last working version, but it should be 'emergency_reports' for consistency. ***
+            // Fetches from the correct table, 'emergency_reports', and selects the correct columns
             const { data, error } = await supabase
-                .from('emergency_reports') // Should ideally be 'emergency_reports'
-                .select('*')
+                .from('emergency_reports') 
+                .select('timestamp, incident_type, incident_details, additional_context, photo_url, status')
                 .eq('user_id', userId)
-                .order('created_at', { ascending: false });
+                .order('timestamp', { ascending: false });
                 
             if (error) {
                 reportsList.innerHTML = `<p class="text-center" style="color:#f44336;">Failed to load history: ${error.message}</p>`;
@@ -663,19 +675,20 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (data && data.length > 0) {
                 reportsList.innerHTML = data.map(report => {
+                    // Assuming your status column uses 'Reported' or 'Resolved'
                     const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
                     const statusText = report.status || 'Pending';
-                    const date = new Date(report.created_at).toLocaleString();
+                    const date = new Date(report.timestamp).toLocaleString();
                     
                     return `
                         <div class="report-card-history">
                             <div class="report-header">
-                                <h4>${report.incident_type || report.type}</h4>
+                                <h4>${report.incident_type}</h4>
                                 <span class="report-status ${statusClass}">${statusText}</span>
                             </div>
-                            <p><strong>Location:</strong> ${report.additional_context || report.location || 'N/A'}</p>
+                            <p><strong>Location:</strong> ${report.additional_context || 'N/A'}</p>
                             <p><strong>Time:</strong> ${date}</p>
-                            <p><strong>Details:</strong> ${report.incident_details || report.details || 'N/A'}</p>
+                            <p><strong>Details:</strong> ${report.incident_details || 'N/A'}</p>
                             ${report.photo_url ? `<p><a href="${report.photo_url}" target="_blank" style="color:#d32f2f; font-weight: 600;">View Attached Photo</a></p>` : ''}
                         </div>
                     `;
