@@ -158,15 +158,26 @@ async function fetchAndStoreProfile(userId) {
             .single();
             
         if (!error && data) {
+            // Fetch email from auth.api.getUser()
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            const fullProfile = {
+                ...data,
+                email: user.email 
+            };
+            
             // Remove sensitive or unnecessary fields before storing locally
-            delete data.id; 
-            delete data.created_at; 
-            localStorage.setItem('profileData', JSON.stringify(data));
+            delete fullProfile.id; 
+            delete fullProfile.created_at; 
+            localStorage.setItem('profileData', JSON.stringify(fullProfile));
+            return fullProfile;
         } else {
             console.error('Failed to fetch profile for local storage:', error ? error.message : 'No data');
+            return null;
         }
     } catch (e) {
         console.error('Error fetching profile for local storage:', e);
+        return null;
     }
 }
 
@@ -206,6 +217,56 @@ function setupPWAInstallPrompt() {
         document.getElementById('dismissButton').addEventListener('click', () => {
             pwaModal.classList.add('hidden'); // Hide modal
         });
+    }
+}
+
+// --- PROFILE PAGE LOGIC (FIXED) ---
+
+function displayProfile(profile) {
+    const detailsContainer = document.getElementById('profileDetails');
+    if (!detailsContainer || !profile) {
+        detailsContainer.innerHTML = '<p>User profile data could not be loaded.</p>';
+        return;
+    }
+
+    detailsContainer.innerHTML = `
+        <div class="profile-card">
+            <h2>${profile.full_name}</h2>
+            <div class="profile-item"><i class="fas fa-envelope fa-fw"></i> <span>${profile.email || 'N/A'}</span></div>
+            <div class="profile-item"><i class="fas fa-phone fa-fw"></i> <span>${profile.phone}</span></div>
+            <div class="profile-item"><i class="fas fa-birthday-cake fa-fw"></i> <span>Date of Birth: ${profile.dob}</span></div>
+            <div class="profile-item"><i class="fas fa-map-marker-alt fa-fw"></i> <span>Address: ${profile.address}, ${profile.city} - ${profile.pincode}</span></div>
+            <hr>
+            <h3>Emergency Contacts</h3>
+            <div class="profile-item"><i class="fas fa-user-plus fa-fw"></i> <span>Contact 1: ${profile.emergency_contact_1}</span></div>
+            ${profile.emergency_contact_2 ? `<div class="profile-item"><i class="fas fa-user-plus fa-fw"></i> <span>Contact 2: ${profile.emergency_contact_2}</span></div>` : ''}
+            <hr>
+            <h3>Medical Information</h3>
+            <div class="profile-item"><i class="fas fa-notes-medical fa-fw"></i> <span>${profile.medical_conditions || 'None specified.'}</span></div>
+        </div>
+        <button id="editProfileBtn" class="primary-btn" style="margin-top: 20px;">
+            <i class="fas fa-edit"></i> Edit Profile
+        </button>
+    `;
+}
+
+async function fetchAndDisplayProfile() {
+    const userId = localStorage.getItem('userId');
+    const detailsContainer = document.getElementById('profileDetails');
+    
+    if (!userId) {
+        detailsContainer.innerHTML = '<p>Error: User not logged in. Redirecting to login...</p>';
+        setTimeout(() => window.location.href = 'index.html', 1500);
+        return;
+    }
+
+    // Use the existing fetchAndStoreProfile utility to get the data
+    const fullProfile = await fetchAndStoreProfile(userId);
+
+    if (fullProfile) {
+        displayProfile(fullProfile);
+    } else {
+        detailsContainer.innerHTML = '<p>Error loading profile data. Please check your internet connection and try again.</p>';
     }
 }
 
@@ -318,9 +379,26 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
+    
+    // =================================================================
+    // PROFILE PAGE (profile.html) (FIXED)
+    // =================================================================
+    if (window.location.pathname.endsWith('/profile.html')) {
+        const cachedProfile = localStorage.getItem('profileData');
+        
+        if (cachedProfile) {
+            // Display cached data immediately
+            displayProfile(JSON.parse(cachedProfile));
+            // Then fetch updated data in the background (good practice)
+            fetchAndDisplayProfile(); 
+        } else {
+            // No cache, fetch and display
+            fetchAndDisplayProfile();
+        }
+    }
 
     // =================================================================
-    // REPORT PAGE (report.html)
+    // REPORT PAGE (report.html) (CONFIRMED CORRECT)
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm');
@@ -406,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (error) {
                 console.error('Report submission failed:', error);
-                // In a real PWA, you would save to IndexedDB here for offline sync
+                // This is the correct error handling logic if the database insert fails
                 showMessage('Failed to submit report. Offline saving is not yet implemented.', 'error', 5000);
                 submitBtn.disabled = false; // Re-enable button on failure
             } else {
@@ -445,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 4. Main Form Submission Handler 
         reportForm?.addEventListener('submit', (e) => {
-            e.preventDefault(); // *** CRITICAL: PREVENTS IMMEDIATE SUBMISSION/RELOAD ***
+            e.preventDefault(); 
 
             // Basic Form Validation (check required fields)
             const incidentType = document.getElementById('incidentType').value;
