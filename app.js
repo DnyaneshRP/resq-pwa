@@ -116,7 +116,6 @@ async function checkAuth() {
             // Session exists, check if user data is stored locally (for offline use)
             if (!localStorage.getItem('userId')) {
                 localStorage.setItem('userId', session.user.id);
-                // Optional: Fetch and store profile details here if needed on login, but for speed, we'll fetch on profile.html
             }
         }
     }
@@ -130,7 +129,6 @@ function getLocation(callback) {
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
                 
-                // Reverse Geocoding to get human-readable address
                 // Mock address for simplicity
                 const locationText = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
                 
@@ -220,7 +218,7 @@ function setupPWAInstallPrompt() {
     }
 }
 
-// --- PROFILE PAGE LOGIC (FIXED) ---
+// --- PROFILE PAGE LOGIC (FIXED: Restored original simple format) ---
 
 function displayProfile(profile) {
     const detailsContainer = document.getElementById('profileDetails');
@@ -228,22 +226,22 @@ function displayProfile(profile) {
         detailsContainer.innerHTML = '<p>User profile data could not be loaded.</p>';
         return;
     }
-
+    
+    // Restored to a simpler, direct list display
     detailsContainer.innerHTML = `
-        <div class="profile-card">
-            <h2>${profile.full_name}</h2>
-            <div class="profile-item"><i class="fas fa-envelope fa-fw"></i> <span>${profile.email || 'N/A'}</span></div>
-            <div class="profile-item"><i class="fas fa-phone fa-fw"></i> <span>${profile.phone}</span></div>
-            <div class="profile-item"><i class="fas fa-birthday-cake fa-fw"></i> <span>Date of Birth: ${profile.dob}</span></div>
-            <div class="profile-item"><i class="fas fa-map-marker-alt fa-fw"></i> <span>Address: ${profile.address}, ${profile.city} - ${profile.pincode}</span></div>
-            <hr>
-            <h3>Emergency Contacts</h3>
-            <div class="profile-item"><i class="fas fa-user-plus fa-fw"></i> <span>Contact 1: ${profile.emergency_contact_1}</span></div>
-            ${profile.emergency_contact_2 ? `<div class="profile-item"><i class="fas fa-user-plus fa-fw"></i> <span>Contact 2: ${profile.emergency_contact_2}</span></div>` : ''}
-            <hr>
-            <h3>Medical Information</h3>
-            <div class="profile-item"><i class="fas fa-notes-medical fa-fw"></i> <span>${profile.medical_conditions || 'None specified.'}</span></div>
-        </div>
+        <p><strong>Full Name:</strong> ${profile.full_name}</p>
+        <p><strong>Email:</strong> ${profile.email || 'N/A'}</p>
+        <p><strong>Phone:</strong> ${profile.phone}</p>
+        <p><strong>Date of Birth:</strong> ${profile.dob}</p>
+        <p><strong>Address:</strong> ${profile.address}, ${profile.city} - ${profile.pincode}</p>
+        
+        <h2 style="margin-top: 15px;">Emergency Contacts</h2>
+        <p><strong>Contact 1:</strong> ${profile.emergency_contact_1}</p>
+        <p><strong>Contact 2:</strong> ${profile.emergency_contact_2 || 'N/A'}</p>
+        
+        <h2 style="margin-top: 15px;">Medical Information</h2>
+        <p><strong>Conditions:</strong> ${profile.medical_conditions || 'None specified.'}</p>
+        
         <button id="editProfileBtn" class="primary-btn" style="margin-top: 20px;">
             <i class="fas fa-edit"></i> Edit Profile
         </button>
@@ -381,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // =================================================================
-    // PROFILE PAGE (profile.html) (FIXED)
+    // PROFILE PAGE (profile.html)
     // =================================================================
     if (window.location.pathname.endsWith('/profile.html')) {
         const cachedProfile = localStorage.getItem('profileData');
@@ -398,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // REPORT PAGE (report.html) (CONFIRMED CORRECT)
+    // REPORT PAGE (report.html)
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm');
@@ -484,11 +482,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (error) {
                 console.error('Report submission failed:', error);
-                // This is the correct error handling logic if the database insert fails
-                showMessage('Failed to submit report. Offline saving is not yet implemented.', 'error', 5000);
-                submitBtn.disabled = false; // Re-enable button on failure
+                // Report Submission Failure: This error means the insert to your Supabase table failed. 
+                // The code is correct, but the DB call failed (likely network/permissions/schema issue).
+                // Re-enable the button to allow retries.
+                showMessage('Report submission failed! Please check console for details and try again.', 'error', 5000);
+                submitBtn.disabled = false; 
             } else {
-                playSound('successSound'); // Plays the success sound
+                playSound('successSound'); // Plays the success sound (when submission is successful)
                 successModal.classList.remove('hidden'); // Show success modal
                 showMessage('Report submitted successfully!', 'success', 5000);
             }
