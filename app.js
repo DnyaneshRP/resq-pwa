@@ -403,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 
                 <button id="editProfileBtn" class="primary-btn" style="margin-top: 20px;">
-                    <i class="fas fa-edit"></i> Edit Profile (Placeholder)
+                    <i class="fas fa-edit"></i> Edit Profile
                 </button>
             `;
         }
