@@ -124,41 +124,54 @@ async function checkAuth() {
     }
 }
 
-// --- Geolocation Utility (ROBUST FIX) ---
-function getLocation(callback) {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                
-                // Location text is just Lat/Lon for now
-                const locationText = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
-                
-                callback({ success: true, lat, lon, locationText });
-            },
-            (error) => {
-                console.error("Geolocation error:", error);
-                
-                let errorMessage = "Location not available. Please ensure location services are enabled.";
-
-                if (error.code === error.PERMISSION_DENIED) {
-                    errorMessage = "PERMISSION DENIED: Please allow location access in your browser settings.";
-                } else if (error.code === error.TIMEOUT) {
-                    errorMessage = "TIMEOUT (10s): Location signal weak. Try moving to an open area and click 'Get Location'.";
-                } else if (error.code === error.POSITION_UNAVAILABLE) {
-                    errorMessage = "POSITION UNAVAILABLE: Device cannot determine location.";
-                }
-
-                callback({ success: false, errorMessage });
-            },
-            // CRITICAL: Increased timeout to 10 seconds for better signal acquisition
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
-        );
-    } else {
-        // Fallback for browsers that don't support it (very rare now)
-        callback({ success: false, errorMessage: "Geolocation is not supported by this browser." });
+// --- Geolocation Utility (FIXED: Using watchPosition for reliability) ---
+// Note: This function now RETURNS the watch ID and calls the callback repeatedly.
+// The caller (handleLocationFetch) must stop the watch.
+function getLocation(successCallback, errorCallback) {
+    if (!navigator.geolocation) {
+        errorCallback({ success: false, errorMessage: "Geolocation is not supported by this browser." });
+        return null;
     }
+
+    const options = { 
+        enableHighAccuracy: true, 
+        timeout: 15000, // Increased to 15s to be generous
+        maximumAge: 0 
+    };
+
+    const handleError = (error) => {
+        console.error("Geolocation error:", error);
+        
+        let errorMessage = "Location not available. Please ensure location services are enabled.";
+
+        if (error.code === error.PERMISSION_DENIED) {
+            errorMessage = "PERMISSION DENIED: Please allow location access in your browser settings.";
+        } else if (error.code === error.TIMEOUT) {
+            errorMessage = "TIMEOUT (15s): Location signal weak. Try moving to an open area and click 'Get Location'.";
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+            errorMessage = "POSITION UNAVAILABLE: Device cannot determine location.";
+        }
+
+        errorCallback({ success: false, errorMessage });
+    };
+
+    // Use watchPosition for a persistent, more reliable attempt to get the first location fix.
+    const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const locationText = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
+            
+            // On success, we notify the caller
+            successCallback({ success: true, lat, lon, locationText });
+            
+            // Important: We don't stop the watch here. The caller (handleLocationFetch) handles it.
+        },
+        handleError,
+        options
+    );
+    
+    return watchId;
 }
 
 // --- Global Utility: Fetch and Store Profile ---
@@ -461,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // REPORT EMERGENCY PAGE (report.html) - LOCATION FIX
+    // REPORT EMERGENCY PAGE (report.html) - ROBUST LOCATION FIX
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm'); 
@@ -475,6 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let isFetchingLocation = false;
         let currentLat = null; 
         let currentLon = null; 
+        let locationWatchId = null; // Store the watch ID to clear it later
         
         async function uploadImage(file, userId) {
             const fileExt = file.name.split('.').pop();
@@ -495,27 +509,55 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${SUPABASE_URL}/storage/v1/object/public/${REPORT_BUCKET}/${uploadData.path}`;
         }
 
-        // Location handling function (used for initial load and button click)
+        // Location handling function (uses watchPosition)
         function handleLocationFetch() {
+            // If a previous watch is active, clear it first
+            if (locationWatchId !== null) {
+                navigator.geolocation.clearWatch(locationWatchId);
+                locationWatchId = null;
+            }
+
             if (isFetchingLocation) return;
             isFetchingLocation = true;
-            locationTextEl.value = 'Fetching Location...'; // Immediate feedback
+            locationTextEl.value = 'Fetching Location... (Waiting for GPS Fix)';
             currentLat = null;
             currentLon = null;
-
-            getLocation((result) => {
-                if (result.success) {
+            
+            // Success Callback: Executed every time a new, better position is found
+            const successCallback = (result) => {
+                // Only update and stop the watch on the first successful fix 
+                // OR if the quality of the fix is considered good enough.
+                // For simplicity, we assume the first successful fix is enough here.
+                if (result.success && currentLat === null) { 
                     locationTextEl.value = result.locationText;
                     currentLat = result.lat;
                     currentLon = result.lon;
                     showMessage('Location acquired successfully.', 'success', 3000);
-                } else {
-                    // Display the specific error message from the utility function
-                    locationTextEl.value = result.errorMessage;
-                    showMessage(result.errorMessage, 'error', 5000);
+                    
+                    // Stop watching once a successful fix is found
+                    if (locationWatchId !== null) {
+                        navigator.geolocation.clearWatch(locationWatchId);
+                        locationWatchId = null; 
+                        isFetchingLocation = false;
+                    }
+                }
+            };
+            
+            // Error Callback: Executed if the watch fails completely
+            const errorCallback = (result) => {
+                locationTextEl.value = result.errorMessage;
+                showMessage(result.errorMessage, 'error', 7000);
+                
+                // Ensure the watch is stopped on error
+                if (locationWatchId !== null) {
+                    navigator.geolocation.clearWatch(locationWatchId);
+                    locationWatchId = null;
                 }
                 isFetchingLocation = false;
-            });
+            };
+
+            // Start watching for the position
+            locationWatchId = getLocation(successCallback, errorCallback);
         }
 
         // FIX: Call the location function immediately on DOM load
@@ -566,6 +608,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('submitReportBtn').disabled = false;
                     return;
                 }
+                
+                // Stop location watch immediately before starting submission countdown
+                if (locationWatchId !== null) {
+                    navigator.geolocation.clearWatch(locationWatchId);
+                    locationWatchId = null;
+                }
+
 
                 countdownModal.classList.remove('hidden');
                 playSound('countdownSound');
