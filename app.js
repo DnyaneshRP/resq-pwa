@@ -126,18 +126,18 @@ async function checkAuth() {
 
 // --- Geolocation Utility (Using getCurrentPosition) ---
 function getLocation(callback) {
-    console.log("Attempting to get location..."); // Added Log
+    console.log("Attempting to get location...");
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                console.log("Geolocation success:", position); // Added Log
+                console.log("Geolocation success:", position);
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
                 const locationText = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
                 callback({ success: true, lat, lon, locationText });
             },
             (error) => {
-                console.error("Geolocation error:", error); // Added Log
+                console.error("Geolocation error:", error);
                 let errorMessage = "Location not available. Ensure services are enabled.";
                 if (error.code === error.PERMISSION_DENIED) {
                     errorMessage = "PERMISSION DENIED: Allow location access.";
@@ -151,7 +151,7 @@ function getLocation(callback) {
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
         );
     } else {
-        console.log("Geolocation not supported by this browser."); // Added Log
+        console.log("Geolocation not supported by this browser.");
         callback({ success: false, errorMessage: "Geolocation not supported by this browser." });
     }
 }
@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // REPORT EMERGENCY PAGE (report.html) - FINAL LOCATION FIX
+    // REPORT EMERGENCY PAGE (report.html) - SUBMISSION FIX APPLIED HERE
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm'); 
@@ -464,8 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const successModal = document.getElementById('successModal');
         const countdownTimer = document.getElementById('countdownTimer');
         const getLocationBtn = document.getElementById('getLocationBtn');
-        const locationTextEl = document.getElementById('location'); // The visible location text input
-        // FIX: Ensure hidden inputs are consistently retrieved
+        const locationTextEl = document.getElementById('location'); 
         const latitudeInput = document.getElementById('latitude'); 
         const longitudeInput = document.getElementById('longitude'); 
         const closeSuccessBtn = document.getElementById('closeSuccessBtn');
@@ -493,28 +492,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${SUPABASE_URL}/storage/v1/object/public/${REPORT_BUCKET}/${uploadData.path}`;
         }
 
-        // Location handling function (uses getCurrentPosition)
         function handleLocationFetch() {
             if (isFetchingLocation) return;
             isFetchingLocation = true;
-            locationTextEl.value = 'Fetching Location...'; // Immediate feedback
-            latitudeInput.value = ''; // Clear hidden fields
+            locationTextEl.value = 'Fetching Location...'; 
+            latitudeInput.value = ''; 
             longitudeInput.value = '';
             currentLat = null;
             currentLon = null;
-            console.log("handleLocationFetch called"); // Added Log
 
             getLocation((result) => {
                 if (result.success) {
-                    console.log("Location Success - Updating fields"); // Added Log
                     locationTextEl.value = result.locationText;
-                    latitudeInput.value = result.lat; // Update hidden input
-                    longitudeInput.value = result.lon; // Update hidden input
+                    latitudeInput.value = result.lat; 
+                    longitudeInput.value = result.lon; 
                     currentLat = result.lat;
                     currentLon = result.lon;
                     showMessage('Location acquired successfully.', 'success', 3000);
                 } else {
-                    console.log("Location Error - Updating fields"); // Added Log
                     locationTextEl.value = result.errorMessage;
                     showMessage(result.errorMessage, 'error', 5000);
                 }
@@ -522,23 +517,19 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Call the location function immediately on DOM load
         handleLocationFetch();
 
-
-        // Manual location fetch button listener
         if (getLocationBtn) {
             getLocationBtn.addEventListener('click', handleLocationFetch);
         }
         
-        // Listener for closing success modal
         if (closeSuccessBtn) {
             closeSuccessBtn.addEventListener('click', () => {
                 successModal.classList.add('hidden');
                 reportForm.reset();
                 currentLat = null;
                 currentLon = null;
-                locationTextEl.value = 'Not acquired.'; // Set back to initial state
+                locationTextEl.value = 'Not acquired.'; 
                 latitudeInput.value = '';
                 longitudeInput.value = '';
                 document.getElementById('submitReportBtn').disabled = false;
@@ -553,9 +544,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 event.stopImmediatePropagation(); 
 
                 const incidentType = document.getElementById('incidentType').value;
-                const incidentDetails = document.getElementById('incidentDetails').value; 
+                // FIX: Use the correct ID 'description' for the textarea
+                const descriptionValue = document.getElementById('description').value; 
                 const severity = document.getElementById('severity').value; 
-                const additionalContext = document.getElementById('description').value; 
+                
+                // Map the description to both relevant DB columns
+                const incidentDetails = descriptionValue;
+                const additionalContext = descriptionValue;
                 
                 document.getElementById('submitReportBtn').disabled = true;
 
@@ -600,17 +595,22 @@ document.addEventListener('DOMContentLoaded', () => {
                                 photoUrl = await uploadImage(photoFile, localStorage.getItem('userId'));
                             }
                             
+                            // Check if photo upload failed and prevent submission if required (optional, but good)
+                            if (photoFile && !photoUrl) {
+                                throw new Error("Photo upload failed, stopping report submission.");
+                            }
+
                             const { error: submissionError } = await supabase.from('emergency_reports').insert([
                                 { 
                                     user_id: localStorage.getItem('userId'), 
                                     incident_type: incidentType, 
-                                    incident_details: incidentDetails, 
+                                    incident_details: incidentDetails, // Uses corrected variable
                                     severity: severity, 
                                     latitude: currentLat, 
                                     longitude: currentLon, 
                                     photo_url: photoUrl,
                                     status: 'Reported', 
-                                    additional_context: additionalContext 
+                                    additional_context: additionalContext // Uses corrected variable
                                 }
                             ]);
                             
@@ -632,12 +632,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         } catch (e) {
                             console.error('Fatal submission error:', e);
-                            showMessage('An unexpected error occurred during submission.', 'error', 5000);
+                            showMessage(`An unexpected error occurred during submission: ${e.message}`, 'error', 5000);
                         } finally {
                             countdownModal.classList.add('hidden'); 
-                            if (document.getElementById('submitReportBtn').disabled) {
-                                document.getElementById('submitReportBtn').disabled = false; 
-                            }
+                            // Re-enable button on all failure paths
+                            document.getElementById('submitReportBtn').disabled = false; 
                         }
                     }
                 }, 1000);
