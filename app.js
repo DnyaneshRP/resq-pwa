@@ -295,6 +295,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fullname = document.getElementById('fullname').value;
                 const phone = document.getElementById('phone').value;
                 const dob = document.getElementById('dob').value;
+                // Note: Assuming 'gender' and 'bloodgrp' are NOT in the form, 
+                // so we insert null, aligning with the schema's NULL constraint.
+                const gender = document.getElementById('gender')?.value || null; 
+                const bloodgrp = document.getElementById('bloodgrp')?.value || null;
                 const address = document.getElementById('address').value;
                 const city = document.getElementById('city').value;
                 const pincode = document.getElementById('pincode').value;
@@ -309,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     email, 
                     password,
                     options: {
-                        data: { full_name: fullname }
+                        data: { full_name: fullname } // Storing in auth user metadata for convenience
                     }
                 });
                 
@@ -320,26 +324,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const userId = authData.user.id;
                 
-                // 2. Insert profile details
+                // 2. Insert profile details (using the correct schema column names)
                 const { error: profileError } = await supabase
                     .from('profiles')
                     .insert([
                         { 
                             id: userId,
-                            full_name: fullname, 
+                            fullname: fullname,             
+                            email: email,                   
                             phone: phone, 
                             dob: dob, 
+                            gender: gender,                 
+                            bloodgrp: bloodgrp,             
                             address: address, 
                             city: city, 
                             pincode: pincode, 
-                            emergency_contact_1: emergency1, 
-                            emergency_contact_2: emergency2, 
-                            medical_conditions: medical
+                            emergency1: emergency1,         
+                            emergency2: emergency2,         
+                            medical: medical                
                         }
                     ]);
                     
                 if (profileError) {
-                    // This is a critical error, log and inform the user
                     console.error('Profile Insert Error:', profileError);
                     showMessage('Registration completed, but failed to save profile details: ' + profileError.message, 'error', 8000);
                     return;
@@ -355,20 +361,69 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // PROFILE PAGE (profile.html)
+    // PROFILE PAGE (profile.html) - FIX APPLIED
     // =================================================================
     if (window.location.pathname.endsWith('/profile.html')) {
-        const profileForm = document.getElementById('profileForm');
         
+        const detailsContainer = document.getElementById('profileDetails');
+
+        // Helper function to render profile data (Display-only view)
+        function displayProfile(profile) {
+            if (!detailsContainer || !profile) {
+                detailsContainer.innerHTML = '<p>User profile data could not be loaded.</p>';
+                return;
+            }
+            
+            // Display all fields from the new schema
+            detailsContainer.innerHTML = `
+                <div class="profile-group">
+                    <p><strong>Full Name:</strong> ${profile.fullname || 'N/A'}</p>
+                    <p><strong>Email:</strong> ${profile.email || 'N/A'}</p>
+                    <p><strong>Phone:</strong> ${profile.phone || 'N/A'}</p>
+                    <p><strong>Date of Birth:</strong> ${profile.dob || 'N/A'}</p>
+                    <p><strong>Gender:</strong> ${profile.gender || 'N/A'}</p>
+                    <p><strong>Blood Group:</strong> ${profile.bloodgrp || 'N/A'}</p>
+                </div>
+                
+                <h2 style="margin-top: 15px;">Address</h2>
+                <div class="profile-group">
+                    <p>${profile.address || 'N/A'}</p>
+                    <p>${profile.city || 'N/A'} - ${profile.pincode || 'N/A'}</p>
+                </div>
+                
+                <h2 style="margin-top: 15px;">Emergency Contacts</h2>
+                <div class="profile-group">
+                    <p><strong>Contact 1:</strong> ${profile.emergency1 || 'N/A'}</p>
+                    <p><strong>Contact 2:</strong> ${profile.emergency2 || 'N/A'}</p>
+                </div>
+                
+                <h2 style="margin-top: 15px;">Medical Information</h2>
+                <div class="profile-group">
+                    <p><strong>Conditions:</strong> ${profile.medical || 'None specified.'}</p>
+                </div>
+                
+                <button id="editProfileBtn" class="primary-btn" style="margin-top: 20px;">
+                    <i class="fas fa-edit"></i> Edit Profile (Placeholder)
+                </button>
+            `;
+        }
+
+
         // Function to fetch and display profile data
         async function loadProfile() {
             const userId = localStorage.getItem('userId');
+            
             if (!userId) {
-                showMessage('User not logged in. Redirecting...', 'error', 3000);
-                setTimeout(() => window.location.href = 'index.html', 3000);
+                detailsContainer.innerHTML = '<p>Error: User not logged in. Redirecting to login...</p>';
+                setTimeout(() => window.location.href = 'index.html', 1500);
                 return;
             }
-
+            
+            // **IMMEDIATE FIX: Clear old cached data to force a fresh pull from Supabase**
+            localStorage.removeItem('profileData'); 
+            
+            // We now skip the cached check and go straight to the network call
+            
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
@@ -376,72 +431,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 .single();
                 
             if (error) {
+                detailsContainer.innerHTML = `<p>Failed to load profile: ${error.message}</p>`;
                 showMessage('Failed to load profile: ' + error.message, 'error', 5000);
                 return;
             }
             
             if (data) {
-                // Populate the form fields with fetched data
-                document.getElementById('fullname').value = data.full_name || '';
-                // The user's email is not in the `profiles` table in this logic, skip or fetch from auth
-                // document.getElementById('email').value = data.email || ''; 
-                document.getElementById('phone').value = data.phone || '';
-                document.getElementById('dob').value = data.dob || '';
-                document.getElementById('address').value = data.address || '';
-                document.getElementById('city').value = data.city || '';
-                document.getElementById('pincode').value = data.pincode || '';
-                document.getElementById('emergency1').value = data.emergency_contact_1 || '';
-                document.getElementById('emergency2').value = data.emergency_contact_2 || '';
-                document.getElementById('medical').value = data.medical_conditions || '';
-                
-                // Store locally for offline/quick access
+                // Store locally and display
                 localStorage.setItem('profileData', JSON.stringify(data));
+                displayProfile(data); 
             }
         }
         
-        // Load profile on page load
         loadProfile();
-
-        // Handle profile update form submission
-        if (profileForm) {
-            profileForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                const userId = localStorage.getItem('userId');
-                
-                const updatedData = {
-                    full_name: document.getElementById('fullname').value,
-                    phone: document.getElementById('phone').value,
-                    dob: document.getElementById('dob').value,
-                    address: document.getElementById('address').value,
-                    city: document.getElementById('city').value,
-                    pincode: document.getElementById('pincode').value,
-                    emergency_contact_1: document.getElementById('emergency1').value,
-                    emergency_contact_2: document.getElementById('emergency2').value || null,
-                    medical_conditions: document.getElementById('medical').value || null
-                };
-                
-                showMessage('Updating profile...', 'success', 2000);
-                
-                const { error } = await supabase
-                    .from('profiles')
-                    .update(updatedData)
-                    .eq('id', userId);
-                    
-                if (error) {
-                    showMessage('Profile Update Failed: ' + error.message, 'error', 5000);
-                } else {
-                    // Update local storage after successful update
-                    localStorage.setItem('profileData', JSON.stringify({...updatedData, id: userId}));
-                    showMessage('Profile updated successfully!', 'success', 3000);
-                }
-            });
-        }
     }
 
     // =================================================================
     // REPORT EMERGENCY PAGE (report.html)
-    // (Retains fix from previous step to use 'emergency_reports' table)
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm'); 
@@ -634,7 +640,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // =================================================================
     // HISTORY PAGE (history.html)
-    // (Assuming history needs to display from 'emergency_reports' now)
     // =================================================================
     if (window.location.pathname.endsWith('/history.html')) {
         async function loadReportsHistory() {
@@ -689,4 +694,3 @@ document.addEventListener('DOMContentLoaded', () => {
         loadReportsHistory();
     }
 });
-
