@@ -650,7 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // *** Note: This section assumes you will rename your reports table to 'reports' or adjust this section too. I am leaving it as 'reports' for now as that was the last working version, but it should be 'emergency_reports' for consistency. ***
             const { data, error } = await supabase
-                .from('reports') // Should ideally be 'emergency_reports'
+                .from('emergency_reports') // Should ideally be 'emergency_reports'
                 .select('*')
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
