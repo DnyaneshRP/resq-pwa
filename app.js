@@ -124,54 +124,33 @@ async function checkAuth() {
     }
 }
 
-// --- Geolocation Utility (FIXED: Using watchPosition for reliability) ---
-// Note: This function now RETURNS the watch ID and calls the callback repeatedly.
-// The caller (handleLocationFetch) must stop the watch.
-function getLocation(successCallback, errorCallback) {
-    if (!navigator.geolocation) {
-        errorCallback({ success: false, errorMessage: "Geolocation is not supported by this browser." });
-        return null;
+// --- Geolocation Utility (REVERTED to getCurrentPosition) ---
+function getLocation(callback) {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const locationText = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
+                callback({ success: true, lat, lon, locationText });
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+                let errorMessage = "Location not available. Ensure services are enabled.";
+                if (error.code === error.PERMISSION_DENIED) {
+                    errorMessage = "PERMISSION DENIED: Allow location access.";
+                } else if (error.code === error.TIMEOUT) {
+                    errorMessage = "TIMEOUT (10s): Signal weak. Try moving & click 'Get Location'.";
+                } else if (error.code === error.POSITION_UNAVAILABLE) {
+                    errorMessage = "POSITION UNAVAILABLE: Cannot determine location.";
+                }
+                callback({ success: false, errorMessage });
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
+        );
+    } else {
+        callback({ success: false, errorMessage: "Geolocation not supported by this browser." });
     }
-
-    const options = { 
-        enableHighAccuracy: true, 
-        timeout: 15000, // Increased to 15s to be generous
-        maximumAge: 0 
-    };
-
-    const handleError = (error) => {
-        console.error("Geolocation error:", error);
-        
-        let errorMessage = "Location not available. Please ensure location services are enabled.";
-
-        if (error.code === error.PERMISSION_DENIED) {
-            errorMessage = "PERMISSION DENIED: Please allow location access in your browser settings.";
-        } else if (error.code === error.TIMEOUT) {
-            errorMessage = "TIMEOUT (15s): Location signal weak. Try moving to an open area and click 'Get Location'.";
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-            errorMessage = "POSITION UNAVAILABLE: Device cannot determine location.";
-        }
-
-        errorCallback({ success: false, errorMessage });
-    };
-
-    // Use watchPosition for a persistent, more reliable attempt to get the first location fix.
-    const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            const locationText = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
-            
-            // On success, we notify the caller
-            successCallback({ success: true, lat, lon, locationText });
-            
-            // Important: We don't stop the watch here. The caller (handleLocationFetch) handles it.
-        },
-        handleError,
-        options
-    );
-    
-    return watchId;
 }
 
 // --- Global Utility: Fetch and Store Profile ---
@@ -474,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // REPORT EMERGENCY PAGE (report.html) - ROBUST LOCATION FIX
+    // REPORT EMERGENCY PAGE (report.html) - FINAL LOCATION FIX
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm'); 
@@ -483,12 +462,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const countdownTimer = document.getElementById('countdownTimer');
         const getLocationBtn = document.getElementById('getLocationBtn');
         const locationTextEl = document.getElementById('location'); 
+        // Get references to hidden lat/lon inputs
+        const latitudeInput = document.getElementById('latitude'); 
+        const longitudeInput = document.getElementById('longitude'); 
         const closeSuccessBtn = document.getElementById('closeSuccessBtn');
 
         let isFetchingLocation = false;
         let currentLat = null; 
         let currentLon = null; 
-        let locationWatchId = null; // Store the watch ID to clear it later
         
         async function uploadImage(file, userId) {
             const fileExt = file.name.split('.').pop();
@@ -509,58 +490,33 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${SUPABASE_URL}/storage/v1/object/public/${REPORT_BUCKET}/${uploadData.path}`;
         }
 
-        // Location handling function (uses watchPosition)
+        // Location handling function (uses reverted getCurrentPosition)
         function handleLocationFetch() {
-            // If a previous watch is active, clear it first
-            if (locationWatchId !== null) {
-                navigator.geolocation.clearWatch(locationWatchId);
-                locationWatchId = null;
-            }
-
             if (isFetchingLocation) return;
             isFetchingLocation = true;
-            locationTextEl.value = 'Fetching Location... (Waiting for GPS Fix)';
+            locationTextEl.value = 'Fetching Location...'; // Immediate feedback
+            latitudeInput.value = ''; // Clear hidden fields
+            longitudeInput.value = '';
             currentLat = null;
             currentLon = null;
-            
-            // Success Callback: Executed every time a new, better position is found
-            const successCallback = (result) => {
-                // Only update and stop the watch on the first successful fix 
-                // OR if the quality of the fix is considered good enough.
-                // For simplicity, we assume the first successful fix is enough here.
-                if (result.success && currentLat === null) { 
+
+            getLocation((result) => {
+                if (result.success) {
                     locationTextEl.value = result.locationText;
+                    latitudeInput.value = result.lat; // Update hidden input
+                    longitudeInput.value = result.lon; // Update hidden input
                     currentLat = result.lat;
                     currentLon = result.lon;
                     showMessage('Location acquired successfully.', 'success', 3000);
-                    
-                    // Stop watching once a successful fix is found
-                    if (locationWatchId !== null) {
-                        navigator.geolocation.clearWatch(locationWatchId);
-                        locationWatchId = null; 
-                        isFetchingLocation = false;
-                    }
-                }
-            };
-            
-            // Error Callback: Executed if the watch fails completely
-            const errorCallback = (result) => {
-                locationTextEl.value = result.errorMessage;
-                showMessage(result.errorMessage, 'error', 7000);
-                
-                // Ensure the watch is stopped on error
-                if (locationWatchId !== null) {
-                    navigator.geolocation.clearWatch(locationWatchId);
-                    locationWatchId = null;
+                } else {
+                    locationTextEl.value = result.errorMessage;
+                    showMessage(result.errorMessage, 'error', 5000);
                 }
                 isFetchingLocation = false;
-            };
-
-            // Start watching for the position
-            locationWatchId = getLocation(successCallback, errorCallback);
+            });
         }
 
-        // FIX: Call the location function immediately on DOM load
+        // Call the location function immediately on DOM load
         handleLocationFetch();
 
 
@@ -577,8 +533,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentLat = null;
                 currentLon = null;
                 // Re-attempt location fetch after a successful report submission
-                locationTextEl.value = 'Location Cleared. Re-fetching...'; 
-                handleLocationFetch(); 
+                locationTextEl.value = 'Not acquired.'; 
+                latitudeInput.value = '';
+                longitudeInput.value = '';
+                // handleLocationFetch(); // Optional: Re-fetch automatically
                 document.getElementById('submitReportBtn').disabled = false;
             });
         }
@@ -603,18 +561,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 
-                if (!currentLat || !currentLon) {
-                    showMessage('Please wait for a valid location or click "Get Location" to try again.', 'error', 5000);
+                // CRUCIAL CHECK: Ensure lat/lon were successfully acquired before submitting
+                if (currentLat === null || currentLon === null || locationTextEl.value.includes('Location not available') || locationTextEl.value.includes('PERMISSION DENIED') || locationTextEl.value.includes('TIMEOUT')) {
+                    showMessage('Valid location is required. Click "Get Location" or ensure permissions are granted.', 'error', 7000);
                     document.getElementById('submitReportBtn').disabled = false;
                     return;
                 }
-                
-                // Stop location watch immediately before starting submission countdown
-                if (locationWatchId !== null) {
-                    navigator.geolocation.clearWatch(locationWatchId);
-                    locationWatchId = null;
-                }
-
 
                 countdownModal.classList.remove('hidden');
                 playSound('countdownSound');
@@ -660,7 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             if (submissionError) {
                                 console.error('Submission Error:', submissionError.message);
-                                showMessage(`Report submission failed! CRITICAL: Check Supabase RLS policies. (Error: ${submissionError.code})`, 'error', 7000);
+                                showMessage(`Report submission failed! Check Supabase RLS. (Error: ${submissionError.code})`, 'error', 7000);
                                 document.getElementById('submitReportBtn').disabled = false;
                             } else {
                                 countdownModal.classList.add('hidden');
