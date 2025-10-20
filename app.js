@@ -53,6 +53,7 @@ function playSound(id) {
 // --- Global Utility: Fetch and Store Profile ---
 async function fetchAndStoreProfile(userId) {
      try {
+        // Fetch ALL profile data including full_name
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
@@ -75,7 +76,7 @@ async function fetchAndStoreProfile(userId) {
     }
 }
 
-// --- Global Utility: Set Drawer Header (FIXED for Hello, User) ---
+// --- Global Utility: Set Drawer Header (FIXED: Uses full_name) ---
 function setDrawerHeader() {
     const drawerTitle = document.getElementById('drawerTitle');
     if (!drawerTitle) return;
@@ -84,11 +85,11 @@ function setDrawerHeader() {
     if (profileDataString) {
         try {
             const profile = JSON.parse(profileDataString);
-            // Access the name safely
+            // Check for the name property
             if (profile.full_name && profile.full_name.trim() !== '') {
                 // Extract only the first word as the first name
                 const firstName = profile.full_name.split(' ')[0];
-                // FIX: Set the header to "Hello, [User]"
+                // Set the header to "Hello, [User]"
                 drawerTitle.textContent = `Hello, ${firstName}`;
                 return;
             }
@@ -113,7 +114,7 @@ function setupDrawerMenu() {
         menuButton.addEventListener('click', () => {
             sideDrawer.classList.add('open');
             drawerBackdrop.classList.add('active');
-            setDrawerHeader(); 
+            setDrawerHeader(); // Re-check header content on opening
         });
     }
 
@@ -153,7 +154,7 @@ function setupDrawerMenu() {
 }
 
 
-// --- Global Utility: Check Authentication (FIXED for name retrieval robustness) ---
+// --- Global Utility: Check Authentication (FIXED: Ensures name is loaded) ---
 async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession();
     let profileLoaded = false;
@@ -173,8 +174,8 @@ async function checkAuth() {
                 localStorage.setItem('userId', userId);
             }
             
-            // **FIX IMPLEMENTED HERE:** Robust check for profile data completeness.
-            // If profile is missing OR full_name is missing/blank (i.e., "N/A" bug source), force re-fetch.
+            // **CRITICAL FIX:** Check if profile exists and, more importantly, if it contains the full name.
+            // If the profile is missing OR the full_name is blank (N/A bug source), force re-fetch from Supabase.
             const profileData = localStorage.getItem('profileData');
             let profile = profileData ? JSON.parse(profileData) : {};
 
@@ -316,7 +317,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Await checkAuth to ensure profile is loaded before setting header (FIXED)
+    // Await checkAuth to ensure profile is loaded (FIXED for name retrieval robustness)
     await checkAuth(); 
     setupDrawerMenu();
     setDrawerHeader(); 
@@ -409,13 +410,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 const userId = authData.user.id;
                 
-                // Step 2: Profile insert
+                // Step 2: Profile insert (Explicitly saving full_name)
                 const { error: profileError } = await supabase
                     .from('profiles')
                     .insert([
                         { 
                             id: userId,
-                            full_name: fullname, // Name is explicitly inserted here
+                            full_name: fullname, 
                             email: email,                   
                             phone: phone, 
                             dob: dob, 
@@ -436,7 +437,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 
                 localStorage.setItem('userId', userId);
-                await fetchAndStoreProfile(userId); // Store the profile with name
+                await fetchAndStoreProfile(userId); // Store the complete profile with name
                 setDrawerHeader(); // Set header with fresh data
                 showMessage('Registration successful! Redirecting to Home...', 'success', 1000);
                 setTimeout(() => {
@@ -447,7 +448,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // =================================================================
-    // PROFILE PAGE (profile.html) Logic (FIXED for Full Name display)
+    // PROFILE PAGE (profile.html) Logic
     // =================================================================
 
     if (window.location.pathname.endsWith('/profile.html')) {
@@ -460,7 +461,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             
-            // FIX: The N/A issue is resolved by ensuring profile.full_name is loaded correctly in checkAuth/loadProfile
+            // The N/A issue is resolved by ensuring profile.full_name is loaded correctly in checkAuth/loadProfile
             detailsContainer.innerHTML = `
                 <h2 style="margin-bottom: 15px;">Personal Information</h2>
                 <div class="profile-group">
