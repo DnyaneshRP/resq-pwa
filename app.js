@@ -11,8 +11,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // --- Initialize Supabase Client ---
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Define the photo bucket name as a constant
+// Define constants
 const REPORT_BUCKET = 'emergency_photos'; 
+const OFFLINE_QUEUE_KEY = '__REPORTS_QUEUE__'; // Key for localStorage queue (Point 6)
 
 // --- Global Utility: Custom Message Box & Sound Player ---
 function showMessage(message, type = 'success', duration = 3000) {
@@ -44,11 +45,60 @@ function playSound(id) {
         audio.pause();
         audio.currentTime = 0;
         audio.play().catch(error => {
-            // This is common for mobile browsers requiring a user gesture
             console.warn('Audio playback prevented by browser:', error);
         });
     }
 }
+
+// --- Global Utility: Fetch and Store Profile ---
+async function fetchAndStoreProfile(userId) {
+     try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+        if (!error && data) {
+            // Remove sensitive or unnecessary fields before storing locally
+            delete data.id; 
+            delete data.created_at; 
+            localStorage.setItem('profileData', JSON.stringify(data));
+            return true;
+        } else {
+            console.error('Failed to fetch profile for local storage:', error ? error.message : 'No data');
+            return false;
+        }
+    } catch (e) {
+        console.error('Error fetching profile for local storage:', e);
+        return false;
+    }
+}
+
+// --- Global Utility: Set Drawer Header (Point 5: "Hello, User" Fix) ---
+function setDrawerHeader() {
+    const drawerTitle = document.getElementById('drawerTitle');
+    if (!drawerTitle) return;
+
+    const profileDataString = localStorage.getItem('profileData');
+    if (profileDataString) {
+        try {
+            const profile = JSON.parse(profileDataString);
+            if (profile.full_name) {
+                // Extract only the first word as the first name
+                const firstName = profile.full_name.split(' ')[0];
+                // FIX: Set the header to "Hello, [User]" (Point 5)
+                drawerTitle.textContent = `Hello, ${firstName}`;
+                return;
+            }
+        } catch (e) {
+            console.error('Error parsing profile data:', e);
+        }
+    }
+    // Default text if no name is found or profile data is missing
+    drawerTitle.textContent = 'ResQ Menu';
+}
+
 
 // --- Global Utility: Drawer Menu ---
 function setupDrawerMenu() {
@@ -62,6 +112,7 @@ function setupDrawerMenu() {
         menuButton.addEventListener('click', () => {
             sideDrawer.classList.add('open');
             drawerBackdrop.classList.add('active');
+            setDrawerHeader(); 
         });
     }
 
@@ -87,7 +138,6 @@ function setupDrawerMenu() {
             if (error) {
                 showMessage('Logout failed: ' + error.message, 'error');
             } else {
-                // Clear all caches and reload to index/login page
                 if ('caches' in window) {
                     const cacheNames = await caches.keys();
                     await Promise.all(
@@ -105,164 +155,174 @@ function setupDrawerMenu() {
 // --- Global Utility: Check Authentication ---
 async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession();
+    let profileLoaded = false;
     
+    // Check if on unprotected pages (login/register/root)
     if (window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/register.html') || window.location.pathname.endsWith('/')) {
-        // On login/register pages
         if (session) {
-            window.location.href = 'home.html'; // Already logged in, redirect to home
+            window.location.href = 'home.html'; 
         }
     } else {
-        // On protected pages
+        // Protected pages
         if (!session) {
-            window.location.href = 'index.html'; // Not logged in, redirect to login
+            window.location.href = 'index.html'; 
         } else {
-            // Session exists, check if user data is stored locally (for offline use)
+            const userId = session.user.id;
             if (!localStorage.getItem('userId')) {
-                localStorage.setItem('userId', session.user.id);
+                localStorage.setItem('userId', userId);
+            }
+            // Await profile fetch if missing in localStorage (Point 5 dependency)
+            if (!localStorage.getItem('profileData')) {
+                profileLoaded = await fetchAndStoreProfile(userId);
+            } else {
+                profileLoaded = true;
             }
         }
     }
+    return profileLoaded;
 }
 
-// --- Geolocation Utility (Using getCurrentPosition) ---
+// --- Geolocation Utility ---
 function getLocation(callback) {
-    console.log("Attempting to get location...");
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                console.log("Geolocation success:", position);
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
                 const locationText = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
                 callback({ success: true, lat, lon, locationText });
             },
             (error) => {
-                console.error("Geolocation error:", error);
                 let errorMessage = "Location not available. Ensure services are enabled.";
                 if (error.code === error.PERMISSION_DENIED) {
                     errorMessage = "PERMISSION DENIED: Allow location access.";
                 } else if (error.code === error.TIMEOUT) {
-                    errorMessage = "TIMEOUT (10s): Signal weak. Try moving & click 'Get Location'.";
-                } else if (error.code === error.POSITION_UNAVAILABLE) {
-                    errorMessage = "POSITION UNAVAILABLE: Cannot determine location.";
+                    errorMessage = "TIMEOUT: Signal weak. Try moving & click 'Get Location'.";
                 }
                 callback({ success: false, errorMessage });
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
         );
     } else {
-        console.log("Geolocation not supported by this browser.");
         callback({ success: false, errorMessage: "Geolocation not supported by this browser." });
     }
 }
 
-// --- Global Utility: Fetch and Store Profile ---
-async function fetchAndStoreProfile(userId, isLoginAttempt = false) {
-     try {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
-            
-        if (error || !data) {
-            if (isLoginAttempt) {
-                console.error('Login profile check failed:', error ? error.message : 'No data');
-                return false; 
-            }
-            console.error('Failed to fetch profile for local storage:', error ? error.message : 'No data');
-            return true; 
-        }
+async function uploadImage(file, userId) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${userId}/${fileName}`;
+
+    showMessage('Uploading photo...', 'info', 2000);
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(REPORT_BUCKET) 
+        .upload(filePath, file);
         
-        delete data.id; 
-        delete data.created_at; 
-        localStorage.setItem('profileData', JSON.stringify(data));
-        return true; 
+    if (uploadError) {
+        console.error('Photo Upload Error:', uploadError.message);
+        showMessage('Photo upload failed. Check Storage RLS and Bucket name.', 'error', 5000);
+        return null;
+    }
+    
+    // Get the public URL for the newly uploaded file
+    const { data: { publicUrl } } = supabase.storage.from(REPORT_BUCKET).getPublicUrl(filePath);
+    return publicUrl;
+}
+
+// =================================================================
+// OFFLINE REPORT QUEUEING LOGIC (Point 6: Offline PWA Transactional Data)
+// =================================================================
+
+function getQueuedReports() {
+    try {
+        const queueString = localStorage.getItem(OFFLINE_QUEUE_KEY);
+        return queueString ? JSON.parse(queueString) : [];
     } catch (e) {
-        console.error('Error fetching profile for local storage:', e);
-        return isLoginAttempt ? false : true; 
+        console.error('Error reading report queue:', e);
+        return [];
     }
 }
 
-// --- PWA Installation Logic ---
-let deferredPrompt;
+function saveQueuedReports(queue) {
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+}
 
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    
-    if (!localStorage.getItem('pwaPromptShown')) {
-        showInstallPromotionModal();
+function queueReport(reportPayload) {
+    const queue = getQueuedReports();
+    queue.push(reportPayload);
+    saveQueuedReports(queue);
+    showMessage('Report saved offline. Will send automatically when connection is restored.', 'info', 7000);
+}
+
+// Function that runs on load to attempt to send queued reports
+async function attemptQueuedReports() {
+    const queue = getQueuedReports();
+    if (queue.length === 0) return;
+
+    if (!navigator.onLine) {
+        console.log('Offline: Cannot send queued reports now.');
+        return;
     }
-});
+    
+    let reportsSent = 0;
+    const failedQueue = [];
 
-function setupPWAInstallPrompt() {
-    const installButton = document.getElementById('installButton');
-    if (installButton) {
-        installButton.addEventListener('click', () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the install prompt');
-                    } else {
-                        console.log('User dismissed the install prompt');
-                    }
-                    deferredPrompt = null;
-                    const pwaModal = document.getElementById('pwaModal');
-                    if (pwaModal) pwaModal.remove();
+    showMessage(`Connection restored! Attempting to send ${queue.length} queued reports...`, 'success', 5000);
+
+    for (const report of queue) {
+        // Photo URL will be null since files can't be queued, only text data
+        const { error } = await supabase.from('emergency_reports').insert([report]);
+
+        if (error) {
+            console.error('Failed to send queued report:', error.message, report);
+            // Re-queue the report if sending fails
+            failedQueue.push(report); 
+        } else {
+            reportsSent++;
+        }
+    }
+
+    if (reportsSent > 0) {
+        showMessage(`Successfully sent ${reportsSent} queued report(s).`, 'success', 5000);
+    }
+    
+    // Update the queue: keep only the failed reports
+    saveQueuedReports(failedQueue);
+}
+
+// =================================================================
+// --- Page Specific Logic Initialization (MADE ASYNC) ---
+// =================================================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+    
+    // +++ Service Worker Registration (Point 6) +++
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            // Note: The sw.js file must be present at the root for this to work
+            navigator.serviceWorker.register('sw.js') 
+                .then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                })
+                .catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
                 });
-            }
         });
     }
-}
 
-function showInstallPromotionModal() {
-    localStorage.setItem('pwaPromptShown', 'true');
-    const modalHtml = `
-        <div id="pwaModal" class="modal-overlay">
-            <div class="modal-content" style="text-align: center;">
-                <i class="fas fa-heartbeat pwa-icon" style="font-size: 3em; color: #d32f2f; margin-bottom: 15px;"></i>
-                <h2>Install ResQ - Your Safety App</h2>
-                <p>Install the ResQ app to get quick access to emergency features and use it even when you're offline. Get the full app experience!</p>
-                <button id="installButton" class="primary-btn" style="width: 100%; margin: 15px 0;">Install App Now</button>
-                <button id="dismissButton" class="secondary-btn" style="width: 100%;">Not now, continue to website</button>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    const pwaModal = document.getElementById('pwaModal');
-    
-    document.getElementById('installButton').addEventListener('click', () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then((choiceResult) => {
-                if (choiceResult.outcome === 'accepted') {
-                    console.log('User accepted the install prompt');
-                } else {
-                    console.log('User dismissed the install prompt');
-                }
-                deferredPrompt = null;
-                pwaModal.remove();
-            });
-        }
-    });
-    
-    document.getElementById('dismissButton').addEventListener('click', () => {
-        pwaModal.remove();
-    });
-}
-
-
-// --- Page Specific Logic Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
-    checkAuth();
+    // Await checkAuth to ensure profile is loaded before setting header (Point 5)
+    await checkAuth(); 
     setupDrawerMenu();
-    setupPWAInstallPrompt();
+    setDrawerHeader(); 
+
+    // Attempt to send any reports queued while offline (Point 6)
+    attemptQueuedReports();
     
     // =================================================================
-    // LOGIN PAGE (index.html) 
+    // LOGIN PAGE (index.html) Logic
     // =================================================================
+
     if (window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/')) {
         const loginForm = document.getElementById('loginForm');
         
@@ -281,16 +341,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (data.session) {
                     const userId = data.user.id;
         
-                    const profileExists = await fetchAndStoreProfile(userId, true);
+                    const profileExists = await fetchAndStoreProfile(userId);
                     
                     if (!profileExists) {
                         await supabase.auth.signOut();
                         localStorage.clear();
-                        showMessage('Login failed. Your account data is incomplete. Please re-register.', 'error', 7000);
+                        showMessage('Login failed. Could not load profile data.', 'error', 7000);
                         return;
                     }
                     
                     localStorage.setItem('userId', userId);
+                    setDrawerHeader(); 
                     showMessage('Login Successful! Redirecting...', 'success', 1000);
                     setTimeout(() => {
                         window.location.href = 'home.html';
@@ -301,8 +362,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // =================================================================
-    // REGISTER PAGE (register.html)
+    // REGISTER PAGE (register.html) Logic
     // =================================================================
+
     if (window.location.pathname.endsWith('/register.html')) {
         const registerForm = document.getElementById('registerForm');
         
@@ -316,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const phone = document.getElementById('phone').value;
                 const dob = document.getElementById('dob').value;
                 const gender = document.getElementById('gender')?.value || null; 
-                const bloodgrp = document.getElementById('bloodgrp')?.value || null;
+                const bloodgrp = document.getElementById('bloodgrp')?.value || null; 
                 const address = document.getElementById('address').value;
                 const city = document.getElementById('city').value;
                 const pincode = document.getElementById('pincode').value;
@@ -326,6 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 showMessage('Registering...', 'success', 2000);
                 
+                // Step 1: Auth sign up
                 const { data: authData, error: authError } = await supabase.auth.signUp({ 
                     email, 
                     password,
@@ -341,12 +404,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const userId = authData.user.id;
                 
+                // Step 2: Profile insert
                 const { error: profileError } = await supabase
                     .from('profiles')
                     .insert([
                         { 
                             id: userId,
-                            fullname: fullname,             
+                            full_name: fullname, 
                             email: email,                   
                             phone: phone, 
                             dob: dob, 
@@ -355,19 +419,20 @@ document.addEventListener('DOMContentLoaded', () => {
                             address: address, 
                             city: city, 
                             pincode: pincode, 
-                            emergency1: emergency1,         
-                            emergency2: emergency2,         
-                            medical: medical                
+                            emergency_contact_1: emergency1, 
+                            emergency_contact_2: emergency2,         
+                            medical_conditions: medical      
                         }
                     ]);
                     
                 if (profileError) {
                     console.error('Profile Insert Error:', profileError);
-                    showMessage('Registration completed, but failed to save profile details: ' + profileError.message, 'error', 8000);
-                    return;
+                    showMessage('Registration completed, but failed to save profile details. Log in to update profile.', 'error', 8000);
                 }
                 
                 localStorage.setItem('userId', userId);
+                await fetchAndStoreProfile(userId); 
+                setDrawerHeader();
                 showMessage('Registration successful! Redirecting to Home...', 'success', 1000);
                 setTimeout(() => {
                     window.location.href = 'home.html';
@@ -377,8 +442,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // PROFILE PAGE (profile.html)
+    // PROFILE PAGE (profile.html) Logic
     // =================================================================
+
     if (window.location.pathname.endsWith('/profile.html')) {
         
         const detailsContainer = document.getElementById('profileDetails');
@@ -392,8 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
             detailsContainer.innerHTML = `
                 <h2 style="margin-bottom: 15px;">Personal Information</h2>
                 <div class="profile-group">
-                    <p><strong>Full Name:</strong> ${profile.fullname || 'N/A'}</p>
-                    <p><strong>Email:</strong> ${profile.email || 'N/A'}</p>
+                    <p><strong>Full Name:</strong> ${profile.full_name || 'N/A'}</p>
                     <p><strong>Phone:</strong> ${profile.phone || 'N/A'}</p>
                     <p><strong>Date of Birth:</strong> ${profile.dob || 'N/A'}</p>
                     <p><strong>Gender:</strong> ${profile.gender || 'N/A'}</p>
@@ -408,18 +473,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 <h2 style="margin-top: 15px;">Emergency Contacts</h2>
                 <div class="profile-group">
-                    <p><strong>Contact 1:</strong> ${profile.emergency1 || 'N/A'}</p>
-                    <p><strong>Contact 2:</strong> ${profile.emergency2 || 'N/A'}</p>
+                    <p><strong>Contact 1:</strong> ${profile.emergency_contact_1 || 'N/A'}</p>
+                    <p><strong>Contact 2:</strong> ${profile.emergency_contact_2 || 'N/A'}</p>
                 </div>
                 
                 <h2 style="margin-top: 15px;">Medical Information</h2>
                 <div class="profile-group">
-                    <p><strong>Conditions:</strong> ${profile.medical || 'None specified.'}</p>
+                    <p><strong>Conditions:</strong> ${profile.medical_conditions || 'None specified.'}</p>
                 </div>
-                
-                <button id="editProfileBtn" class="primary-btn" style="margin-top: 20px;">
-                    <i class="fas fa-edit"></i> Edit Profile
-                </button>
             `;
         }
 
@@ -427,12 +488,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const userId = localStorage.getItem('userId');
             
             if (!userId) {
-                detailsContainer.innerHTML = '<p>Error: User not logged in. Redirecting to login...</p>';
-                setTimeout(() => window.location.href = 'index.html', 1500);
+                detailsContainer.innerHTML = '<p>Error: User not logged in.</p>';
                 return;
             }
-            
-            localStorage.removeItem('profileData'); 
             
             const { data, error } = await supabase
                 .from('profiles')
@@ -441,6 +499,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 .single();
                 
             if (error) {
+                const localData = localStorage.getItem('profileData');
+                if (localData) {
+                    showMessage('Failed to connect to update profile. Using offline data.', 'info', 3000);
+                    displayProfile(JSON.parse(localData));
+                    return;
+                }
                 detailsContainer.innerHTML = `<p>Failed to load profile: ${error.message}</p>`;
                 showMessage('Failed to load profile: ' + error.message, 'error', 5000);
                 return;
@@ -456,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // REPORT EMERGENCY PAGE (report.html) - SINGLE AUDIO PLAYBACK FIX
+    // REPORT EMERGENCY PAGE (report.html) Logic
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm'); 
@@ -467,34 +531,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const locationTextEl = document.getElementById('location'); 
         const latitudeInput = document.getElementById('latitude'); 
         const longitudeInput = document.getElementById('longitude'); 
-        const closeSuccessBtn = document.getElementById('closeSuccessBtn');
+        const submitButton = document.getElementById('submitReportBtn');
 
         let isFetchingLocation = false;
         let currentLat = null; 
         let currentLon = null; 
         
-        async function uploadImage(file, userId) {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-            const filePath = `${userId}/${fileName}`;
-
-            showMessage('Uploading photo...', 'info', 2000);
-
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from(REPORT_BUCKET) 
-                .upload(filePath, file);
-                
-            if (uploadError) {
-                console.error('Photo Upload Error:', uploadError.message);
-                showMessage('Photo upload failed. Check Storage RLS and Bucket name.', 'error', 5000);
-                return null;
-            }
-            
-            // Use getPublicUrl which correctly handles the URL construction 
-            const { data: { publicUrl } } = supabase.storage.from(REPORT_BUCKET).getPublicUrl(filePath);
-            return publicUrl;
-        }
-
         function handleLocationFetch() {
             if (isFetchingLocation) return;
             isFetchingLocation = true;
@@ -520,15 +562,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Attempt to fetch location on page load
         handleLocationFetch();
 
         if (getLocationBtn) {
             getLocationBtn.addEventListener('click', handleLocationFetch);
         }
         
-        if (closeSuccessBtn) {
-            closeSuccessBtn.addEventListener('click', () => {
+        if (document.getElementById('closeSuccessBtn')) {
+            document.getElementById('closeSuccessBtn').addEventListener('click', () => {
                 successModal.classList.add('hidden');
                 reportForm.reset();
                 currentLat = null;
@@ -536,7 +577,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 locationTextEl.value = 'Not acquired.'; 
                 latitudeInput.value = '';
                 longitudeInput.value = '';
-                document.getElementById('submitReportBtn').disabled = false;
+                submitButton.disabled = false;
+                handleLocationFetch(); 
             });
         }
 
@@ -547,45 +589,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 event.preventDefault();
                 event.stopImmediatePropagation(); 
 
-                // Get the session directly from Supabase
                 const { data: { session } } = await supabase.auth.getSession();
                 const userId = session?.user?.id;
                 
                 if (!userId) {
-                    showMessage('Error: You are not logged in or session expired. Redirecting...', 'error', 5000);
-                    // Force a full re-auth check
-                    setTimeout(checkAuth, 1000); 
+                    showMessage('Error: You are not logged in.', 'error', 5000);
                     return; 
                 }
                 
                 const incidentType = document.getElementById('incidentType').value;
-                const descriptionValue = document.getElementById('description').value; 
+                const rawDescription = document.getElementById('description').value.trim();
+                const descriptionValue = rawDescription || 'No details provided by user.'; // Fix for NOT NULL constraint
                 const severity = document.getElementById('severity').value; 
                 
-                const incidentDetails = descriptionValue;
-                const additionalContext = descriptionValue;
-                
-                document.getElementById('submitReportBtn').disabled = true;
+                submitButton.disabled = true;
 
                 if (!incidentType || incidentType === '') {
                     showMessage('Please select an incident type.', 'error', 4000);
-                    document.getElementById('submitReportBtn').disabled = false;
+                    submitButton.disabled = false;
                     return;
                 }
                 
-                // CRUCIAL CHECK: Ensure lat/lon were successfully acquired
                 if (currentLat === null || currentLon === null || locationTextEl.value.includes('Location not available') || locationTextEl.value.includes('PERMISSION DENIED') || locationTextEl.value.includes('TIMEOUT') || locationTextEl.value.includes('Fetching Location')) {
-                    showMessage('Valid location is required. Click "Get Location" or ensure permissions are granted.', 'error', 7000);
-                    document.getElementById('submitReportBtn').disabled = false;
+                    showMessage('Valid location is required. Please wait for location or click "Get Location".', 'error', 7000);
+                    submitButton.disabled = false;
                     return;
                 }
 
-                // If all checks pass, start the visual countdown
+                // Start countdown
                 countdownModal.classList.remove('hidden');
                 
-                // FIX: Play the 3-beep sound only ONCE at the start
                 const countdownAudio = document.getElementById('countdownSound');
-                countdownAudio.play().catch(error => console.warn('Audio playback error:', error));
+                // Use the correct audio ID/source for countdown
+                if (countdownAudio && countdownAudio.src.endsWith('countdown.wav')) { 
+                    countdownAudio.play().catch(error => console.warn('Audio playback error (countdown):', error));
+                }
 
                 document.getElementById('countdownMessage').textContent = 'Report sending in...';
 
@@ -593,19 +631,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 countdownTimer.textContent = count; 
 
                 const countdownInterval = setInterval(async () => {
-                    count--; // 3 -> 2, 2 -> 1, 1 -> 0
+                    count--; 
                     
                     if (count >= 0) {
-                        countdownTimer.textContent = count; // Visual update for 3, 2, 1, 0
+                        countdownTimer.textContent = count; 
                     }
                     
-                    // The sound plays for 3 seconds based on the single play at the start.
-                    // NO `playSound()` call here.
-
                     if (count <= 0) {
                         clearInterval(countdownInterval);
                         
-                        // Stop and rewind the audio explicitly just in case its tail was still playing
                         if (countdownAudio) {
                             countdownAudio.pause();
                             countdownAudio.currentTime = 0; 
@@ -616,55 +650,55 @@ document.addEventListener('DOMContentLoaded', () => {
                         const photoFile = document.getElementById('photo').files[0];
                         let photoUrl = null;
 
-                        try {
-                            if (photoFile) {
-                                photoUrl = await uploadImage(photoFile, userId); 
-                            }
-                            
-                            // If photo upload failed and it was intended, abort insertion
-                            if (photoFile && !photoUrl) {
-                                throw new Error("Photo upload failed, stopping report submission.");
-                            }
-
-                            const { error: submissionError } = await supabase.from('emergency_reports').insert([
-                                { 
-                                    user_id: userId, 
-                                    incident_type: incidentType, 
-                                    incident_details: incidentDetails, 
-                                    severity_level: severity, 
-                                    latitude: currentLat, 
-                                    longitude: currentLon, 
-                                    photo_url: photoUrl,
-                                    status: 'Reported', 
-                                    additional_context: additionalContext 
-                                }
-                            ]);
-                            
-                            if (submissionError) {
-                                console.error('Submission Error:', submissionError.message);
-                                showMessage(`Report submission failed! (Error: ${submissionError.code || submissionError.message})`, 'error', 7000);
-                            } else {
-                                countdownModal.classList.add('hidden');
-                                successModal.classList.remove('hidden');
-                                playSound('successSound'); 
-                                showMessage('Report submitted successfully!', 'success', 5000);
-                                
-                                // Reset after success
-                                setTimeout(() => {
-                                    successModal.classList.add('hidden');
-                                    reportForm.reset();
-                                    document.getElementById('submitReportBtn').disabled = false;
-                                    handleLocationFetch(); // Re-fetch location after successful submission
-                                }, 5000);
-                            }
-                        } catch (e) {
-                            console.error('Fatal submission error:', e);
-                            showMessage(`An unexpected error occurred during submission: ${e.message}`, 'error', 5000);
-                        } finally {
-                            countdownModal.classList.add('hidden'); 
-                            // Re-enable button on all failure paths
-                            document.getElementById('submitReportBtn').disabled = false; 
+                        // 1. Photo Upload (Only possible if online)
+                        if (photoFile && navigator.onLine) {
+                            photoUrl = await uploadImage(photoFile, userId); 
+                        } else if (photoFile && !navigator.onLine) {
+                             showMessage("You are offline. Cannot upload photo; report will be queued without image.", 'warning', 7000);
                         }
+
+                        // 2. Prepare payload (Point 1: no additional_context)
+                        const reportPayload = { 
+                            user_id: userId, 
+                            incident_type: incidentType, 
+                            incident_details: descriptionValue, 
+                            severity_level: severity, 
+                            latitude: currentLat, 
+                            longitude: currentLon, 
+                            photo_url: photoUrl,
+                            status: 'Reported', 
+                        };
+
+                        // 3. Attempt Submission (Point 6)
+                        if (navigator.onLine) {
+                            try {
+                                const { error: submissionError } = await supabase.from('emergency_reports').insert([reportPayload]);
+                                
+                                if (submissionError) {
+                                    console.error('Submission Error:', submissionError.message);
+                                    showMessage(`Report submission failed! (Error: ${submissionError.message})`, 'error', 7000);
+                                } else {
+                                    countdownModal.classList.add('hidden');
+                                    successModal.classList.remove('hidden');
+                                    playSound('successSound'); // Use the correct ID for success sound
+                                    showMessage('Report submitted successfully!', 'success', 5000);
+                                }
+                            } catch (e) {
+                                console.error('Fatal submission error:', e);
+                                showMessage(`An unexpected error occurred: ${e.message}`, 'error', 5000);
+                            }
+                        } else {
+                            // OFFLINE QUEUE: If submission fails because we are offline
+                            reportPayload.photo_url = null; // Cannot queue file blobs, rely on text data
+                            queueReport(reportPayload);
+                            
+                            countdownModal.classList.add('hidden');
+                            successModal.classList.remove('hidden');
+                            playSound('successSound'); // Use the correct ID for success sound
+                        }
+                        
+                        countdownModal.classList.add('hidden'); 
+                        submitButton.disabled = false; 
                     }
                 }, 1000);
             });
@@ -672,7 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // =================================================================
-    // HISTORY PAGE (history.html)
+    // HISTORY PAGE (history.html) - Fixes applied
     // =================================================================
     if (window.location.pathname.endsWith('/history.html')) {
         async function loadReportsHistory() {
@@ -686,9 +720,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             reportsList.innerHTML = '<div class="text-center" style="margin-top: 50px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #d32f2f;"></i><p>Loading reports...</p></div>';
 
+            // Point 1 & 4: Select only existing, required columns (no photo_url, no additional_context)
             const { data, error } = await supabase
                 .from('emergency_reports') 
-                .select('timestamp, incident_type, incident_details, additional_context, photo_url, status, severity_level') 
+                .select('timestamp, incident_type, incident_details, status, severity_level, latitude, longitude') 
                 .eq('user_id', userId)
                 .order('timestamp', { ascending: false });
                 
@@ -700,12 +735,18 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (data && data.length > 0) {
                 reportsList.innerHTML = data.map(report => {
-                    // Correcting status class assignment
+                    // Point 2: Status is displayed
                     const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
-                    const statusText = report.status || 'Pending';
+                    const statusText = report.status || 'Reported'; 
                     const date = new Date(report.timestamp).toLocaleString();
                     const severityHtml = report.severity_level ? `<p class="severity-tag">Severity: ${report.severity_level}</p>` : '';
                     
+                    // Point 3: Location shows Lat/Lon
+                    const locationText = (report.latitude && report.longitude) 
+                        ? `Lat: ${report.latitude.toFixed(4)}, Lon: ${report.longitude.toFixed(4)}`
+                        : 'Location not recorded';
+                        
+                    // Point 4: Photo URL link is excluded
                     return `
                         <div class="report-card-history">
                             <div class="report-header">
@@ -713,10 +754,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span class="report-status ${statusClass}">${statusText}</span>
                             </div>
                             ${severityHtml}
-                            <p><strong>Location:</strong> ${report.additional_context || 'N/A'}</p>
+                            <p><strong>Location:</strong> ${locationText}</p>
                             <p><strong>Time:</strong> ${date}</p>
                             <p><strong>Details:</strong> ${report.incident_details || 'N/A'}</p>
-                            ${report.photo_url ? `<p><a href="${report.photo_url}" target="_blank" style="color:#d32f2f; font-weight: 600;">View Attached Photo</a></p>` : ''}
                         </div>
                     `;
                 }).join('');
