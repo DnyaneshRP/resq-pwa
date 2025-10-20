@@ -1,4 +1,4 @@
-const CACHE_NAME = "resq-cache-v6"; // INCREMENTED VERSION!
+const CACHE_NAME = "resq-cache-v6"; // Using your version
 const ASSETS = [
     '/',
     '/index.html',
@@ -6,15 +6,17 @@ const ASSETS = [
     '/home.html',
     '/profile.html', 
     '/about.html',
-    '/report.html', // ADDED
-    '/history.html', // ADDED
+    '/report.html', 
+    '/history.html', 
     '/style.css',
     '/app.js',
     '/manifest.json',
     '/icons/resq-192.png',
-    // Audio files: MUST be added to enable offline countdown/success sounds in report.html
+    // Correct Audio files per your specification
     '/countdown.wav', 
-    '/success.mp3'
+    '/success.mp3',   
+    // Critical external dependency for icons
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css', 
 ];
 
 // Installation: Cache all assets
@@ -22,7 +24,10 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             console.log('Opened cache, pre-caching assets');
-            return cache.addAll(ASSETS);
+            // Use a catch block for addAll because external requests might fail
+            return cache.addAll(ASSETS).catch(error => {
+                console.warn('One or more assets failed to cache (often external resources like Font Awesome):', error);
+            });
         })
     );
     self.skipWaiting(); // Forces the new Service Worker to activate immediately
@@ -47,8 +52,11 @@ self.addEventListener('activate', (event) => {
 
 // Fetch: Cache-First strategy for the app shell
 self.addEventListener('fetch', (event) => {
-    // Only respond to requests for assets we want to cache-first
-    if (ASSETS.includes(new URL(event.request.url).pathname) || new URL(event.request.url).origin === location.origin) {
+    const requestUrl = new URL(event.request.url);
+    const isAsset = ASSETS.includes(requestUrl.pathname) || ASSETS.includes(event.request.url);
+
+    // Only apply Cache-First strategy to our PWA shell assets
+    if (requestUrl.origin === self.location.origin || isAsset) {
         event.respondWith(
             caches.match(event.request).then((response) => {
                 // Return cached response or fetch from network
@@ -56,5 +64,5 @@ self.addEventListener('fetch', (event) => {
             })
         );
     }
-    // All other requests (e.g., Font Awesome CDN) go directly to the network
+    // All other requests (like Supabase API calls) go directly to the network
 });
