@@ -41,477 +41,242 @@ body {
     top: 0;
     left: 0;
     width: 100%;
-    background-color: #d32f2f; /* Red primary color */
+    background-color: #d32f2f; /* Dark red, the primary color */
     color: white;
-    padding: 12px 15px; /* Larger padding */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    z-index: 50;
+    height: 60px;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    padding: 0 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 1000; /* Above content */
 }
 
 .header h2 {
-    margin: 0; 
-    font-size: 1.3em;
-    font-weight: 600;
+    flex-grow: 1;
+    text-align: center;
+    margin: 0;
+    font-size: 1.2em;
 }
 
 .hamburger {
-    font-size: 26px; /* Larger tap target */
     cursor: pointer;
-    margin-right: 15px;
+    font-size: 1.5em;
     padding: 5px;
-    border-radius: 8px;
-    transition: background-color 0.2s;
-}
-.hamburger:active {
-    background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Form Styles (Login/Register) */
-.form-container {
+/* --- Form Styles --- */
+form {
     background-color: white;
-    padding: 30px; /* Generous padding */
-    border-radius: 16px; /* Rounded corners */
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-    margin-top: 0;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    margin-top: 20px;
 }
 
-h1, h2 {
-    color: #d32f2f;
-    text-align: center;
-    margin-bottom: 25px;
+.input-group {
+    margin-bottom: 15px;
 }
 
-.form-group {
-    margin-bottom: 20px; /* Increased spacing */
-}
-
-.form-group label {
+.input-group label {
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
     font-weight: 500;
     color: #555;
     font-size: 0.9em;
 }
 
-.form-group input, .form-group select {
+.input-group input, 
+.input-group textarea, 
+.input-group select {
     width: 100%;
-    padding: 14px 10px; /* Taller input fields for touch */
+    padding: 12px;
     border: 1px solid #ddd;
-    border-radius: 10px; /* Rounded inputs */
-    box-sizing: border-box;
-    font-size: 1em;
-    transition: border-color 0.3s, box-shadow 0.3s;
-}
-
-.form-group input:focus, .form-group select:focus {
-    border-color: #d32f2f;
-    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.2);
-    outline: none;
-}
-
-/* Updated Textarea Style (Fix - Point 2) */
-.form-group textarea {
-    width: 100%;
-    padding: 14px 10px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    box-sizing: border-box;
-    font-size: 1em;
-    resize: vertical; /* Allow vertical resizing */
-    min-height: 100px; /* Decent size */
-    transition: border-color 0.3s, box-shadow 0.3s;
-}
-
-.form-group textarea:focus {
-    border-color: #d32f2f;
-    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.2);
-    outline: none;
-}
-
-button {
-    width: 100%;
-    padding: 18px; /* Large, easy-to-tap button */
-    background-color: #d32f2f;
-    color: white;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    font-size: 1.1em;
-    font-weight: 700;
-    transition: background-color 0.3s, transform 0.1s;
-    margin-top: 25px;
-    box-shadow: 0 5px #a00; /* Subtle 3D effect */
-}
-
-button:active {
-    background-color: #a00;
-    transform: translateY(3px);
-    box-shadow: 0 2px #a00;
-}
-
-button:disabled {
-    background-color: #999;
-    box-shadow: none;
-    cursor: not-allowed;
-}
-
-
-.text-center {
-    text-align: center;
-    margin-top: 25px;
-}
-
-.text-center a {
-    color: #d32f2f;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-/* Protected Page Content Styles */
-.app > h1 {
-    font-size: 1.8em;
-    text-align: left;
-    margin-top: 10px;
-    margin-bottom: 15px;
-    padding: 0 15px; 
-}
-.app > p {
-    font-size: 1em;
-    color: #666;
-    margin-bottom: 10px;
-    padding: 0 15px;
-}
-
-/* Profile/About Page Container Styles */
-.profile-info {
-    background-color: white;
-    padding: 25px;
-    border-radius: 16px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    margin: 20px 15px; 
-    font-size: 1em; 
-}
-
-.profile-item {
-    padding: 12px 0; 
-    border-bottom: 1px solid #eee;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-}
-
-.profile-item:last-child {
-    border-bottom: none;
-}
-
-.profile-label {
-    font-weight: 600;
-    color: #444;
-    min-width: 130px;
-    margin-right: 15px;
-}
-
-.profile-value {
-    flex-grow: 1;
-    text-align: right;
-    color: #333;
-    font-weight: 400;
-}
-
-/* List styles for About page */
-.profile-info ul {
-    list-style: disc inside;
-    padding-left: 0;
-    margin-top: 15px;
-    line-height: 1.5;
-}
-.profile-info li {
-    margin-bottom: 8px;
-    color: #555;
-}
-
-/* ------------------------------------------- */
-/* --- HOME PAGE CARDS --- */
-/* ------------------------------------------- */
-.home-card-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    padding: 0 15px;
-    margin-top: 20px;
-}
-.action-card {
-    display: block;
-    text-decoration: none;
-    padding: 25px;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-    text-align: center;
-}
-.action-card:active {
-    transform: translateY(2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-.action-card i {
-    font-size: 3em;
-    margin-bottom: 15px;
-}
-.action-card h3 {
-    margin: 0 0 5px 0;
-    font-size: 1.5em;
-    font-weight: 700;
-}
-.action-card p {
-    margin: 0;
-    font-size: 0.9em;
-    color: inherit;
-    padding: 0; 
-}
-.primary-action {
-    background-color: #d32f2f; /* Red */
-    color: white;
-}
-.primary-action i {
-    color: white;
-}
-.secondary-action {
-    background-color: #ffffff; /* White */
-    color: #333;
-    border: 1px solid #ddd;
-}
-.secondary-action i {
-    color: #d32f2f;
-}
-
-/* ------------------------------------------- */
-/* --- REPORT/HISTORY PAGE CARD/FORM STYLES --- */
-/* ------------------------------------------- */
-
-/* Report Form Card (Point 2) */
-.report-form-card {
-    background-color: white;
-    padding: 25px;
-    border-radius: 16px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    margin: 20px 15px; 
-}
-
-/* Location Status Input Styling */
-#locationStatus {
-    text-align: center;
-    font-weight: 600;
-    border: none;
-    background-color: #fffde7;
-}
-
-/* Report History Card Styles (Point 3) */
-.history-list {
-    margin: 20px 15px; 
-}
-
-.report-card-history {
-    background-color: white;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    border-left: 5px solid #d32f2f; /* Highlight bar */
-    transition: transform 0.2s;
-}
-
-.report-card-history:active {
-    transform: scale(0.99);
-}
-
-.report-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px dashed #eee;
-}
-
-.report-header h4 {
-    margin: 0;
-    color: #d32f2f;
-    font-size: 1.1em;
-}
-
-.report-status {
-    padding: 4px 8px;
-    border-radius: 5px;
-    font-size: 0.8em;
-    font-weight: 600;
-    color: white;
-}
-.status-reported {
-    background-color: #fbc02d; /* Yellow/Amber */
-}
-.status-in_progress {
-    background-color: #1976d2; /* Blue */
-}
-.status-resolved {
-    background-color: #388e3c; /* Green */
-}
-
-.report-detail-line {
-    font-size: 0.95em;
-    color: #333;
-    margin: 4px 0;
-}
-.report-description {
-    font-size: 0.9em;
-    color: #555;
-    margin: 5px 0 10px 0;
-    /* word-wrap: break-word; */
-}
-
-.report-footer {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    font-size: 0.8em;
-    color: #888;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid #f0f0f0;
-}
-.report-footer i {
-    margin-right: 5px;
-}
-.report-photo {
-    width: 100%;
-    max-height: 150px;
-    object-fit: cover;
     border-radius: 8px;
-    margin-bottom: 10px;
+    box-sizing: border-box;
+    font-size: 1em;
+    transition: border-color 0.3s;
 }
-/* States for empty/loading */
-.loading-state, .error-state, .empty-state {
+
+.input-group input:focus, 
+.input-group textarea:focus, 
+.input-group select:focus {
+    border-color: #d32f2f;
+    outline: none;
+}
+
+.input-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* --- Button Styles --- */
+.btn {
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
     text-align: center;
-    padding: 30px;
-    color: #777;
-    font-style: italic;
+    text-decoration: none;
+    margin-top: 15px;
 }
 
+.btn-primary {
+    background-color: #d32f2f; /* Primary red */
+    color: white;
+    box-shadow: 0 4px 10px rgba(211, 47, 47, 0.3);
+}
 
-/* ----------------- DRAWER & MESSAGE BOX STYLES... (unchanged) ----------------- */
+.btn-primary:hover:not(:disabled) {
+    background-color: #b71c1c; 
+    box-shadow: 0 6px 15px rgba(211, 47, 47, 0.4);
+}
 
-/* ------------------------------------------- */
-/* --- SLIDE-OUT DRAWER STYLES --- */
-/* ------------------------------------------- */
+.btn-primary:disabled {
+    background-color: #ffcdd2;
+    cursor: not-allowed;
+    box-shadow: none;
+}
 
+.btn-secondary {
+    background-color: #fff;
+    color: #d32f2f;
+    border: 2px solid #d32f2f;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: #fce4ec;
+}
+
+.link-text {
+    display: block;
+    text-align: center;
+    margin-top: 15px;
+    color: #555;
+    font-size: 0.9em;
+}
+
+.link-text a {
+    color: #d32f2f;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* --- Side Drawer Styles (for PWA menu) --- */
 .side-drawer {
+    height: 100%;
+    width: 0;
     position: fixed;
+    z-index: 2000;
     top: 0;
     left: 0;
-    height: 100%; 
-    width: 80%; 
-    max-width: 320px; 
-    background-color: white;
-    box-shadow: 2px 0 15px rgba(0,0,0,0.5);
-    z-index: 1000; 
-    overflow-y: auto;
-    transform: translateX(-100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1); 
+    background-color: #ffffff;
+    overflow-x: hidden;
+    transition: 0.3s;
+    padding-top: 60px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.2);
 }
 
 .side-drawer.open {
-    transform: translateX(0);
+    width: 250px;
 }
 
 .drawer-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
     background-color: #d32f2f;
     color: white;
-    padding: 20px; 
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    font-size: 1.2em;
+    justify-content: space-between;
+    padding: 0 15px;
+    box-sizing: border-box;
+}
+
+.drawer-header h3 {
+    margin: 0;
+    font-size: 1.1em;
+    font-weight: 600;
 }
 
 .close-btn {
-    font-size: 36px;
-    cursor: pointer;
-    line-height: 1;
+    font-size: 2em;
     color: white;
-    padding: 5px;
-    border-radius: 50%;
-    transition: background-color 0.2s;
+    cursor: pointer;
+    line-height: 0.5;
+    padding: 0 5px;
 }
 
 .drawer-content {
-    padding-top: 5px;
+    padding: 20px 0;
 }
 
 .drawer-link {
-    display: flex;
-    align-items: center;
-    padding: 18px 20px; /* Taller touch targets */
+    padding: 15px 25px;
     text-decoration: none;
-    color: #333;
     font-size: 1.1em;
-    border-bottom: 1px solid #f0f2f5;
-    transition: background-color 0.2s;
-}
-.drawer-link i {
-    margin-right: 15px;
-    color: #d32f2f;
-    font-size: 1.2em;
+    color: #333;
+    display: block;
+    transition: background-color 0.3s;
 }
 
-.drawer-link:hover, .drawer-link:active {
-    background-color: #f5f5f5;
+.drawer-link:hover, .drawer-link.active-link {
+    background-color: #f0f2f5;
+    color: #d32f2f;
+}
+
+.drawer-link i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
 }
 
 .logout-link {
-    color: #d32f2f !important;
-    font-weight: 600;
-}
-.logout-link i {
-    color: #d32f2f;
+    color: #f44336;
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
 }
 
-/* Overlay Backdrop */
 .drawer-backdrop {
-    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.6); 
-    z-index: 999; 
-    opacity: 0; 
-    transition: opacity 0.3s ease-in-out;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 1500;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
 }
 
 .drawer-backdrop.active {
-    display: block;
     opacity: 1;
+    visibility: visible;
 }
 
-/* ------------------------------------------- */
-/* --- CUSTOM MESSAGE BOX --- */
-/* ------------------------------------------- */
 
+/* --- Custom Message Box --- */
 .custom-message-box {
     position: fixed;
-    bottom: 30px; 
+    bottom: 20px;
     left: 50%;
-    transform: translateX(-50%);
-    padding: 15px 25px; 
-    border-radius: 10px;
-    color: white;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 2000;
+    transform: translateX(-50%) translateY(100px); /* Start off-screen */
     opacity: 0;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    z-index: 5000;
     transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
     min-width: 280px;
     text-align: center;
@@ -560,32 +325,190 @@ button:disabled {
 .modal-content h3 {
     color: #333;
     margin-top: 0;
+    font-size: 1.5em;
 }
-#countdownTimer {
-    font-size: 4em;
+.modal-content p {
+    color: #555;
+    font-size: 1em;
+    margin-bottom: 25px;
+}
+.countdown-timer {
+    font-size: 3em;
+    font-weight: 700;
     color: #d32f2f;
-    font-weight: 900;
+    margin: 15px 0;
 }
 .success-icon {
-    font-size: 3em;
     color: #4CAF50;
-    margin-bottom: 10px;
+    font-size: 3em;
+    margin-bottom: 15px;
 }
 .modal-content button {
-    margin-top: 20px;
-    background-color: #4CAF50;
-    box-shadow: 0 5px #388E3C;
+    background-color: #d32f2f;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
 }
-.modal-content button:active {
-    background-color: #388E3C;
-    box-shadow: 0 2px #388E3C;
-}
-
-/* --- Utility Class (MUST BE PRESENT) --- */
 .hidden {
     display: none !important;
 }
-/* Ensure the backdrop is correctly hidden by default */
-.modal-overlay.hidden {
-    display: none !important;
+
+/* --- Profile Page Styles --- */
+.profile-group {
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+}
+.profile-group p {
+    margin: 8px 0;
+    font-size: 1em;
+    line-height: 1.4;
+}
+.profile-group strong {
+    color: #d32f2f;
+}
+
+
+/* ------------------------------------------- */
+/* --- Report History Styles (FIX IS HERE) --- */
+/* ------------------------------------------- */
+
+.history-list {
+    margin-top: 20px;
+}
+
+.report-card-history {
+    background-color: #ffffff;
+    padding: 18px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 15px;
+    border-left: 5px solid #d32f2f; /* Highlight border */
+    position: relative;
+    overflow: hidden;
+}
+
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.report-header h4 {
+    margin: 0;
+    color: #333;
+    font-size: 1.15em;
+    font-weight: 600;
+}
+
+/* Base style for status tag */
+.report-status {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8em;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* FIX: Status tag for 'Reported' (Pending) */
+.status-pending {
+    background-color: #ffcc80; /* Light Orange/Amber */
+    color: #5d4037; /* Dark Brown/Contrast Color */
+}
+
+/* FIX: Status tag for 'Resolved' */
+.status-resolved {
+    background-color: #a5d6a7; /* Light Green */
+    color: #1b5e20; /* Dark Green/Contrast Color */
+}
+
+.severity-tag {
+    font-size: 0.85em;
+    color: #d32f2f;
+    font-weight: 500;
+    margin: 5px 0 10px 0;
+}
+
+.report-card-history p {
+    margin: 4px 0;
+    font-size: 0.9em;
+    color: #555;
+}
+
+.report-card-history strong {
+    color: #333;
+    font-weight: 600;
+}
+
+.report-card-history a {
+    color: #d32f2f;
+    text-decoration: underline;
+}
+
+/* --- Home Page Styles --- */
+.home-page .app {
+    text-align: center;
+}
+
+.home-page h1 {
+    font-size: 1.8em;
+    color: #d32f2f;
+    margin-bottom: 5px;
+}
+
+.home-page p {
+    color: #666;
+    margin-bottom: 30px;
+}
+
+.home-actions {
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.action-card {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    text-decoration: none;
+    display: block;
+    transition: transform 0.2s;
+    border-top: 4px solid #d32f2f;
+}
+
+.action-card:hover {
+    transform: translateY(-5px);
+}
+
+.action-card i {
+    font-size: 2.5em;
+    color: #d32f2f;
+    margin-bottom: 10px;
+}
+
+.action-card h3 {
+    margin: 5px 0 5px 0;
+    color: #333;
+    font-size: 1.3em;
+}
+
+.action-card p {
+    margin: 0;
+    color: #777;
+    font-size: 0.9em;
+}
+
+/* General utility class */
+.text-center {
+    text-align: center;
 }
