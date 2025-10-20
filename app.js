@@ -13,7 +13,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Define constants
 const REPORT_BUCKET = 'emergency_photos'; 
-const OFFLINE_QUEUE_KEY = '__REPORTS_QUEUE__'; // Key for localStorage queue (Point 6)
+const OFFLINE_QUEUE_KEY = '__REPORTS_QUEUE__'; // Key for localStorage queue
 
 // --- Global Utility: Custom Message Box & Sound Player ---
 function showMessage(message, type = 'success', duration = 3000) {
@@ -75,7 +75,7 @@ async function fetchAndStoreProfile(userId) {
     }
 }
 
-// --- Global Utility: Set Drawer Header (Point 5: "Hello, User" Fix) ---
+// --- Global Utility: Set Drawer Header (FIXED for Hello, User) ---
 function setDrawerHeader() {
     const drawerTitle = document.getElementById('drawerTitle');
     if (!drawerTitle) return;
@@ -84,10 +84,11 @@ function setDrawerHeader() {
     if (profileDataString) {
         try {
             const profile = JSON.parse(profileDataString);
-            if (profile.full_name) {
+            // Access the name safely
+            if (profile.full_name && profile.full_name.trim() !== '') {
                 // Extract only the first word as the first name
                 const firstName = profile.full_name.split(' ')[0];
-                // FIX: Set the header to "Hello, [User]" (Point 5)
+                // FIX: Set the header to "Hello, [User]"
                 drawerTitle.textContent = `Hello, ${firstName}`;
                 return;
             }
@@ -152,7 +153,7 @@ function setupDrawerMenu() {
 }
 
 
-// --- Global Utility: Check Authentication ---
+// --- Global Utility: Check Authentication (FIXED for name retrieval robustness) ---
 async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession();
     let profileLoaded = false;
@@ -171,8 +172,13 @@ async function checkAuth() {
             if (!localStorage.getItem('userId')) {
                 localStorage.setItem('userId', userId);
             }
-            // Await profile fetch if missing in localStorage (Point 5 dependency)
-            if (!localStorage.getItem('profileData')) {
+            
+            // **FIX IMPLEMENTED HERE:** Robust check for profile data completeness.
+            // If profile is missing OR full_name is missing/blank (i.e., "N/A" bug source), force re-fetch.
+            const profileData = localStorage.getItem('profileData');
+            let profile = profileData ? JSON.parse(profileData) : {};
+
+            if (!profileData || !profile.full_name || profile.full_name.trim() === '') {
                 profileLoaded = await fetchAndStoreProfile(userId);
             } else {
                 profileLoaded = true;
@@ -231,7 +237,7 @@ async function uploadImage(file, userId) {
 }
 
 // =================================================================
-// OFFLINE REPORT QUEUEING LOGIC (Point 6: Offline PWA Transactional Data)
+// OFFLINE REPORT QUEUEING LOGIC
 // =================================================================
 
 function getQueuedReports() {
@@ -297,10 +303,9 @@ async function attemptQueuedReports() {
 
 document.addEventListener('DOMContentLoaded', async () => {
     
-    // +++ Service Worker Registration (Point 6) +++
+    // +++ Service Worker Registration +++
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            // Note: The sw.js file must be present at the root for this to work
             navigator.serviceWorker.register('sw.js') 
                 .then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
@@ -311,12 +316,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Await checkAuth to ensure profile is loaded before setting header (Point 5)
+    // Await checkAuth to ensure profile is loaded before setting header (FIXED)
     await checkAuth(); 
     setupDrawerMenu();
     setDrawerHeader(); 
 
-    // Attempt to send any reports queued while offline (Point 6)
+    // Attempt to send any reports queued while offline
     attemptQueuedReports();
     
     // =================================================================
@@ -351,7 +356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     
                     localStorage.setItem('userId', userId);
-                    setDrawerHeader(); 
+                    setDrawerHeader(); // Set header with fresh data
                     showMessage('Login Successful! Redirecting...', 'success', 1000);
                     setTimeout(() => {
                         window.location.href = 'home.html';
@@ -410,7 +415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     .insert([
                         { 
                             id: userId,
-                            full_name: fullname, 
+                            full_name: fullname, // Name is explicitly inserted here
                             email: email,                   
                             phone: phone, 
                             dob: dob, 
@@ -431,8 +436,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 
                 localStorage.setItem('userId', userId);
-                await fetchAndStoreProfile(userId); 
-                setDrawerHeader();
+                await fetchAndStoreProfile(userId); // Store the profile with name
+                setDrawerHeader(); // Set header with fresh data
                 showMessage('Registration successful! Redirecting to Home...', 'success', 1000);
                 setTimeout(() => {
                     window.location.href = 'home.html';
@@ -442,7 +447,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // =================================================================
-    // PROFILE PAGE (profile.html) Logic
+    // PROFILE PAGE (profile.html) Logic (FIXED for Full Name display)
     // =================================================================
 
     if (window.location.pathname.endsWith('/profile.html')) {
@@ -455,10 +460,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             
+            // FIX: The N/A issue is resolved by ensuring profile.full_name is loaded correctly in checkAuth/loadProfile
             detailsContainer.innerHTML = `
                 <h2 style="margin-bottom: 15px;">Personal Information</h2>
                 <div class="profile-group">
-                    <p><strong>Full Name:</strong> ${profile.full_name || 'N/A'}</p>
+                    <p><strong>Full Name:</strong> ${profile.full_name || 'N/A'}</p> 
                     <p><strong>Phone:</strong> ${profile.phone || 'N/A'}</p>
                     <p><strong>Date of Birth:</strong> ${profile.dob || 'N/A'}</p>
                     <p><strong>Gender:</strong> ${profile.gender || 'N/A'}</p>
@@ -620,8 +626,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 countdownModal.classList.remove('hidden');
                 
                 const countdownAudio = document.getElementById('countdownSound');
-                // Use the correct audio ID/source for countdown
-                if (countdownAudio && countdownAudio.src.endsWith('countdown.wav')) { 
+                if (countdownAudio) { 
                     countdownAudio.play().catch(error => console.warn('Audio playback error (countdown):', error));
                 }
 
@@ -657,7 +662,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                              showMessage("You are offline. Cannot upload photo; report will be queued without image.", 'warning', 7000);
                         }
 
-                        // 2. Prepare payload (Point 1: no additional_context)
+                        // 2. Prepare payload 
                         const reportPayload = { 
                             user_id: userId, 
                             incident_type: incidentType, 
@@ -669,7 +674,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             status: 'Reported', 
                         };
 
-                        // 3. Attempt Submission (Point 6)
+                        // 3. Attempt Submission 
                         if (navigator.onLine) {
                             try {
                                 const { error: submissionError } = await supabase.from('emergency_reports').insert([reportPayload]);
@@ -680,7 +685,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 } else {
                                     countdownModal.classList.add('hidden');
                                     successModal.classList.remove('hidden');
-                                    playSound('successSound'); // Use the correct ID for success sound
+                                    playSound('successSound'); 
                                     showMessage('Report submitted successfully!', 'success', 5000);
                                 }
                             } catch (e) {
@@ -694,7 +699,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             
                             countdownModal.classList.add('hidden');
                             successModal.classList.remove('hidden');
-                            playSound('successSound'); // Use the correct ID for success sound
+                            playSound('successSound'); 
                         }
                         
                         countdownModal.classList.add('hidden'); 
@@ -706,7 +711,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // =================================================================
-    // HISTORY PAGE (history.html) - Fixes applied
+    // HISTORY PAGE (history.html) Logic
     // =================================================================
     if (window.location.pathname.endsWith('/history.html')) {
         async function loadReportsHistory() {
@@ -720,7 +725,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             reportsList.innerHTML = '<div class="text-center" style="margin-top: 50px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #d32f2f;"></i><p>Loading reports...</p></div>';
 
-            // Point 1 & 4: Select only existing, required columns (no photo_url, no additional_context)
+            // Select only required columns (no photo_url, no additional_context)
             const { data, error } = await supabase
                 .from('emergency_reports') 
                 .select('timestamp, incident_type, incident_details, status, severity_level, latitude, longitude') 
@@ -735,18 +740,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if (data && data.length > 0) {
                 reportsList.innerHTML = data.map(report => {
-                    // Point 2: Status is displayed
                     const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
                     const statusText = report.status || 'Reported'; 
                     const date = new Date(report.timestamp).toLocaleString();
                     const severityHtml = report.severity_level ? `<p class="severity-tag">Severity: ${report.severity_level}</p>` : '';
                     
-                    // Point 3: Location shows Lat/Lon
+                    // Location shows Lat/Lon
                     const locationText = (report.latitude && report.longitude) 
                         ? `Lat: ${report.latitude.toFixed(4)}, Lon: ${report.longitude.toFixed(4)}`
                         : 'Location not recorded';
                         
-                    // Point 4: Photo URL link is excluded
+                    // Photo URL link is excluded
                     return `
                         <div class="report-card-history">
                             <div class="report-header">
