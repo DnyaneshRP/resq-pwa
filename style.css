@@ -418,7 +418,7 @@ form {
 
 /* FIX: Status tag for 'Reported' (Pending) */
 .status-pending {
-    background-color: #ffcc80; /* Light Orange/Amber */
+    background-color: #000000; /* Light Orange/Amber */
     color: #5d4037; /* Dark Brown/Contrast Color */
 }
 
