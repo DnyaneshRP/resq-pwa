@@ -350,10 +350,12 @@ button:disabled {
     color: white;
 }
 .status-reported {
-    background-color: #fbc02d; /* Yellow/Amber */
+    background-color: black; /* Yellow/Amber */
+    color: black;
 }
 .status-in_progress {
-    background-color: #1976d2; /* Blue */
+    background-color: black; /* Yellow/Amber */
+    color: black;
 }
 .status-resolved {
     background-color: #388e3c; /* Green */
