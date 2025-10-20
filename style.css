@@ -349,17 +349,29 @@ button:disabled {
     font-weight: 600;
     color: white;
 }
-.status-reported {
-    background-color: black; /* Yellow/Amber */
-    color: black;
+
+/* --- FIX: Status visibility has been corrected here --- */
+
+/* Pending/Reported Status (Initial State, Blue Badge) */
+.status-reported,
+.status-pending {
+    background-color: #1e88e5; /* Blue */
+    color: white;
 }
+
+/* In Progress Status (Active State, Amber Badge) */
 .status-in_progress {
-    background-color: black; /* Yellow/Amber */
-    color: black;
+    background-color: #ffc107; /* Amber */
+    color: #333; /* Dark text for contrast on light background */
 }
+
+/* Resolved Status (Success State, Green Badge) */
 .status-resolved {
     background-color: #388e3c; /* Green */
+    color: white;
 }
+
+/* --- END FIX --- */
 
 .report-detail-line {
     font-size: 0.95em;
