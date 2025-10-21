@@ -18,7 +18,6 @@ const ASSETS = [
     // Critical external dependency for icons
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css', 
 ];
-
 // Installation: Cache all assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -32,7 +31,6 @@ self.addEventListener('install', (event) => {
     );
     self.skipWaiting(); // Forces the new Service Worker to activate immediately
 });
-
 // Activation: Clean up old caches
 self.addEventListener('activate', (event) => {
     const cacheWhitelist = [CACHE_NAME];
@@ -49,12 +47,10 @@ self.addEventListener('activate', (event) => {
         }).then(() => self.clients.claim())
     );
 });
-
 // Fetch: Cache-First strategy for the app shell
 self.addEventListener('fetch', (event) => {
     const requestUrl = new URL(event.request.url);
     const isAsset = ASSETS.includes(requestUrl.pathname) || ASSETS.includes(event.request.url);
-
     // Only apply Cache-First strategy to our PWA shell assets
     if (requestUrl.origin === self.location.origin || isAsset) {
         event.respondWith(

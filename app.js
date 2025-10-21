@@ -53,6 +53,7 @@ function playSound(id) {
 // --- Global Utility: Fetch and Store Profile ---
 async function fetchAndStoreProfile(userId) {
      try {
+        // Fetch ALL profile data including fullname (database column name)
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
@@ -75,7 +76,7 @@ async function fetchAndStoreProfile(userId) {
     }
 }
 
-// --- Global Utility: Set Drawer Header (FIXED for Hello, User) ---
+// --- Global Utility: Set Drawer Header (FIXED: Uses fullname) ---
 function setDrawerHeader() {
     const drawerTitle = document.getElementById('drawerTitle');
     if (!drawerTitle) return;
@@ -84,11 +85,11 @@ function setDrawerHeader() {
     if (profileDataString) {
         try {
             const profile = JSON.parse(profileDataString);
-            // Access the name safely
-            if (profile.full_name && profile.full_name.trim() !== '') {
+            // Check for the correct database column name: fullname
+            if (profile.fullname && profile.fullname.trim() !== '') {
                 // Extract only the first word as the first name
-                const firstName = profile.full_name.split(' ')[0];
-                // FIX: Set the header to "Hello, [User]"
+                const firstName = profile.fullname.split(' ')[0];
+                // Set the header to "Hello, [User]"
                 drawerTitle.textContent = `Hello, ${firstName}`;
                 return;
             }
@@ -113,7 +114,7 @@ function setupDrawerMenu() {
         menuButton.addEventListener('click', () => {
             sideDrawer.classList.add('open');
             drawerBackdrop.classList.add('active');
-            setDrawerHeader(); 
+            setDrawerHeader(); // Re-check header content on opening
         });
     }
 
@@ -153,7 +154,7 @@ function setupDrawerMenu() {
 }
 
 
-// --- Global Utility: Check Authentication (FIXED for name retrieval robustness) ---
+// --- Global Utility: Check Authentication (FIXED: Ensures name is loaded) ---
 async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession();
     let profileLoaded = false;
@@ -173,12 +174,11 @@ async function checkAuth() {
                 localStorage.setItem('userId', userId);
             }
             
-            // **FIX IMPLEMENTED HERE:** Robust check for profile data completeness.
-            // If profile is missing OR full_name is missing/blank (i.e., "N/A" bug source), force re-fetch.
+            // **CRITICAL FIX:** Check if profile exists and, more importantly, if it contains the correct name column (`fullname`).
             const profileData = localStorage.getItem('profileData');
             let profile = profileData ? JSON.parse(profileData) : {};
 
-            if (!profileData || !profile.full_name || profile.full_name.trim() === '') {
+            if (!profileData || !profile.fullname || profile.fullname.trim() === '') {
                 profileLoaded = await fetchAndStoreProfile(userId);
             } else {
                 profileLoaded = true;
@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Await checkAuth to ensure profile is loaded before setting header (FIXED)
+    // Await checkAuth to ensure profile is loaded (FIXED for name retrieval robustness)
     await checkAuth(); 
     setupDrawerMenu();
     setDrawerHeader(); 
@@ -398,7 +398,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     email, 
                     password,
                     options: {
-                        data: { full_name: fullname }
+                        // Using 'fullname' for user metadata to be consistent, though table insert is the main data source
+                        data: { fullname: fullname } 
                     }
                 });
                 
@@ -409,13 +410,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 const userId = authData.user.id;
                 
-                // Step 2: Profile insert
+                // Step 2: Profile insert 
+                // CRITICAL FIX: Changed column names to match the database schema: fullname, emergency1, emergency2, medical
                 const { error: profileError } = await supabase
                     .from('profiles')
                     .insert([
                         { 
                             id: userId,
-                            full_name: fullname, // Name is explicitly inserted here
+                            fullname: fullname, // <-- FIXED: Matches DB column
                             email: email,                   
                             phone: phone, 
                             dob: dob, 
@@ -424,9 +426,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                             address: address, 
                             city: city, 
                             pincode: pincode, 
-                            emergency_contact_1: emergency1, 
-                            emergency_contact_2: emergency2,         
-                            medical_conditions: medical      
+                            emergency1: emergency1, // <-- FIXED: Matches DB column
+                            emergency2: emergency2, // <-- FIXED: Matches DB column      
+                            medical: medical      // <-- FIXED: Matches DB column
                         }
                     ]);
                     
@@ -436,7 +438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 
                 localStorage.setItem('userId', userId);
-                await fetchAndStoreProfile(userId); // Store the profile with name
+                await fetchAndStoreProfile(userId); // Store the complete profile with name
                 setDrawerHeader(); // Set header with fresh data
                 showMessage('Registration successful! Redirecting to Home...', 'success', 1000);
                 setTimeout(() => {
@@ -447,12 +449,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // =================================================================
-    // PROFILE PAGE (profile.html) Logic (FIXED for Full Name display)
+    // PROFILE PAGE (profile.html) Logic
     // =================================================================
 
     if (window.location.pathname.endsWith('/profile.html')) {
         
-        const detailsContainer = document.getElementById('profileDetails');
+        // Note: The HTML profile page needs to have an element with id="profileDetails" 
+        // if it's supposed to display the information in a read-only format like you showed.
+        // Assuming your profile.html from earlier chat had a profileForm, I'm adapting to the display structure you provided.
+        const detailsContainer = document.getElementById('profileForm'); // Using the form ID as container
 
         function displayProfile(profile) {
             if (!detailsContainer || !profile) {
@@ -460,11 +465,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             
-            // FIX: The N/A issue is resolved by ensuring profile.full_name is loaded correctly in checkAuth/loadProfile
+            // CRITICAL FIX: Using the correct database column names (fullname, emergency1, emergency2, medical)
             detailsContainer.innerHTML = `
                 <h2 style="margin-bottom: 15px;">Personal Information</h2>
                 <div class="profile-group">
-                    <p><strong>Full Name:</strong> ${profile.full_name || 'N/A'}</p> 
+                    <p><strong>Full Name:</strong> ${profile.fullname || 'N/A'}</p> 
                     <p><strong>Phone:</strong> ${profile.phone || 'N/A'}</p>
                     <p><strong>Date of Birth:</strong> ${profile.dob || 'N/A'}</p>
                     <p><strong>Gender:</strong> ${profile.gender || 'N/A'}</p>
@@ -479,14 +484,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 <h2 style="margin-top: 15px;">Emergency Contacts</h2>
                 <div class="profile-group">
-                    <p><strong>Contact 1:</strong> ${profile.emergency_contact_1 || 'N/A'}</p>
-                    <p><strong>Contact 2:</strong> ${profile.emergency_contact_2 || 'N/A'}</p>
+                    <p><strong>Contact 1:</strong> ${profile.emergency1 || 'N/A'}</p>
+                    <p><strong>Contact 2:</strong> ${profile.emergency2 || 'N/A'}</p>
                 </div>
                 
                 <h2 style="margin-top: 15px;">Medical Information</h2>
                 <div class="profile-group">
-                    <p><strong>Conditions:</strong> ${profile.medical_conditions || 'None specified.'}</p>
+                    <p><strong>Conditions:</strong> ${profile.medical || 'None specified.'}</p>
                 </div>
+
+                <button type="button" class="main-button" style="margin-top: 30px;">Edit Profile (Future Feature)</button>
             `;
         }
 
