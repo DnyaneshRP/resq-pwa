@@ -113,7 +113,7 @@ function setupDrawerMenu() {
     if (menuButton) {
         menuButton.addEventListener('click', () => {
             sideDrawer.classList.add('open');
-            drawerBackdrop.classList.add('active');
+            drawerBackdrop.classList.add('show'); // FIX: Changed 'active' to 'show' to match style.css
             setDrawerHeader(); // Re-check header content on opening
         });
     }
@@ -121,14 +121,14 @@ function setupDrawerMenu() {
     if (closeDrawer) {
         closeDrawer.addEventListener('click', () => {
             sideDrawer.classList.remove('open');
-            drawerBackdrop.classList.remove('active');
+            drawerBackdrop.classList.remove('show'); // FIX: Changed 'active' to 'show' to match style.css
         });
     }
 
     if (drawerBackdrop) {
         drawerBackdrop.addEventListener('click', () => {
             sideDrawer.classList.remove('open');
-            drawerBackdrop.classList.remove('active');
+            drawerBackdrop.classList.remove('show'); // FIX: Changed 'active' to 'show' to match style.css
         });
     }
     
@@ -174,7 +174,7 @@ async function checkAuth() {
                 localStorage.setItem('userId', userId);
             }
             
-            // **CRITICAL FIX:** Check if profile exists and, more importantly, if it contains the correct name column (`fullname`).
+            // CRITICAL FIX: Ensure profile data exists AND is up-to-date
             const profileData = localStorage.getItem('profileData');
             let profile = profileData ? JSON.parse(profileData) : {};
 
@@ -411,13 +411,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const userId = authData.user.id;
                 
                 // Step 2: Profile insert 
-                // CRITICAL FIX: Changed column names to match the database schema: fullname, emergency1, emergency2, medical
                 const { error: profileError } = await supabase
                     .from('profiles')
                     .insert([
                         { 
                             id: userId,
-                            fullname: fullname, // <-- FIXED: Matches DB column
+                            fullname: fullname,       
                             email: email,                   
                             phone: phone, 
                             dob: dob, 
@@ -426,9 +425,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                             address: address, 
                             city: city, 
                             pincode: pincode, 
-                            emergency1: emergency1, // <-- FIXED: Matches DB column
-                            emergency2: emergency2, // <-- FIXED: Matches DB column      
-                            medical: medical      // <-- FIXED: Matches DB column
+                            emergency1: emergency1,   
+                            emergency2: emergency2,        
+                            medical: medical      
                         }
                     ]);
                     
@@ -454,22 +453,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (window.location.pathname.endsWith('/profile.html')) {
         
-        // Note: The HTML profile page needs to have an element with id="profileDetails" 
-        // if it's supposed to display the information in a read-only format like you showed.
-        // Assuming your profile.html from earlier chat had a profileForm, I'm adapting to the display structure you provided.
-        const detailsContainer = document.getElementById('profileForm'); // Using the form ID as container
+        const detailsContainer = document.getElementById('profileDetailsContainer'); // New container ID for display
+        const formContainer = document.getElementById('profileForm'); // Existing form ID from profile.html
+
+        // Helper to display content in the correct container
+        function updateProfileDisplay(htmlContent) {
+            // If the dedicated container doesn't exist, use the form container
+            const target = detailsContainer || formContainer;
+            if (target) {
+                target.innerHTML = htmlContent;
+            }
+        }
 
         function displayProfile(profile) {
-            if (!detailsContainer || !profile) {
-                detailsContainer.innerHTML = '<p>User profile data could not be loaded.</p>';
+            if (!profile) {
+                updateProfileDisplay('<p class="text-center">User profile data could not be loaded.</p>');
                 return;
             }
             
-            // CRITICAL FIX: Using the correct database column names (fullname, emergency1, emergency2, medical)
-            detailsContainer.innerHTML = `
+            // Generate HTML structure based on the data you provided. 
+            // Only fields that have a value should be rendered, or rendered with N/A.
+            const html = `
                 <h2 style="margin-bottom: 15px;">Personal Information</h2>
                 <div class="profile-group">
                     <p><strong>Full Name:</strong> ${profile.fullname || 'N/A'}</p> 
+                    <p><strong>Email:</strong> ${profile.email || 'N/A'}</p> 
                     <p><strong>Phone:</strong> ${profile.phone || 'N/A'}</p>
                     <p><strong>Date of Birth:</strong> ${profile.dob || 'N/A'}</p>
                     <p><strong>Gender:</strong> ${profile.gender || 'N/A'}</p>
@@ -479,7 +487,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <h2 style="margin-top: 15px;">Address</h2>
                 <div class="profile-group">
                     <p>${profile.address || 'N/A'}</p>
-                    <p>${profile.city || 'N/A'} - ${profile.pincode || 'N/A'}</p>
+                    <p>${profile.city || 'N/A'}${profile.pincode ? ` - ${profile.pincode}` : ''}</p>
                 </div>
                 
                 <h2 style="margin-top: 15px;">Emergency Contacts</h2>
@@ -495,15 +503,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 <button type="button" class="main-button" style="margin-top: 30px;">Edit Profile (Future Feature)</button>
             `;
+            
+            updateProfileDisplay(html);
         }
 
         async function loadProfile() {
             const userId = localStorage.getItem('userId');
             
             if (!userId) {
-                detailsContainer.innerHTML = '<p>Error: User not logged in.</p>';
+                updateProfileDisplay('<p class="text-center" style="color:#f44336;">Error: User not logged in.</p>');
                 return;
             }
+            
+            // Set the loading state before fetching
+            updateProfileDisplay(`
+                <div class="text-center" style="margin-top: 50px;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #d32f2f;"></i>
+                    <p>Loading user data...</p>
+                </div>
+            `);
             
             const { data, error } = await supabase
                 .from('profiles')
@@ -518,12 +536,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     displayProfile(JSON.parse(localData));
                     return;
                 }
-                detailsContainer.innerHTML = `<p>Failed to load profile: ${error.message}</p>`;
+                updateProfileDisplay(`<p class="text-center" style="color:#f44336;">Failed to load profile: ${error.message}</p>`);
                 showMessage('Failed to load profile: ' + error.message, 'error', 5000);
                 return;
             }
             
             if (data) {
+                // Also update localStorage on successful fetch
                 localStorage.setItem('profileData', JSON.stringify(data));
                 displayProfile(data); 
             }
@@ -732,10 +751,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             reportsList.innerHTML = '<div class="text-center" style="margin-top: 50px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #d32f2f;"></i><p>Loading reports...</p></div>';
 
-            // Select only required columns (no photo_url, no additional_context)
+            // Select all columns including photo_url to check for photo link generation
             const { data, error } = await supabase
                 .from('emergency_reports') 
-                .select('timestamp, incident_type, incident_details, status, severity_level, latitude, longitude') 
+                .select('*') 
                 .eq('user_id', userId)
                 .order('timestamp', { ascending: false });
                 
@@ -757,7 +776,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? `Lat: ${report.latitude.toFixed(4)}, Lon: ${report.longitude.toFixed(4)}`
                         : 'Location not recorded';
                         
-                    // Photo URL link is excluded
+                    // Handle photo URL and generate public URL
+                    let photoHtml = '';
+                    if (report.photo_url) {
+                        // Re-integrate the getPhotoPublicUrl logic here for completeness if needed, 
+                        // but since it was removed in previous step, I'll rely on the simplified photo_url usage for now, 
+                        // as it was in the original snippet. If the photo_url in the DB is the full public URL, this is fine.
+                        // Assuming photo_url is a path and needs the helper from an earlier version:
+                        let publicUrl = report.photo_url;
+                        if (!publicUrl.startsWith('http')) {
+                            try {
+                                const { data: urlData } = supabase.storage
+                                    .from(REPORT_BUCKET)
+                                    .getPublicUrl(report.photo_url);
+                                publicUrl = urlData.publicUrl;
+                            } catch(e) { /* ignore error, use default */ }
+                        }
+
+                        if (publicUrl) {
+                             photoHtml = `<p><a href="${publicUrl}" target="_blank" class="text-link">View Attached Photo</a></p>`;
+                        }
+                    }
+
                     return `
                         <div class="report-card-history">
                             <div class="report-header">
@@ -768,6 +808,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <p><strong>Location:</strong> ${locationText}</p>
                             <p><strong>Time:</strong> ${date}</p>
                             <p><strong>Details:</strong> ${report.incident_details || 'N/A'}</p>
+                            ${photoHtml}
                         </div>
                     `;
                 }).join('');
