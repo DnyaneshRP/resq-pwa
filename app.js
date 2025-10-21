@@ -5,7 +5,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // YOUR SUPABASE CONFIGURATION (VERIFIED)
 // =================================================================
 const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g117CgiGzS-MetDY1h0kV-d0vg'; 
 // =================================================================
 
 // --- Initialize Supabase Client ---
@@ -817,27 +817,36 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? `Lat: ${report.latitude.toFixed(4)}, Lon: ${report.longitude.toFixed(4)}`
                         : 'Location not recorded';
                         
-                    // *** FIX 3: Always generate the public URL using the stored value as the path ***
+                    // *** FIX: Changed getPublicUrl to createSignedUrl for private access ***
                     let photoHtml = '';
                     if (report.photo_url) {
                         let publicUrl = null;
                         
                         try {
-                            // Enforce the correct REPORT_BUCKET by regenerating the public URL
-                            const { data: urlData } = supabase.storage
+                            // Use createSignedUrl for 60 seconds. This is necessary for PRIVATE buckets.
+                            const { data: urlData, error: signedUrlError } = await supabase.storage
                                 .from(REPORT_BUCKET)
-                                .getPublicUrl(report.photo_url); 
-                            publicUrl = urlData.publicUrl;
+                                .createSignedUrl(report.photo_url, 60); // URL expires in 60 seconds
+                                
+                            if (signedUrlError) {
+                                throw signedUrlError;
+                            }
+                            
+                            publicUrl = urlData.signedUrl;
+
                         } catch(e) { 
-                            console.error("Error generating public URL:", e);
-                            // Fallback to stored value if generation fails (e.g., if it's a broken full URL)
-                            publicUrl = report.photo_url.startsWith('http') ? report.photo_url : null;
+                            console.error("Error generating signed URL (Check Storage RLS policy):", e.message);
+                            // Show a temporary message to the user/console error but don't break the app
+                            publicUrl = null; 
                         }
 
                         if (publicUrl) {
                              photoHtml = `<p><a href="${publicUrl}" target="_blank" class="text-link">View Attached Photo</a></p>`;
+                        } else {
+                             photoHtml = `<p class="text-link" style="color:#f44336; font-style: italic; font-size: 0.9em;">(Photo link failed - check RLS policy)</p>`;
                         }
                     }
+                    // *** END FIX ***
 
                     return `
                         <div class="report-card-history">
