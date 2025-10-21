@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p><strong>Conditions:</strong> ${profile.medical || 'None specified.'}</p>
                     </div>
 
-                    <button type="button" class="main-button" style="margin-top: 30px;">Edit Profile (Future Feature)</button>
+                    <button type="button" class="main-button" style="margin-top: 30px;">Edit Profile</button>
                 </div>
             `;
             
