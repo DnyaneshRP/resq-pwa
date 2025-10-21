@@ -80,8 +80,13 @@
             </div>
             
             <div class="form-group">
-                <label for="photo">Add Photo (Optional):</label>
-                <input type="file" id="photo" name="photo" accept="image/*" capture="filesystem">
+                <label for="photoTriggerBtn">Add Photo (Optional):</label>
+                <button type="button" id="photoTriggerBtn" class="secondary-btn" style="width: 100%; padding: 10px 15px; margin-top: 5px;">
+                    <i class="fas fa-camera"></i> Select Photo
+                </button>
+                <input type="file" id="photoGallery" name="photoGallery" accept="image/*" style="display: none;">
+                <input type="file" id="photoCapture" name="photoCapture" accept="image/*" capture="camera" style="display: none;">
+                <p id="selectedFileName" style="font-size: 0.9em; margin-top: 5px; color: #555; text-align: left;"></p>
             </div>
 
             <button type="submit" id="submitReportBtn">
@@ -90,7 +95,21 @@
         </form>
     </div>
   </div>
-
+  
+  <div id="photoOptionModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3>Choose Photo Source</h3>
+      <button type="button" id="optionCameraBtn" class="main-button" style="width: 100%; margin: 10px 0;">
+          <i class="fas fa-camera"></i> Take New Photo
+      </button>
+      <button type="button" id="optionGalleryBtn" class="secondary-btn" style="width: 100%; margin: 10px 0;">
+          <i class="fas fa-images"></i> Upload from Gallery
+      </button>
+      <button type="button" id="closePhotoModalBtn" class="secondary-btn" style="width: 100%; margin-top: 20px; background-color: #f4f4f4; color: #333;">
+          Cancel
+      </button>
+    </div>
+  </div>
   <div id="countdownModal" class="modal-overlay hidden">
     <div class="modal-content">
         <div id="countdownTimer" class="countdown-timer">3</div>
