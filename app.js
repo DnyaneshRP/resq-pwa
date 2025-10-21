@@ -484,50 +484,58 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Helper to display content in the correct container
         function updateProfileDisplay(htmlContent) {
             if (detailsContainer) {
+                // Ensure the card styling is applied, which is now done in the generated HTML in displayProfile
                 detailsContainer.innerHTML = htmlContent;
             }
         }
-
+        
+        // *** FIX: Changed profile display to use the .profile-info card and .profile-item structure ***
         function displayProfile(profile) {
             if (!profile) {
-                updateProfileDisplay('<p class="text-center">User profile data could not be loaded.</p>');
-                return;
+                return '<p class="text-center">User profile data could not be loaded.</p>';
             }
             
-            // Generate HTML structure based on the data
+            // Function to create a profile item line
+            const createItem = (label, value) => `
+                <div class="profile-item">
+                    <span class="profile-label">${label}:</span>
+                    <span class="profile-value">${value || 'N/A'}</span>
+                </div>
+            `;
+            
+            // Generate HTML structure, wrapped in the .profile-info card (which adds margins and card style)
             const html = `
-                <h2 style="margin-bottom: 15px;">Personal Information</h2>
-                <div class="profile-group">
-                    <p><strong>Full Name:</strong> ${profile.fullname || 'N/A'}</p> 
-                    <p><strong>Email:</strong> ${profile.email || 'N/A'}</p> 
-                    <p><strong>Phone:</strong> ${profile.phone || 'N/A'}</p>
-                    <p><strong>Date of Birth:</strong> ${profile.dob || 'N/A'}</p>
-                    <p><strong>Gender:</strong> ${profile.gender || 'N/A'}</p>
-                    <p><strong>Blood Group:</strong> ${profile.bloodgrp || 'N/A'}</p>
-                </div>
-                
-                <h2 style="margin-top: 15px;">Address</h2>
-                <div class="profile-group">
-                    <p>${profile.address || 'N/A'}</p>
-                    <p>${profile.city || 'N/A'}${profile.pincode ? ` - ${profile.pincode}` : ''}</p>
-                </div>
-                
-                <h2 style="margin-top: 15px;">Emergency Contacts</h2>
-                <div class="profile-group">
-                    <p><strong>Contact 1:</strong> ${profile.emergency1 || 'N/A'}</p>
-                    <p><strong>Contact 2:</strong> ${profile.emergency2 || 'N/A'}</p>
-                </div>
-                
-                <h2 style="margin-top: 15px;">Medical Information</h2>
-                <div class="profile-group">
-                    <p><strong>Conditions:</strong> ${profile.medical || 'None specified.'}</p>
-                </div>
+                <div class="profile-info">
+                    <h2>Personal Information</h2>
+                    ${createItem('Full Name', profile.fullname)}
+                    ${createItem('Email', profile.email)}
+                    ${createItem('Phone', profile.phone)}
+                    ${createItem('Date of Birth', profile.dob)}
+                    ${createItem('Gender', profile.gender)}
+                    ${createItem('Blood Group', profile.bloodgrp)}
+                    
+                    <h2 style="margin-top: 25px;">Address</h2>
+                    <div class="profile-group">
+                        <p>${profile.address || 'N/A'}</p>
+                        <p>${profile.city || 'N/A'}${profile.pincode ? ` - ${profile.pincode}` : ''}</p>
+                    </div>
+                    
+                    <h2 style="margin-top: 25px;">Emergency Contacts</h2>
+                    ${createItem('Contact 1', profile.emergency1)}
+                    ${createItem('Contact 2', profile.emergency2)}
+                    
+                    <h2 style="margin-top: 25px;">Medical Information</h2>
+                    <div class="profile-group">
+                        <p><strong>Conditions:</strong> ${profile.medical || 'None specified.'}</p>
+                    </div>
 
-                <button type="button" class="main-button" style="margin-top: 30px;">Edit Profile</button>
+                    <button type="button" class="main-button" style="margin-top: 30px;">Edit Profile</button>
+                </div>
             `;
             
             updateProfileDisplay(html);
         }
+        // *** END FIX ***
 
         async function loadProfile() {
             const userId = localStorage.getItem('userId');
