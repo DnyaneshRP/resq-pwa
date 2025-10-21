@@ -12,7 +12,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Define constants
-const REPORT_BUCKET = 'emergency_photos'; 
+const REPORT_BUCKET = 'emergency_photos'; // <--- VERIFIED BUCKET NAME
 const OFFLINE_QUEUE_KEY = '__REPORTS_QUEUE__'; // Key for localStorage queue
 
 // --- Global Utility: Custom Message Box & Sound Player ---
@@ -240,6 +240,7 @@ function getLocation(callback) {
     }
 }
 
+// *** FIX 1: Modified to return the FILE PATH, not the full public URL. ***
 async function uploadImage(file, userId) {
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -257,9 +258,8 @@ async function uploadImage(file, userId) {
         return null;
     }
     
-    // Get the public URL for the newly uploaded file
-    const { data: { publicUrl } } = supabase.storage.from(REPORT_BUCKET).getPublicUrl(filePath);
-    return publicUrl;
+    // Return the file PATH, not the public URL. This is stored in DB.
+    return filePath;
 }
 
 // =================================================================
@@ -523,7 +523,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <p><strong>Conditions:</strong> ${profile.medical || 'None specified.'}</p>
                 </div>
 
-                <button type="button" class="main-button" style="margin-top: 30px;">Edit Profile (Future Feature)</button>
+                <button type="button" class="main-button" style="margin-top: 30px;">Edit Profile</button>
             `;
             
             updateProfileDisplay(html);
@@ -712,11 +712,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         document.getElementById('countdownMessage').textContent = 'Sending...';
 
                         const photoFile = document.getElementById('photo').files[0];
-                        let photoUrl = null;
+                        let photoPath = null; // *** FIX 2: Renamed to photoPath for clarity ***
 
                         // 1. Photo Upload (Only possible if online)
                         if (photoFile && navigator.onLine) {
-                            photoUrl = await uploadImage(photoFile, userId); 
+                            photoPath = await uploadImage(photoFile, userId); // uploadImage returns the path (FIX 1)
                         } else if (photoFile && !navigator.onLine) {
                              showMessage("You are offline. Cannot upload photo; report will be queued without image.", 'warning', 7000);
                         }
@@ -729,7 +729,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             severity_level: severity, 
                             latitude: currentLat, 
                             longitude: currentLon, 
-                            photo_url: photoUrl,
+                            photo_url: photoPath, // *** FIX 2: Save the PATH to the DB ***
                             status: 'Reported', 
                         };
 
@@ -809,21 +809,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? `Lat: ${report.latitude.toFixed(4)}, Lon: ${report.longitude.toFixed(4)}`
                         : 'Location not recorded';
                         
-                    // Handle photo URL and generate public URL
+                    // *** FIX 3: Always generate the public URL using the stored value as the path ***
                     let photoHtml = '';
                     if (report.photo_url) {
-                        // Re-integrate the getPhotoPublicUrl logic here for completeness if needed, 
-                        // but since it was removed in previous step, I'll rely on the simplified photo_url usage for now, 
-                        // as it was in the original snippet. If the photo_url in the DB is the full public URL, this is fine.
-                        // Assuming photo_url is a path and needs the helper from an earlier version:
-                        let publicUrl = report.photo_url;
-                        if (!publicUrl.startsWith('http')) {
-                            try {
-                                const { data: urlData } = supabase.storage
-                                    .from(REPORT_BUCKET)
-                                    .getPublicUrl(report.photo_url);
-                                publicUrl = urlData.publicUrl;
-                            } catch(e) { /* ignore error, use default */ }
+                        let publicUrl = null;
+                        
+                        try {
+                            // Enforce the correct REPORT_BUCKET by regenerating the public URL
+                            const { data: urlData } = supabase.storage
+                                .from(REPORT_BUCKET)
+                                .getPublicUrl(report.photo_url); 
+                            publicUrl = urlData.publicUrl;
+                        } catch(e) { 
+                            console.error("Error generating public URL:", e);
+                            // Fallback to stored value if generation fails (e.g., if it's a broken full URL)
+                            publicUrl = report.photo_url.startsWith('http') ? report.photo_url : null;
                         }
 
                         if (publicUrl) {
