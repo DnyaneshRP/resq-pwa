@@ -5,7 +5,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // YOUR SUPABASE CONFIGURATION (VERIFIED)
 // =================================================================
 const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g117CgiGzS-MetDY1h0kV-d0vg'; 
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
 // =================================================================
 
 // --- Initialize Supabase Client ---
@@ -806,7 +806,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             if (data && data.length > 0) {
-                
                 reportsList.innerHTML = data.map(report => {
                     const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
                     const statusText = report.status || 'Reported'; 
@@ -818,28 +817,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? `Lat: ${report.latitude.toFixed(4)}, Lon: ${report.longitude.toFixed(4)}`
                         : 'Location not recorded';
                         
+                    // *** FIX 3: Always generate the public URL using the stored value as the path ***
                     let photoHtml = '';
                     if (report.photo_url) {
                         let publicUrl = null;
                         
                         try {
-                            // *** FIX: Switched to getPublicUrl, which requires the bucket to be public. ***
+                            // Enforce the correct REPORT_BUCKET by regenerating the public URL
                             const { data: urlData } = supabase.storage
                                 .from(REPORT_BUCKET)
                                 .getPublicUrl(report.photo_url); 
-                            
                             publicUrl = urlData.publicUrl;
-
                         } catch(e) { 
-                            console.error("Error generating public URL:", e.message);
-                            publicUrl = null; 
+                            console.error("Error generating public URL:", e);
+                            // Fallback to stored value if generation fails (e.g., if it's a broken full URL)
+                            publicUrl = report.photo_url.startsWith('http') ? report.photo_url : null;
                         }
 
                         if (publicUrl) {
                              photoHtml = `<p><a href="${publicUrl}" target="_blank" class="text-link">View Attached Photo</a></p>`;
-                        } else {
-                             // This message is only a fallback, the public link should work if the bucket is public.
-                             photoHtml = `<p class="text-link" style="color:#f44336; font-style: italic; font-size: 0.9em;">(Photo link failed - check if bucket is Public)</p>`;
                         }
                     }
 
