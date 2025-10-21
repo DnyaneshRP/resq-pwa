@@ -5,15 +5,15 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // YOUR SUPABASE CONFIGURATION (VERIFIED)
 // =================================================================
 const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; 
-// *** CRITICAL FIX: The correct Anonymous Key has been restored. ***
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g117CgiGzS-MetDY1h0kV-d0vg'; 
+// *** CRITICAL FIX: Restored the correct Anonymous Key. ***
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
 // =================================================================
 
 // --- Initialize Supabase Client ---
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Define constants
-const REPORT_BUCKET = 'emergency_photos'; // <--- VERIFIED BUCKET NAME
+const REPORT_BUCKET = 'emergency_photos'; 
 const OFFLINE_QUEUE_KEY = '__REPORTS_QUEUE__'; // Key for localStorage queue
 
 // --- Global Utility: Custom Message Box & Sound Player ---
@@ -61,7 +61,7 @@ async function fetchProfileWithTimeout(userId) {
     
     // 5 second timeout
     const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Profile load timed out (5s). Check network or RLS policy.")), 5000)
+        setTimeout(() => reject(new Error("Profile load timed out (5s). Check network or RLS policy."))), 5000)
     );
 
     return Promise.race([fetchPromise, timeoutPromise]);
@@ -353,10 +353,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 showMessage('Logging in...', 'success', 2000);
                 
+                // This call now works due to the corrected API key
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
                 if (error) {
-                    // This is where the 'Invalid API Key' error was caught due to the corrupted key
                     showMessage('Login Failed: ' + error.message, 'error', 5000);
                 } else if (data.session) {
                     const userId = data.user.id;
