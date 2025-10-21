@@ -720,11 +720,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         document.getElementById('countdownMessage').textContent = 'Sending...';
 
                         const photoFile = document.getElementById('photo').files[0];
-                        let photoPath = null; // *** FIX 2: Renamed to photoPath for clarity ***
+                        let photoPath = null; // *** Renamed to photoPath for clarity ***
 
                         // 1. Photo Upload (Only possible if online)
                         if (photoFile && navigator.onLine) {
-                            photoPath = await uploadImage(photoFile, userId); // uploadImage returns the path (FIX 1)
+                            photoPath = await uploadImage(photoFile, userId); // uploadImage returns the path
                         } else if (photoFile && !navigator.onLine) {
                              showMessage("You are offline. Cannot upload photo; report will be queued without image.", 'warning', 7000);
                         }
@@ -737,7 +737,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             severity_level: severity, 
                             latitude: currentLat, 
                             longitude: currentLon, 
-                            photo_url: photoPath, // *** FIX 2: Save the PATH to the DB ***
+                            photo_url: photoPath, // *** Save the PATH to the DB ***
                             status: 'Reported', 
                         };
 
@@ -817,7 +817,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? `Lat: ${report.latitude.toFixed(4)}, Lon: ${report.longitude.toFixed(4)}`
                         : 'Location not recorded';
                         
-                    // *** FIX 3: Always generate the public URL using the stored value as the path ***
+                    // *** FIX: Always generate the public URL using the stored value as the path ***
                     let photoHtml = '';
                     if (report.photo_url) {
                         let publicUrl = null;
@@ -836,6 +836,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         if (publicUrl) {
                              photoHtml = `<p><a href="${publicUrl}" target="_blank" class="text-link">View Attached Photo</a></p>`;
+                        } else {
+                            photoHtml = `<p class="text-link" style="color:#f44336; font-style: italic; font-size: 0.9em;">(Photo link failed - check if bucket is Public)</p>`;
                         }
                     }
 
