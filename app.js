@@ -51,28 +51,45 @@ function playSound(id) {
 }
 
 // --- Global Utility: Fetch and Store Profile ---
+// **NEW HELPER:** Fetches profile data with a 5-second timeout.
+async function fetchProfileWithTimeout(userId) {
+    const fetchPromise = supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+    
+    // 5 second timeout
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Profile load timed out (5s). Check network or RLS policy.")), 5000)
+    );
+
+    return Promise.race([fetchPromise, timeoutPromise]);
+}
+
 async function fetchAndStoreProfile(userId) {
      try {
-        // Fetch ALL profile data including fullname (database column name)
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
+        // Use the new timeout-protected fetch
+        const { data, error } = await fetchProfileWithTimeout(userId);
             
-        if (!error && data) {
+        if (error) {
+            throw new Error(error.message);
+        }
+
+        if (data) {
             // Remove sensitive or unnecessary fields before storing locally
             delete data.id; 
             delete data.created_at; 
             localStorage.setItem('profileData', JSON.stringify(data));
             return true;
         } else {
-            console.error('Failed to fetch profile for local storage:', error ? error.message : 'No data');
-            return false;
+             // Happens if .single() finds no row but doesn't throw a formal error
+            throw new Error('Profile data record is missing from the database.');
         }
     } catch (e) {
         console.error('Error fetching profile for local storage:', e);
-        return false;
+        // Fallback: If local storage has data, assume success for auth check
+        return !!localStorage.getItem('profileData');
     }
 }
 
@@ -113,7 +130,7 @@ function setupDrawerMenu() {
     if (menuButton) {
         menuButton.addEventListener('click', () => {
             sideDrawer.classList.add('open');
-            drawerBackdrop.classList.add('show'); // FIX: Changed 'active' to 'show' to match style.css
+            drawerBackdrop.classList.add('show'); 
             setDrawerHeader(); // Re-check header content on opening
         });
     }
@@ -121,14 +138,14 @@ function setupDrawerMenu() {
     if (closeDrawer) {
         closeDrawer.addEventListener('click', () => {
             sideDrawer.classList.remove('open');
-            drawerBackdrop.classList.remove('show'); // FIX: Changed 'active' to 'show' to match style.css
+            drawerBackdrop.classList.remove('show'); 
         });
     }
 
     if (drawerBackdrop) {
         drawerBackdrop.addEventListener('click', () => {
             sideDrawer.classList.remove('open');
-            drawerBackdrop.classList.remove('show'); // FIX: Changed 'active' to 'show' to match style.css
+            drawerBackdrop.classList.remove('show'); 
         });
     }
     
@@ -179,9 +196,18 @@ async function checkAuth() {
             let profile = profileData ? JSON.parse(profileData) : {};
 
             if (!profileData || !profile.fullname || profile.fullname.trim() === '') {
+                // If profile is missing or name is empty, fetch it
                 profileLoaded = await fetchAndStoreProfile(userId);
             } else {
                 profileLoaded = true;
+            }
+            
+            // If profile still couldn't be loaded/stored, it's a serious issue, redirect to login
+            if (!profileLoaded) {
+                 showMessage('Critical Error: Failed to load user profile. Please log in again.', 'error', 10000);
+                 await supabase.auth.signOut();
+                 localStorage.clear();
+                 setTimeout(() => window.location.href = 'index.html', 500); 
             }
         }
     }
@@ -453,15 +479,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (window.location.pathname.endsWith('/profile.html')) {
         
-        const detailsContainer = document.getElementById('profileDetailsContainer'); // New container ID for display
-        const formContainer = document.getElementById('profileForm'); // Existing form ID from profile.html
+        const detailsContainer = document.getElementById('profileDetailsContainer');
 
         // Helper to display content in the correct container
         function updateProfileDisplay(htmlContent) {
-            // If the dedicated container doesn't exist, use the form container
-            const target = detailsContainer || formContainer;
-            if (target) {
-                target.innerHTML = htmlContent;
+            if (detailsContainer) {
+                detailsContainer.innerHTML = htmlContent;
             }
         }
 
@@ -471,8 +494,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             
-            // Generate HTML structure based on the data you provided. 
-            // Only fields that have a value should be rendered, or rendered with N/A.
+            // Generate HTML structure based on the data
             const html = `
                 <h2 style="margin-bottom: 15px;">Personal Information</h2>
                 <div class="profile-group">
@@ -523,28 +545,39 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `);
             
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
+            try {
+                // Use the timeout-protected fetch
+                const { data, error } = await fetchProfileWithTimeout(userId);
                 
-            if (error) {
+                // If Supabase returned an error object (e.g., bad query or RLS permission denied)
+                if (error) { 
+                    throw new Error(error.message); 
+                }
+
+                if (data) {
+                    // Success
+                    localStorage.setItem('profileData', JSON.stringify(data));
+                    displayProfile(data); 
+                } else {
+                    // .single() returning null data
+                    throw new Error("Profile record not found for this user ID.");
+                }
+
+            } catch (e) {
+                // This block catches all errors: Supabase errors, network errors, and the custom timeout error.
+                console.error("Profile loading error:", e.message);
+
                 const localData = localStorage.getItem('profileData');
                 if (localData) {
-                    showMessage('Failed to connect to update profile. Using offline data.', 'info', 3000);
+                    // Fallback to local data if connection fails or times out
+                    showMessage(`Could not connect to update profile. Using offline data. (${e.message})`, 'info', 7000);
                     displayProfile(JSON.parse(localData));
                     return;
                 }
-                updateProfileDisplay(`<p class="text-center" style="color:#f44336;">Failed to load profile: ${error.message}</p>`);
-                showMessage('Failed to load profile: ' + error.message, 'error', 5000);
-                return;
-            }
-            
-            if (data) {
-                // Also update localStorage on successful fetch
-                localStorage.setItem('profileData', JSON.stringify(data));
-                displayProfile(data); 
+                
+                // Show final error message
+                updateProfileDisplay(`<p class="text-center" style="color:#f44336;">Failed to load profile: ${e.message}. Please check your network connection or contact support.</p>`);
+                showMessage('Failed to load profile: ' + e.message, 'error', 8000);
             }
         }
         
