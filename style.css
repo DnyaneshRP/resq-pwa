@@ -360,7 +360,7 @@ button:disabled {
 }
 
 /* In Progress Status (Active State, Amber Badge) */
-.status-in_progress {
+.status-assigned {
     background-color: #ffc107; /* Amber */
     color: #333; /* Dark text for contrast on light background */
 }
