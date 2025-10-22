@@ -1,4 +1,4 @@
-const CACHE_NAME = "resq-cache-v6"; // Using your version
+const CACHE_NAME = "resq-cache-v7"; // Incrementing version
 const ASSETS = [
     '/',
     '/index.html',
@@ -12,25 +12,27 @@ const ASSETS = [
     '/app.js',
     '/manifest.json',
     '/icons/resq-192.png',
-    // Correct Audio files per your specification
     '/countdown.wav', 
     '/success.mp3',   
     // Critical external dependency for icons
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css', 
+    // Supabase SDK dependency for offline shell
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.3/+esm' 
 ];
-// Installation: Cache all assets
+
+// Installation: Cache all assets (Cache-First)
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             console.log('Opened cache, pre-caching assets');
-            // Use a catch block for addAll because external requests might fail
             return cache.addAll(ASSETS).catch(error => {
-                console.warn('One or more assets failed to cache (often external resources like Font Awesome):', error);
+                console.warn('One or more assets failed to cache:', error);
             });
         })
     );
-    self.skipWaiting(); // Forces the new Service Worker to activate immediately
+    self.skipWaiting(); 
 });
+
 // Activation: Clean up old caches
 self.addEventListener('activate', (event) => {
     const cacheWhitelist = [CACHE_NAME];
@@ -47,18 +49,38 @@ self.addEventListener('activate', (event) => {
         }).then(() => self.clients.claim())
     );
 });
-// Fetch: Cache-First strategy for the app shell
+
+// Fetch: Cache-First strategy for PWA Shell, Network-Only for Data/API
 self.addEventListener('fetch', (event) => {
     const requestUrl = new URL(event.request.url);
-    const isAsset = ASSETS.includes(requestUrl.pathname) || ASSETS.includes(event.request.url);
-    // Only apply Cache-First strategy to our PWA shell assets
-    if (requestUrl.origin === self.location.origin || isAsset) {
+
+    // 1. Cache-First Strategy for PWA Shell Assets
+    const isPwaAsset = ASSETS.includes(requestUrl.pathname) || 
+                       ASSETS.includes(event.request.url) ||
+                       requestUrl.origin === self.location.origin;
+
+    // Check if the request is an asset we want to cache-first
+    if (isPwaAsset) {
         event.respondWith(
             caches.match(event.request).then((response) => {
-                // Return cached response or fetch from network
-                return response || fetch(event.request);
+                // Return cached response or fetch from network (and potentially cache it)
+                return response || fetch(event.request).then(fetchResponse => {
+                    // Optional: Cache new requests on the fly if needed, but for now stick to pre-caching
+                    // return caches.open(CACHE_NAME).then(cache => {
+                    //    cache.put(event.request, fetchResponse.clone());
+                    //    return fetchResponse;
+                    // });
+                    return fetchResponse;
+                }).catch(() => {
+                    // Fallback for failed fetches, critical for offline experience
+                    return caches.match('/'); // Return index page as a last resort
+                });
             })
         );
+        return; // Stop here if it's an asset
     }
-    // All other requests (like Supabase API calls) go directly to the network
+
+    // 2. Network-Only Strategy for All Other Requests (Supabase API, etc.)
+    // If we're not using Cache-First, the request goes directly to the network.
+    // The offline history/report queuing is handled by app.js (LocalStorage).
 });
