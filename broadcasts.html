@@ -1,47 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emergency Broadcasts | ResQ PWA</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ResQ - Broadcasts</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#d32f2f">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
-<body>
-    <div id="customMessageBox"></div>
+<body class="broadcast-page">
 
-    <div id="sideDrawer" class="side-drawer">
-        <button id="closeDrawer" class="close-btn">&times;</button>
-        <h2 id="drawerTitle">ResQ Menu</h2>
-        <nav>
-            <a href="home.html"><i class="fas fa-home"></i> Home</a>
-            <a href="report.html"><i class="fas fa-exclamation-triangle"></i> Report Emergency</a>
-            <a href="history.html"><i class="fas fa-history"></i> View Report History</a>
-            <a href="broadcasts.html" class="active"><i class="fas fa-bullhorn"></i> Emergency Broadcasts</a>
-            <a href="profile.html"><i class="fas fa-user-circle"></i> View Profile</a>
-        </nav>
-        <button id="logoutButton" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  <div id="sideDrawer" class="side-drawer">
+    <div class="drawer-header">
+        <h3 id="drawerTitle">ResQ Menu</h3>
+        <span id="closeDrawer" class="close-btn">&times;</span>
     </div>
-    <div id="drawerBackdrop" class="drawer-backdrop"></div>
+    <div class="drawer-content">
+        <a href="home.html" class="drawer-link"><i class="fas fa-home fa-fw"></i> Home</a>
+        <a href="report.html" class="drawer-link"><i class="fas fa-exclamation-triangle fa-fw"></i> Report Incident</a>
+        <a href="history.html" class="drawer-link"><i class="fas fa-history fa-fw"></i> Report History</a>
+        <a href="broadcasts.html" class="drawer-link active"><i class="fas fa-bullhorn fa-fw"></i> Emergency Broadcasts</a>
+        <a href="profile.html" class="drawer-link"><i class="fas fa-user fa-fw"></i> My Profile</a>
+        <a href="about.html" class="drawer-link"><i class="fas fa-info-circle fa-fw"></i> About App</a>
+        <a href="#" id="logoutButton" class="drawer-link logout-link"><i class="fas fa-sign-out-alt fa-fw"></i> Logout</a>
+    </div>
+  </div>
+  
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+  
+  <header class="header">
+    <div class="hamburger" id="menuButton">
+        <i class="fas fa-bars"></i>
+    </div>
+    <h2>Emergency Broadcasts</h2>
+  </header>
+  
+  <div class="app">
+    <h1>🚨 Public Alerts</h1>
+    <p>Review all past critical alerts and announcements from ResQ services.</p>
     
-    <header class="header">
-        <button id="menuButton" class="menu-btn"><i class="fas fa-bars"></i></button>
-        <h1>Emergency Broadcasts</h1>
-    </header>
-
-    <main class="container app-container">
+    <div id="broadcastList" class="broadcast-list">
+        <div class="empty-state">
+            <i class="fas fa-box-open fa-3x" style="margin-bottom: 10px;"></i>
+            <p>No emergency broadcasts have been received yet. Check back later for official alerts.</p>
+        </div>
+    </div>
+  </div>
+  
+  <div id="customMessageBox" class="custom-message-box hidden"></div>
+  
+  <script type="module" src="app.js"></script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- MOCK DATA FOR DEMONSTRATION ---
+        // You will replace this section with your actual data fetching logic.
+        const mockBroadcasts = []; // Keep this array empty to show the "No broadcasts" message correctly.
+        /* Use the following to test the cards:
+        const mockBroadcasts = [
+            { id: 1, message: "Severe weather alert: Flash flood warning in effect for central districts. Seek high ground immediately.", timestamp: "2025-10-22T10:00:00Z" },
+            { id: 2, message: "Road closure update: Highway 401 East is closed due to an overturned vehicle. Please use alternate routes.", timestamp: "2025-10-22T08:30:00Z" }
+        ];
+        */
         
-        <p class="text-center" style="margin-bottom: 20px;">Review all past critical alerts and announcements from ResQ services.</p>
-
-        <div id="broadcastsHistoryContainer">
-            </div>
-
-    </main>
-
-    <audio id="successSound" src="path/to/success.mp3"></audio>
-    <audio id="alarmSound" src="path/to/alarm.mp3"></audio> 
-    <audio id="countdownSound" src="path/to/countdown.mp3"></audio>
-
-    <script type="module" src="app.js"></script>
+        const listContainer = document.getElementById('broadcastList');
+        
+        if (mockBroadcasts.length > 0) {
+            listContainer.innerHTML = ''; // Clear empty state
+            
+            mockBroadcasts.forEach(broadcast => {
+                const date = new Date(broadcast.timestamp).toLocaleString();
+                const broadcastHtml = `
+                    <div class="broadcast-item">
+                        <div class="broadcast-timestamp">
+                            <i class="far fa-clock"></i> ${date}
+                        </div>
+                        <div class="broadcast-message">
+                            ${broadcast.message}
+                        </div>
+                    </div>
+                `;
+                listContainer.insertAdjacentHTML('beforeend', broadcastHtml);
+            });
+        }
+    });
+  </script>
 </body>
 </html>

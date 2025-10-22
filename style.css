@@ -356,7 +356,7 @@ button:disabled {
     border-radius: 5px;
     font-size: 0.8em;
     font-weight: 600;
-    color: #333; /* FIX: Default text color to dark for visibility on light backgrounds */
+    color: #333; /* FIX: Default text color to dark for visibility */
 }
 
 /* Pending/Reported Status (Initial State, Blue Badge) */
