@@ -234,7 +234,7 @@ button:disabled {
 }
 
 /* ------------------------------------------- */
-/* --- HOME PAGE CARDS (Updated with new .info-action) --- */
+/* --- HOME PAGE CARDS --- */
 /* ------------------------------------------- */
 .home-card-grid {
     display: flex;
@@ -286,7 +286,7 @@ button:disabled {
 .secondary-action i {
     color: #d32f2f;
 }
-/* New style for the Emergency Broadcasts card */
+/* Style for the Emergency Broadcasts card */
 .info-action {
     background-color: #fffde7; /* Very light yellow */
     color: #e65100; /* Deep orange/amber text */
@@ -295,7 +295,6 @@ button:disabled {
 .info-action i {
     color: #e65100;
 }
-
 
 /* ------------------------------------------- */
 /* --- REPORT/HISTORY PAGE CARD/FORM STYLES --- */
@@ -357,31 +356,27 @@ button:disabled {
     border-radius: 5px;
     font-size: 0.8em;
     font-weight: 600;
-    color: white;
+    color: #333; /* FIX: Default text color to dark for visibility on light backgrounds */
 }
-
-/* --- FIX: Status visibility has been corrected here --- */
 
 /* Pending/Reported Status (Initial State, Blue Badge) */
 .status-reported,
 .status-pending {
     background-color: #1e88e5; /* Blue */
-    color: white;
+    color: white; /* Override for dark background */
 }
 
 /* In Progress Status (Active State, Amber Badge) */
 .status-assigned {
-    background-color: #ffc107; /* Amber (Task 1 confirmation) */
+    background-color: #ffc107; /* Amber */
     color: #333; /* Dark text for contrast on light background */
 }
 
 /* Resolved Status (Success State, Green Badge) */
 .status-resolved {
     background-color: #388e3c; /* Green */
-    color: white;
+    color: white; /* Override for dark background */
 }
-
-/* --- END FIX --- */
 
 .report-detail-line {
     font-size: 0.95em;
@@ -423,8 +418,40 @@ button:disabled {
     font-style: italic;
 }
 
+/* ------------------------------------------- */
+/* --- BROADCASTS PAGE STYLES (NEW) --- */
+/* ------------------------------------------- */
+.broadcast-list {
+    margin: 20px 15px; 
+}
+.broadcast-item {
+    background-color: white;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-left: 5px solid #1e88e5; /* Blue info color */
+    transition: transform 0.2s;
+}
+.broadcast-item:active {
+    transform: scale(0.99);
+}
+.broadcast-timestamp {
+    font-size: 0.8em;
+    color: #888;
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed #eee;
+}
+.broadcast-message {
+    font-size: 1em;
+    color: #333;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-top: 10px;
+}
 
-/* ----------------- DRAWER & MESSAGE BOX STYLES... (unchanged) ----------------- */
+/* ----------------- DRAWER & MESSAGE BOX STYLES... ----------------- */
 
 /* ------------------------------------------- */
 /* --- SLIDE-OUT DRAWER STYLES --- */
