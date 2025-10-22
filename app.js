@@ -2,10 +2,9 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.3/+esm';
 
 // =================================================================
-// YOUR SUPABASE CONFIGURATION (RESTORED - FIX)
+// YOUR SUPABASE CONFIGURATION (VERIFIED)
 // =================================================================
 const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; 
-// !!! THE CORRECT ANON KEY HAS BEEN RESTORED HERE !!!
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
 // =================================================================
 
@@ -325,6 +324,27 @@ async function attemptQueuedReports() {
 }
 
 // =================================================================
+// REALTIME BROADCAST LISTENER (NEW FEATURE)
+// =================================================================
+
+function setupBroadcastListener() {
+    // Listens for NEW inserts into the 'broadcasts' table
+    supabase
+        .channel('public:broadcasts')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcasts' }, (payload) => {
+            console.log('Admin Broadcast received:', payload);
+            const message = payload.new.message || "Emergency broadcast received!";
+            
+            // Display the message prominently (warning color, long duration)
+            showMessage(`!!! ADMIN BROADCAST: ${message}`, 'warning', 15000); 
+            
+            // Play a distinctive alert sound (using the existing countdown sound)
+            playSound('countdownSound'); 
+        })
+        .subscribe();
+}
+
+// =================================================================
 // --- Page Specific Logic Initialization ---
 // =================================================================
 
@@ -352,6 +372,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupDrawerMenu();
     setDrawerHeader(); 
+    
+    if (profileLoaded) {
+        // Setup listener for Admin Broadcasts ONLY after successful login
+        setupBroadcastListener(); 
+    }
 
     // Attempt to send any reports queued while offline
     attemptQueuedReports();
