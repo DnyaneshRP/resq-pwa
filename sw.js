@@ -16,7 +16,7 @@ const ASSETS = [
     '/success.mp3',   
     // Critical external dependency for icons
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css', 
-    // Supabase SDK dependency for offline shell
+    // Supabase SDK dependency for offline shell (NEW)
     'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.3/+esm' 
 ];
 
@@ -64,23 +64,15 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             caches.match(event.request).then((response) => {
                 // Return cached response or fetch from network (and potentially cache it)
-                return response || fetch(event.request).then(fetchResponse => {
-                    // Optional: Cache new requests on the fly if needed, but for now stick to pre-caching
-                    // return caches.open(CACHE_NAME).then(cache => {
-                    //    cache.put(event.request, fetchResponse.clone());
-                    //    return fetchResponse;
-                    // });
-                    return fetchResponse;
-                }).catch(() => {
-                    // Fallback for failed fetches, critical for offline experience
+                return response || fetch(event.request).catch(() => {
+                    // Fallback for failed fetches
                     return caches.match('/'); // Return index page as a last resort
                 });
             })
         );
-        return; // Stop here if it's an asset
+        return; 
     }
 
-    // 2. Network-Only Strategy for All Other Requests (Supabase API, etc.)
-    // If we're not using Cache-First, the request goes directly to the network.
-    // The offline history/report queuing is handled by app.js (LocalStorage).
+    // 2. Network-Only Strategy for All Other Requests (Supabase API, Storage, etc.)
+    // Note: Data persistence (History/Reports) is handled by LocalStorage in app.js
 });

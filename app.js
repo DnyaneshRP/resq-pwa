@@ -2,19 +2,20 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.3/+esm';
 
 // =================================================================
-// YOUR SUPABASE CONFIGURATION (VERIFIED)
+// YOUR SUPABASE CONFIGURATION (RESTORED - FIX)
 // =================================================================
 const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g117CgiGzS-MetDY1h0kV-d0vg'; 
+// !!! THE CORRECT ANON KEY HAS BEEN RESTORED HERE !!!
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
 // =================================================================
 
 // --- Initialize Supabase Client ---
-// Note: Supabase SDK handles session persistence by default (using LocalStorage for refresh token)
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Define constants
 const REPORT_BUCKET = 'emergency_photos'; 
 const OFFLINE_QUEUE_KEY = '__REPORTS_QUEUE__'; // Key for localStorage queue
+const HISTORY_CACHE_KEY = '__REPORT_HISTORY__'; // Key for localStorage history cache
 
 // =================================================================
 // --- Global Utilities ---
@@ -143,11 +144,17 @@ function setupDrawerMenu() {
             e.preventDefault();
             const { error } = await supabase.auth.signOut();
             localStorage.clear();
+            // Also clear data cache keys
+            localStorage.removeItem(HISTORY_CACHE_KEY); 
+            localStorage.removeItem(OFFLINE_QUEUE_KEY);
+
             if (error) {
                 showMessage('Logout failed: ' + error.message, 'error');
             } else {
                 if ('caches' in window) {
                     const cacheNames = await caches.keys();
+                    // NOTE: Clearing service worker caches ensures the PWA shell is re-downloaded next time
+                    // This is good practice after logout to ensure security/fresh content
                     await Promise.all(
                         cacheNames.map(cacheName => caches.delete(cacheName))
                     );
@@ -172,7 +179,7 @@ async function checkAuth() {
         if (onAuthPage) {
             // User is logged in, redirect away from login/register page
             window.location.href = 'home.html'; 
-            return false; // Stop further execution on this page
+            return false; 
         }
         
         // Protected Page logic (User is logged in)
@@ -184,12 +191,20 @@ async function checkAuth() {
 
         // Fetch profile if missing or incomplete
         if (!profileData || !profile.fullname || profile.fullname.trim() === '') {
-            profileLoaded = await fetchAndStoreProfile(userId);
+            // Use network only if session exists and data is missing
+            if (navigator.onLine) {
+                 profileLoaded = await fetchAndStoreProfile(userId);
+            } else {
+                 // Offline and profile is incomplete/missing: serious issue, force re-login upon network return
+                 profileLoaded = false; 
+                 showMessage('Offline and profile data is missing. Please connect to the internet to verify credentials.', 'error', 10000);
+            }
         } else {
             profileLoaded = true;
         }
         
-        if (!profileLoaded) {
+        if (!profileLoaded && !onAuthPage) {
+             // If profile failed to load (e.g., timeout, RLS error, or missing offline)
              showMessage('Critical Error: Failed to load user profile. Please log in again.', 'error', 10000);
              await supabase.auth.signOut();
              localStorage.clear();
@@ -200,7 +215,7 @@ async function checkAuth() {
         if (!onAuthPage) {
             // User is NOT logged in, redirect to login page
             window.location.href = 'index.html'; 
-            return false; // Stop further execution on this page
+            return false; 
         }
     }
     return profileLoaded;
@@ -276,7 +291,6 @@ function queueReport(reportPayload) {
     showMessage('Report saved offline. Will send automatically when connection is restored.', 'info', 7000);
 }
 
-// Function that runs on load to attempt to send queued reports
 async function attemptQueuedReports() {
     const queue = getQueuedReports();
     if (queue.length === 0) return;
@@ -331,8 +345,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Await checkAuth to handle redirects and ensure profile is loaded
     const profileLoaded = await checkAuth(); 
+    // Stop execution on pages that are about to redirect
     if (!profileLoaded && !window.location.pathname.endsWith('/index.html') && !window.location.pathname.endsWith('/register.html')) {
-        return; // Stop if not on auth page and not loaded (redirect is pending)
+        return; 
     }
 
     setupDrawerMenu();
@@ -356,7 +371,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 showMessage('Logging in...', 'success', 2000);
                 
-                // Supabase signInWithPassword handles session persistence via refresh tokens automatically
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
                 if (error) {
@@ -569,7 +583,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // =================================================================
-    // REPORT EMERGENCY PAGE (report.html) Logic (Simplified Photo Input)
+    // REPORT EMERGENCY PAGE (report.html) Logic
     // =================================================================
     if (window.location.pathname.endsWith('/report.html')) {
         const reportForm = document.getElementById('emergencyReportForm'); 
@@ -581,7 +595,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const latitudeInput = document.getElementById('latitude'); 
         const longitudeInput = document.getElementById('longitude'); 
         const submitButton = document.getElementById('submitReportBtn');
-        const photoInput = document.getElementById('photo'); // Single file input now
+        const photoInput = document.getElementById('photo'); // Single file input (camera only if capture="camera" is set in HTML)
 
         let isFetchingLocation = false;
         let currentLat = null; 
@@ -612,6 +626,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
+        // Initial location fetch
         handleLocationFetch();
 
         if (getLocationBtn) {
@@ -698,9 +713,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         let photoPath = null; 
 
-                        // 1. CRITICAL: Handle Photo Upload
+                        // 1. CRITICAL: Handle Photo Upload - REQUIRES INTERNET
                         if (photoFile) {
                             if (navigator.onLine) {
+                                // Upload photo BEFORE submitting the report
                                 photoPath = await uploadImage(photoFile, userId); 
                                 
                                 if (!photoPath) {
@@ -741,6 +757,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     successModal.classList.remove('hidden');
                                     playSound('successSound'); 
                                     showMessage('Report submitted successfully!', 'success', 5000);
+                                    // Optionally force a history refresh after success
+                                    localStorage.removeItem(HISTORY_CACHE_KEY); 
                                 }
                             } catch (e) {
                                 console.error('Fatal submission error:', e);
@@ -764,12 +782,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // =================================================================
-    // HISTORY PAGE (history.html) Logic (FIXED: Uses Cache-First)
+    // HISTORY PAGE (history.html) Logic (FIXED: Uses Cache-First Data Strategy)
     // =================================================================
     if (window.location.pathname.endsWith('/history.html')) {
         
-        const HISTORY_CACHE_KEY = '__REPORT_HISTORY__';
-
         async function loadReportsHistory() {
             const userId = localStorage.getItem('userId');
             const reportsList = document.getElementById('reportsHistoryContainer');
@@ -798,10 +814,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     error = response.error;
 
                     if (data) {
+                        // Cache the fresh data
                         localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(data));
                     }
                 } catch(e) {
                     console.error("Network history fetch failed:", e);
+                    // Use a generic network error message
                     error = { message: "Network request failed. Using cached data if available." };
                 }
             }
@@ -832,6 +850,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (report.photo_url) {
                         let publicUrl = null;
                         
+                        // Regenerate public URL using the stored path
                         try {
                             const { data: urlData } = supabase.storage
                                 .from(REPORT_BUCKET)
