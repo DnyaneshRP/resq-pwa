@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p><strong>Conditions:</strong> ${profile.medical || 'None specified.'}</p>
                     </div>
 
-                    <button type="button" class="main-button" style="margin-top: 30px;">Edit Profile</button>
+                    <button type="button" class="main-button" style="margin-top: 30px;">Edit Profile (Future Feature)</button>
                 </div>
             `;
             
@@ -720,11 +720,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         document.getElementById('countdownMessage').textContent = 'Sending...';
 
                         const photoFile = document.getElementById('photo').files[0];
-                        let photoPath = null; // *** Renamed to photoPath for clarity ***
+                        let photoPath = null; // *** FIX 2: Renamed to photoPath for clarity ***
 
                         // 1. Photo Upload (Only possible if online)
                         if (photoFile && navigator.onLine) {
-                            photoPath = await uploadImage(photoFile, userId); // uploadImage returns the path
+                            photoPath = await uploadImage(photoFile, userId); // uploadImage returns the path (FIX 1)
                         } else if (photoFile && !navigator.onLine) {
                              showMessage("You are offline. Cannot upload photo; report will be queued without image.", 'warning', 7000);
                         }
@@ -737,7 +737,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             severity_level: severity, 
                             latitude: currentLat, 
                             longitude: currentLon, 
-                            photo_url: photoPath, // *** Save the PATH to the DB ***
+                            photo_url: photoPath, // *** FIX 2: Save the PATH to the DB ***
                             status: 'Reported', 
                         };
 
@@ -806,6 +806,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             if (data && data.length > 0) {
+                
                 reportsList.innerHTML = data.map(report => {
                     const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
                     const statusText = report.status || 'Reported'; 
@@ -817,27 +818,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? `Lat: ${report.latitude.toFixed(4)}, Lon: ${report.longitude.toFixed(4)}`
                         : 'Location not recorded';
                         
-                    // *** FIX: Always generate the public URL using the stored value as the path ***
                     let photoHtml = '';
                     if (report.photo_url) {
                         let publicUrl = null;
                         
                         try {
-                            // Enforce the correct REPORT_BUCKET by regenerating the public URL
+                            // *** FIX: Switched to getPublicUrl, which requires the bucket to be public. ***
                             const { data: urlData } = supabase.storage
                                 .from(REPORT_BUCKET)
                                 .getPublicUrl(report.photo_url); 
+                            
                             publicUrl = urlData.publicUrl;
+
                         } catch(e) { 
-                            console.error("Error generating public URL:", e);
-                            // Fallback to stored value if generation fails (e.g., if it's a broken full URL)
-                            publicUrl = report.photo_url.startsWith('http') ? report.photo_url : null;
+                            console.error("Error generating public URL:", e.message);
+                            publicUrl = null; 
                         }
 
                         if (publicUrl) {
                              photoHtml = `<p><a href="${publicUrl}" target="_blank" class="text-link">View Attached Photo</a></p>`;
                         } else {
-                            photoHtml = `<p class="text-link" style="color:#f44336; font-style: italic; font-size: 0.9em;">(Photo link failed - check if bucket is Public)</p>`;
+                             // This message is only a fallback, the public link should work if the bucket is public.
+                             photoHtml = `<p class="text-link" style="color:#f44336; font-style: italic; font-size: 0.9em;">(Photo link failed - check if bucket is Public)</p>`;
                         }
                     }
 
