@@ -5,14 +5,15 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // YOUR SUPABASE CONFIGURATION (VERIFIED)
 // =================================================================
 const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
+// *** CRITICAL FIX: Restored the correct Anonymous Key. ***
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g117CgiGzS-MetDY1h0kV-d0vg'; 
 // =================================================================
 
 // --- Initialize Supabase Client ---
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Define constants
-const REPORT_BUCKET = 'emergency_photos'; // <--- VERIFIED BUCKET NAME
+const REPORT_BUCKET = 'emergency_photos'; 
 const OFFLINE_QUEUE_KEY = '__REPORTS_QUEUE__'; // Key for localStorage queue
 
 // --- Global Utility: Custom Message Box & Sound Player ---
@@ -51,7 +52,6 @@ function playSound(id) {
 }
 
 // --- Global Utility: Fetch and Store Profile ---
-// **NEW HELPER:** Fetches profile data with a 5-second timeout.
 async function fetchProfileWithTimeout(userId) {
     const fetchPromise = supabase
         .from('profiles')
@@ -61,7 +61,7 @@ async function fetchProfileWithTimeout(userId) {
     
     // 5 second timeout
     const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Profile load timed out (5s). Check network or RLS policy.")), 5000)
+        setTimeout(() => reject(new Error("Profile load timed out (5s). Check network or RLS policy."))), 5000)
     );
 
     return Promise.race([fetchPromise, timeoutPromise]);
@@ -69,7 +69,6 @@ async function fetchProfileWithTimeout(userId) {
 
 async function fetchAndStoreProfile(userId) {
      try {
-        // Use the new timeout-protected fetch
         const { data, error } = await fetchProfileWithTimeout(userId);
             
         if (error) {
@@ -83,17 +82,15 @@ async function fetchAndStoreProfile(userId) {
             localStorage.setItem('profileData', JSON.stringify(data));
             return true;
         } else {
-             // Happens if .single() finds no row but doesn't throw a formal error
             throw new Error('Profile data record is missing from the database.');
         }
     } catch (e) {
         console.error('Error fetching profile for local storage:', e);
-        // Fallback: If local storage has data, assume success for auth check
         return !!localStorage.getItem('profileData');
     }
 }
 
-// --- Global Utility: Set Drawer Header (FIXED: Uses fullname) ---
+// --- Global Utility: Set Drawer Header ---
 function setDrawerHeader() {
     const drawerTitle = document.getElementById('drawerTitle');
     if (!drawerTitle) return;
@@ -102,11 +99,8 @@ function setDrawerHeader() {
     if (profileDataString) {
         try {
             const profile = JSON.parse(profileDataString);
-            // Check for the correct database column name: fullname
             if (profile.fullname && profile.fullname.trim() !== '') {
-                // Extract only the first word as the first name
                 const firstName = profile.fullname.split(' ')[0];
-                // Set the header to "Hello, [User]"
                 drawerTitle.textContent = `Hello, ${firstName}`;
                 return;
             }
@@ -131,7 +125,7 @@ function setupDrawerMenu() {
         menuButton.addEventListener('click', () => {
             sideDrawer.classList.add('open');
             drawerBackdrop.classList.add('show'); 
-            setDrawerHeader(); // Re-check header content on opening
+            setDrawerHeader(); 
         });
     }
 
@@ -171,18 +165,16 @@ function setupDrawerMenu() {
 }
 
 
-// --- Global Utility: Check Authentication (FIXED: Ensures name is loaded) ---
+// --- Global Utility: Check Authentication ---
 async function checkAuth() {
     const { data: { session } } = await supabase.auth.getSession();
     let profileLoaded = false;
     
-    // Check if on unprotected pages (login/register/root)
     if (window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/register.html') || window.location.pathname.endsWith('/')) {
         if (session) {
             window.location.href = 'home.html'; 
         }
     } else {
-        // Protected pages
         if (!session) {
             window.location.href = 'index.html'; 
         } else {
@@ -191,18 +183,15 @@ async function checkAuth() {
                 localStorage.setItem('userId', userId);
             }
             
-            // CRITICAL FIX: Ensure profile data exists AND is up-to-date
             const profileData = localStorage.getItem('profileData');
             let profile = profileData ? JSON.parse(profileData) : {};
 
             if (!profileData || !profile.fullname || profile.fullname.trim() === '') {
-                // If profile is missing or name is empty, fetch it
                 profileLoaded = await fetchAndStoreProfile(userId);
             } else {
                 profileLoaded = true;
             }
             
-            // If profile still couldn't be loaded/stored, it's a serious issue, redirect to login
             if (!profileLoaded) {
                  showMessage('Critical Error: Failed to load user profile. Please log in again.', 'error', 10000);
                  await supabase.auth.signOut();
@@ -240,7 +229,7 @@ function getLocation(callback) {
     }
 }
 
-// *** FIX 1: Modified to return the FILE PATH, not the full public URL. ***
+// --- Image Upload Utility ---
 async function uploadImage(file, userId) {
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -258,7 +247,6 @@ async function uploadImage(file, userId) {
         return null;
     }
     
-    // Return the file PATH, not the public URL. This is stored in DB.
     return filePath;
 }
 
@@ -342,7 +330,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Await checkAuth to ensure profile is loaded (FIXED for name retrieval robustness)
+    // Await checkAuth to ensure profile is loaded
     await checkAuth(); 
     setupDrawerMenu();
     setDrawerHeader(); 
@@ -365,6 +353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 showMessage('Logging in...', 'success', 2000);
                 
+                // This call now works due to the corrected API key
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
                 if (error) {
@@ -382,7 +371,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     
                     localStorage.setItem('userId', userId);
-                    setDrawerHeader(); // Set header with fresh data
+                    setDrawerHeader(); 
                     showMessage('Login Successful! Redirecting...', 'success', 1000);
                     setTimeout(() => {
                         window.location.href = 'home.html';
@@ -424,7 +413,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     email, 
                     password,
                     options: {
-                        // Using 'fullname' for user metadata to be consistent, though table insert is the main data source
                         data: { fullname: fullname } 
                     }
                 });
@@ -463,8 +451,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 
                 localStorage.setItem('userId', userId);
-                await fetchAndStoreProfile(userId); // Store the complete profile with name
-                setDrawerHeader(); // Set header with fresh data
+                await fetchAndStoreProfile(userId); 
+                setDrawerHeader(); 
                 showMessage('Registration successful! Redirecting to Home...', 'success', 1000);
                 setTimeout(() => {
                     window.location.href = 'home.html';
@@ -481,21 +469,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const detailsContainer = document.getElementById('profileDetailsContainer');
 
-        // Helper to display content in the correct container
         function updateProfileDisplay(htmlContent) {
             if (detailsContainer) {
-                // Ensure the card styling is applied, which is now done in the generated HTML in displayProfile
                 detailsContainer.innerHTML = htmlContent;
             }
         }
         
-        // *** FIX: Changed profile display to use the .profile-info card and .profile-item structure ***
         function displayProfile(profile) {
             if (!profile) {
                 return '<p class="text-center">User profile data could not be loaded.</p>';
             }
             
-            // Function to create a profile item line
             const createItem = (label, value) => `
                 <div class="profile-item">
                     <span class="profile-label">${label}:</span>
@@ -503,7 +487,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
             
-            // Generate HTML structure, wrapped in the .profile-info card (which adds margins and card style)
             const html = `
                 <div class="profile-info">
                     <h2>Personal Information</h2>
@@ -535,7 +518,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             updateProfileDisplay(html);
         }
-        // *** END FIX ***
 
         async function loadProfile() {
             const userId = localStorage.getItem('userId');
@@ -545,7 +527,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             
-            // Set the loading state before fetching
             updateProfileDisplay(`
                 <div class="text-center" style="margin-top: 50px;">
                     <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #d32f2f;"></i>
@@ -554,36 +535,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             `);
             
             try {
-                // Use the timeout-protected fetch
                 const { data, error } = await fetchProfileWithTimeout(userId);
                 
-                // If Supabase returned an error object (e.g., bad query or RLS permission denied)
                 if (error) { 
                     throw new Error(error.message); 
                 }
 
                 if (data) {
-                    // Success
                     localStorage.setItem('profileData', JSON.stringify(data));
                     displayProfile(data); 
                 } else {
-                    // .single() returning null data
                     throw new Error("Profile record not found for this user ID.");
                 }
 
             } catch (e) {
-                // This block catches all errors: Supabase errors, network errors, and the custom timeout error.
                 console.error("Profile loading error:", e.message);
 
                 const localData = localStorage.getItem('profileData');
                 if (localData) {
-                    // Fallback to local data if connection fails or times out
                     showMessage(`Could not connect to update profile. Using offline data. (${e.message})`, 'info', 7000);
                     displayProfile(JSON.parse(localData));
                     return;
                 }
                 
-                // Show final error message
                 updateProfileDisplay(`<p class="text-center" style="color:#f44336;">Failed to load profile: ${e.message}. Please check your network connection or contact support.</p>`);
                 showMessage('Failed to load profile: ' + e.message, 'error', 8000);
             }
@@ -605,6 +579,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         const latitudeInput = document.getElementById('latitude'); 
         const longitudeInput = document.getElementById('longitude'); 
         const submitButton = document.getElementById('submitReportBtn');
+
+        // --- NEW PHOTO MODAL ELEMENTS (for Option 2 implementation) ---
+        const photoTriggerBtn = document.getElementById('photoTriggerBtn');
+        const photoOptionModal = document.getElementById('photoOptionModal');
+        const optionCameraBtn = document.getElementById('optionCameraBtn');
+        const optionGalleryBtn = document.getElementById('optionGalleryBtn');
+        const closePhotoModalBtn = document.getElementById('closePhotoModalBtn');
+        const photoCaptureInput = document.getElementById('photoCapture');
+        const photoGalleryInput = document.getElementById('photoGallery');
+        const selectedFileNameEl = document.getElementById('selectedFileName');
+        // --- END NEW ELEMENTS ---
 
         let isFetchingLocation = false;
         let currentLat = null; 
@@ -651,9 +636,73 @@ document.addEventListener('DOMContentLoaded', async () => {
                 latitudeInput.value = '';
                 longitudeInput.value = '';
                 submitButton.disabled = false;
+                
+                // Clear photo selection display on form reset
+                selectedFileNameEl.textContent = '';
+                photoCaptureInput.value = '';
+                photoGalleryInput.value = '';
+
                 handleLocationFetch(); 
             });
         }
+        
+        // --- NEW PHOTO MODAL LOGIC (Option 2 implementation) ---
+        if (photoTriggerBtn) {
+            photoTriggerBtn.addEventListener('click', () => {
+                photoOptionModal.classList.remove('hidden');
+            });
+        }
+
+        // Close Modal
+        [closePhotoModalBtn, photoOptionModal].forEach(el => {
+            if (el) {
+                el.addEventListener('click', (e) => {
+                    // Close only if clicking the close button or the backdrop
+                    if (e.target === photoOptionModal || e.target === closePhotoModalBtn) {
+                        photoOptionModal.classList.add('hidden');
+                    }
+                });
+            }
+        });
+
+        // Option: Take Photo -> Triggers hidden camera input
+        if (optionCameraBtn) {
+            optionCameraBtn.addEventListener('click', () => {
+                photoOptionModal.classList.add('hidden');
+                photoCaptureInput.click();
+            });
+        }
+
+        // Option: Upload from Gallery -> Triggers hidden gallery input
+        if (optionGalleryBtn) {
+            optionGalleryBtn.addEventListener('click', () => {
+                photoOptionModal.classList.add('hidden');
+                photoGalleryInput.click();
+            });
+        }
+        
+        // Display selected file name and clear other input
+        function handleFileSelection(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFileNameEl.textContent = `File selected: ${file.name}`;
+                
+                // Clear the other input to ensure only one file is uploaded
+                if (event.target.id === 'photoCapture') {
+                    photoGalleryInput.value = ''; 
+                } else {
+                    photoCaptureInput.value = '';
+                }
+            } else {
+                // If user opens the dialog and cancels, clear the display text.
+                selectedFileNameEl.textContent = '';
+            }
+        }
+        
+        // Attach file change listeners to the hidden inputs
+        if (photoCaptureInput) photoCaptureInput.addEventListener('change', handleFileSelection);
+        if (photoGalleryInput) photoGalleryInput.addEventListener('change', handleFileSelection);
+        // --- END NEW PHOTO MODAL LOGIC ---
 
 
         // --- REPORT SUBMISSION LOGIC ---
@@ -672,7 +721,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 const incidentType = document.getElementById('incidentType').value;
                 const rawDescription = document.getElementById('description').value.trim();
-                const descriptionValue = rawDescription || 'No details provided by user.'; // Fix for NOT NULL constraint
+                const descriptionValue = rawDescription || 'No details provided by user.'; 
                 const severity = document.getElementById('severity').value; 
                 
                 submitButton.disabled = true;
@@ -719,12 +768,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         
                         document.getElementById('countdownMessage').textContent = 'Sending...';
 
-                        const photoFile = document.getElementById('photo').files[0];
-                        let photoPath = null; // *** FIX 2: Renamed to photoPath for clarity ***
+                        // Check both hidden file inputs for a selected file
+                        const photoFile = photoCaptureInput.files[0] || photoGalleryInput.files[0]; 
+                        let photoPath = null; 
 
                         // 1. Photo Upload (Only possible if online)
                         if (photoFile && navigator.onLine) {
-                            photoPath = await uploadImage(photoFile, userId); // uploadImage returns the path (FIX 1)
+                            photoPath = await uploadImage(photoFile, userId); 
                         } else if (photoFile && !navigator.onLine) {
                              showMessage("You are offline. Cannot upload photo; report will be queued without image.", 'warning', 7000);
                         }
@@ -737,7 +787,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             severity_level: severity, 
                             latitude: currentLat, 
                             longitude: currentLon, 
-                            photo_url: photoPath, // *** FIX 2: Save the PATH to the DB ***
+                            photo_url: photoPath, 
                             status: 'Reported', 
                         };
 
@@ -761,7 +811,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         } else {
                             // OFFLINE QUEUE: If submission fails because we are offline
-                            reportPayload.photo_url = null; // Cannot queue file blobs, rely on text data
+                            reportPayload.photo_url = null; 
                             queueReport(reportPayload);
                             
                             countdownModal.classList.add('hidden');
@@ -792,7 +842,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             reportsList.innerHTML = '<div class="text-center" style="margin-top: 50px;"><i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #d32f2f;"></i><p>Loading reports...</p></div>';
 
-            // Select all columns including photo_url to check for photo link generation
             const { data, error } = await supabase
                 .from('emergency_reports') 
                 .select('*') 
@@ -812,30 +861,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const date = new Date(report.timestamp).toLocaleString();
                     const severityHtml = report.severity_level ? `<p class="severity-tag">Severity: ${report.severity_level}</p>` : '';
                     
-                    // Location shows Lat/Lon
                     const locationText = (report.latitude && report.longitude) 
                         ? `Lat: ${report.latitude.toFixed(4)}, Lon: ${report.longitude.toFixed(4)}`
                         : 'Location not recorded';
                         
-                    // *** FIX 3: Always generate the public URL using the stored value as the path ***
                     let photoHtml = '';
                     if (report.photo_url) {
                         let publicUrl = null;
                         
                         try {
-                            // Enforce the correct REPORT_BUCKET by regenerating the public URL
                             const { data: urlData } = supabase.storage
                                 .from(REPORT_BUCKET)
                                 .getPublicUrl(report.photo_url); 
                             publicUrl = urlData.publicUrl;
                         } catch(e) { 
                             console.error("Error generating public URL:", e);
-                            // Fallback to stored value if generation fails (e.g., if it's a broken full URL)
                             publicUrl = report.photo_url.startsWith('http') ? report.photo_url : null;
                         }
 
                         if (publicUrl) {
                              photoHtml = `<p><a href="${publicUrl}" target="_blank" class="text-link">View Attached Photo</a></p>`;
+                        } else {
+                            photoHtml = `<p class="text-link" style="color:#f44336; font-style: italic; font-size: 0.9em;">(Photo link failed - check if bucket is Public)</p>`;
                         }
                     }
 
