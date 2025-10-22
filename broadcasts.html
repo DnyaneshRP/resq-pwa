@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Broadcasts | ResQ PWA</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <div id="customMessageBox"></div>
+
+    <div id="sideDrawer" class="side-drawer">
+        <button id="closeDrawer" class="close-btn">&times;</button>
+        <h2 id="drawerTitle">ResQ Menu</h2>
+        <nav>
+            <a href="home.html"><i class="fas fa-home"></i> Home</a>
+            <a href="report.html"><i class="fas fa-exclamation-triangle"></i> Report Emergency</a>
+            <a href="history.html"><i class="fas fa-history"></i> View Report History</a>
+            <a href="broadcasts.html" class="active"><i class="fas fa-bullhorn"></i> Emergency Broadcasts</a>
+            <a href="profile.html"><i class="fas fa-user-circle"></i> View Profile</a>
+        </nav>
+        <button id="logoutButton" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+    <div id="drawerBackdrop" class="drawer-backdrop"></div>
+    
+    <header class="header">
+        <button id="menuButton" class="menu-btn"><i class="fas fa-bars"></i></button>
+        <h1>Emergency Broadcasts</h1>
+    </header>
+
+    <main class="container app-container">
+        
+        <p class="text-center" style="margin-bottom: 20px;">Review all past critical alerts and announcements from ResQ services.</p>
+
+        <div id="broadcastsHistoryContainer">
+            </div>
+
+    </main>
+
+    <audio id="successSound" src="path/to/success.mp3"></audio>
+    <audio id="alarmSound" src="path/to/alarm.mp3"></audio> 
+    <audio id="countdownSound" src="path/to/countdown.mp3"></audio>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

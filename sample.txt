@@ -6,6 +6,24 @@ six things:
 5)put hello user in left side drawer instead of Resq Menu text
 6)right now the pwa isnt available offline. it says offline. pls use service worker to cache so that report can be sent even when offline and when connection restores it will actually be stored. so cache all pwa
 
+So now u have full context of all my project files .
+
+I NEED UR HELP
+
+VERY IMP: WITHOUR BREAKING/CHANGING/DAMAGING ANY OF EXISTING FUNCTIONALITY THAT WORKS I NEED YOU TO DO FOLLOWING:
+
+1)In history page right now for the background color of status: reported->blue, resolved->green is working fine. but for assigned it still shows blue only. pls change that to amber color.
+
+2)in admin page we did broadcast feature already i.e. the sending part.now we need to implment to receive it on user's PWA. i want the notification like a regular smartphone notification we get with its sound, not an in-app toast message. even if app is closed,not opened still that notification should be received on user's smartphone if he is logged in.
+
+make it like a native app notification. also i want u to create a dedicated new page to emergency broadcasts in left drawer menu, that is accessible from home page(make separate card for it like we did for report emergency and view history) and throught left side drawer menu.in this page we should be able to see all broadcasts sent out (like history) along with its date and time in a cardlayout.
+
+
+
+so now implement above things remebering VERY IMP TIP given to you.
+
+also provide me entire file to easily copy-paste plz.
+
 
 // --- Supabase SDK Imports ---
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.3/+esm';

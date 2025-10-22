@@ -234,7 +234,7 @@ button:disabled {
 }
 
 /* ------------------------------------------- */
-/* --- HOME PAGE CARDS --- */
+/* --- HOME PAGE CARDS (Updated with new .info-action) --- */
 /* ------------------------------------------- */
 .home-card-grid {
     display: flex;
@@ -286,6 +286,16 @@ button:disabled {
 .secondary-action i {
     color: #d32f2f;
 }
+/* New style for the Emergency Broadcasts card */
+.info-action {
+    background-color: #fffde7; /* Very light yellow */
+    color: #e65100; /* Deep orange/amber text */
+    border: 1px solid #ffcc80;
+}
+.info-action i {
+    color: #e65100;
+}
+
 
 /* ------------------------------------------- */
 /* --- REPORT/HISTORY PAGE CARD/FORM STYLES --- */
@@ -361,7 +371,7 @@ button:disabled {
 
 /* In Progress Status (Active State, Amber Badge) */
 .status-assigned {
-    background-color: #ffc107; /* Amber */
+    background-color: #ffc107; /* Amber (Task 1 confirmation) */
     color: #333; /* Dark text for contrast on light background */
 }
 

@@ -16,6 +16,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const REPORT_BUCKET = 'emergency_photos'; 
 const OFFLINE_QUEUE_KEY = '__REPORTS_QUEUE__'; // Key for localStorage queue
 const HISTORY_CACHE_KEY = '__REPORT_HISTORY__'; // Key for localStorage history cache
+const BROADCAST_CACHE_KEY = '__BROADCAST_HISTORY__'; // NEW Key for broadcast history cache
 
 // =================================================================
 // --- Global Utilities ---
@@ -76,8 +77,6 @@ async function fetchAndStoreProfile(userId) {
         }
 
         if (data) {
-            delete data.id; 
-            delete data.created_at; 
             localStorage.setItem('profileData', JSON.stringify(data));
             return true;
         } else {
@@ -117,6 +116,19 @@ function setupDrawerMenu() {
     const drawerBackdrop = document.getElementById('drawerBackdrop');
     const logoutButton = document.getElementById('logoutButton');
 
+    // Drawer links for history/profile pages need to be updated to reflect the new broadcasts page
+    // Assuming you have HTML structure that includes links for home.html, report.html, history.html, broadcasts.html, profile.html
+    const navBroadcasts = document.querySelector('nav a[href="broadcasts.html"]');
+    
+    // Check if the HTML links exist, otherwise add them dynamically or ensure they are present in all page HTML
+    if (navBroadcasts) {
+        // Set up the active state if on the broadcasts page
+        if (window.location.pathname.endsWith('/broadcasts.html')) {
+            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+            navBroadcasts.classList.add('active');
+        }
+    }
+    
     if (menuButton) {
         menuButton.addEventListener('click', () => {
             sideDrawer.classList.add('open');
@@ -144,17 +156,15 @@ function setupDrawerMenu() {
             e.preventDefault();
             const { error } = await supabase.auth.signOut();
             localStorage.clear();
-            // Also clear data cache keys
             localStorage.removeItem(HISTORY_CACHE_KEY); 
             localStorage.removeItem(OFFLINE_QUEUE_KEY);
+            localStorage.removeItem(BROADCAST_CACHE_KEY); // Clear new cache key
 
             if (error) {
                 showMessage('Logout failed: ' + error.message, 'error');
             } else {
                 if ('caches' in window) {
                     const cacheNames = await caches.keys();
-                    // NOTE: Clearing service worker caches ensures the PWA shell is re-downloaded next time
-                    // This is good practice after logout to ensure security/fresh content
                     await Promise.all(
                         cacheNames.map(cacheName => caches.delete(cacheName))
                     );
@@ -166,10 +176,8 @@ function setupDrawerMenu() {
     }
 }
 
-
 // --- Global Utility: Check Authentication (FIXED FOR PERSISTENCE) ---
 async function checkAuth() {
-    // Supabase automatically attempts to refresh the session from LocalStorage
     const { data: { session } } = await supabase.auth.getSession();
     let profileLoaded = false;
     
@@ -177,25 +185,20 @@ async function checkAuth() {
 
     if (session) {
         if (onAuthPage) {
-            // User is logged in, redirect away from login/register page
             window.location.href = 'home.html'; 
             return false; 
         }
         
-        // Protected Page logic (User is logged in)
         const userId = session.user.id;
         localStorage.setItem('userId', userId);
         
         const profileData = localStorage.getItem('profileData');
         let profile = profileData ? JSON.parse(profileData) : {};
 
-        // Fetch profile if missing or incomplete
         if (!profileData || !profile.fullname || profile.fullname.trim() === '') {
-            // Use network only if session exists and data is missing
             if (navigator.onLine) {
                  profileLoaded = await fetchAndStoreProfile(userId);
             } else {
-                 // Offline and profile is incomplete/missing: serious issue, force re-login upon network return
                  profileLoaded = false; 
                  showMessage('Offline and profile data is missing. Please connect to the internet to verify credentials.', 'error', 10000);
             }
@@ -204,16 +207,15 @@ async function checkAuth() {
         }
         
         if (!profileLoaded && !onAuthPage) {
-             // If profile failed to load (e.g., timeout, RLS error, or missing offline)
              showMessage('Critical Error: Failed to load user profile. Please log in again.', 'error', 10000);
              await supabase.auth.signOut();
              localStorage.clear();
              setTimeout(() => window.location.href = 'index.html', 500); 
+             return false;
         }
 
     } else {
         if (!onAuthPage) {
-            // User is NOT logged in, redirect to login page
             window.location.href = 'index.html'; 
             return false; 
         }
@@ -266,6 +268,22 @@ async function uploadImage(file, userId) {
     return filePath;
 }
 
+function formatDateTime(isoString) {
+    if (!isoString) return 'N/A';
+    try {
+        const date = new Date(isoString);
+        return date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (e) {
+        return 'Invalid Date';
+    }
+}
+
 // =================================================================
 // OFFLINE REPORT QUEUEING LOGIC
 // =================================================================
@@ -286,6 +304,7 @@ function saveQueuedReports(queue) {
 
 function queueReport(reportPayload) {
     const queue = getQueuedReports();
+    reportPayload.offline_timestamp = Date.now(); 
     queue.push(reportPayload);
     saveQueuedReports(queue);
     showMessage('Report saved offline. Will send automatically when connection is restored.', 'info', 7000);
@@ -300,14 +319,26 @@ async function attemptQueuedReports() {
         return;
     }
     
+    queue.sort((a, b) => a.offline_timestamp - b.offline_timestamp);
+    
     let reportsSent = 0;
     const failedQueue = [];
 
     showMessage(`Connection restored! Attempting to send ${queue.length} queued reports...`, 'success', 5000);
 
     for (const report of queue) {
-        // Photo URL will be null here as files cannot be queued
-        const { error } = await supabase.from('emergency_reports').insert([report]);
+        const payloadToSend = {
+            user_id: report.user_id,
+            incident_type: report.incident_type,
+            incident_details: report.incident_details || report.message,
+            severity_level: report.severity_level || report.severity,
+            latitude: report.latitude,
+            longitude: report.longitude,
+            photo_url: report.photo_url,
+            status: 'Reported',
+        };
+        
+        const { error } = await supabase.from('emergency_reports').insert([payloadToSend]);
 
         if (error) {
             console.error('Failed to send queued report:', error.message, report);
@@ -319,10 +350,156 @@ async function attemptQueuedReports() {
 
     if (reportsSent > 0) {
         showMessage(`Successfully sent ${reportsSent} queued report(s).`, 'success', 5000);
+        localStorage.removeItem(HISTORY_CACHE_KEY); 
     }
     
     saveQueuedReports(failedQueue);
 }
+
+// =================================================================
+// REAL-TIME & PUSH NOTIFICATIONS (Task 2)
+// =================================================================
+
+function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                showMessage('Notifications enabled!', 'success', 3000);
+            } else {
+                console.warn('Notification permission denied.');
+            }
+        });
+    }
+}
+
+// This function prepares the PWA to receive push notifications
+async function setupPushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.warn('Push messaging is not supported.');
+        return;
+    }
+
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        
+        if (Notification.permission === 'granted') {
+            // Note: In a real app, you would generate a VAPID key pair, get the subscription
+            // using registration.pushManager.subscribe, and send the resulting subscription 
+            // object to your Supabase/backend to store and use for sending pushes.
+            console.log('Push service is ready. Native push is enabled in Service Worker.');
+        }
+
+    } catch (e) {
+        console.error('Error setting up Push Notifications:', e);
+    }
+}
+
+// Updated to show native notification when the app is focused (Task 2)
+function setupBroadcastListener() {
+    const channel = supabase.channel('resq_broadcast');
+
+    channel.on(
+        'broadcast', 
+        { event: 'critical_alert' }, 
+        (payload) => {
+            const message = payload.payload.message || 'Critical message received.';
+            console.log('Broadcast Received:', message);
+            playSound('alarmSound'); 
+            
+            // 1. In-App Toast
+            showMessage(`CRITICAL ALERT: ${message}`, 'warning', 10000);
+
+            // 2. Native Notification (Only if app is open/focused and permission is granted)
+            if (Notification.permission === 'granted') {
+                new Notification('RESQ CRITICAL ALERT', {
+                    body: message,
+                    icon: '/path/to/app-icon-96x96.png', // Use your app icon
+                    vibrate: [1000, 500, 1000]
+                });
+            }
+            
+            // Also store the message locally to show immediately on the broadcasts page
+            let broadcasts = JSON.parse(localStorage.getItem(BROADCAST_CACHE_KEY) || '[]');
+            broadcasts.unshift({ message: message, timestamp: new Date().toISOString() });
+            localStorage.setItem(BROADCAST_CACHE_KEY, JSON.stringify(broadcasts.slice(0, 50))); // Keep last 50
+
+            if (navigator.vibrate) {
+                navigator.vibrate([1000, 500, 1000, 500, 1000]);
+            }
+        }
+    ).subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+            console.log('Subscribed to ResQ Broadcast channel.');
+        } else {
+            console.warn('Subscription status:', status);
+        }
+    });
+}
+
+
+// =================================================================
+// BROADCAST HISTORY LOGIC (Task 3)
+// =================================================================
+
+function renderBroadcastHistory(broadcasts) {
+    const historyContainer = document.getElementById('broadcastsHistoryContainer');
+    if (!historyContainer) return;
+
+    if (broadcasts.length === 0) {
+        historyContainer.innerHTML = '<p class="empty-state">No emergency broadcasts have been received yet.</p>';
+        return;
+    }
+
+    historyContainer.innerHTML = broadcasts.map(broadcast => `
+        <div class="broadcast-card-history">
+            <span class="broadcast-date">${formatDateTime(broadcast.timestamp)}</span>
+            <p class="broadcast-message">${broadcast.message}</p>
+        </div>
+    `).join('');
+}
+
+async function fetchBroadcastHistory() {
+    const historyContainer = document.getElementById('broadcastsHistoryContainer');
+    if (!historyContainer) return;
+    
+    // 1. Load from cache first
+    const cachedBroadcasts = localStorage.getItem(BROADCAST_CACHE_KEY);
+    if (cachedBroadcasts) {
+        try {
+            const data = JSON.parse(cachedBroadcasts);
+            renderBroadcastHistory(data);
+            showMessage('Displaying cached broadcasts. Fetching latest...', 'info', 3000);
+        } catch (e) {
+            console.error('Error parsing broadcast cache:', e);
+        }
+    } else {
+        historyContainer.innerHTML = '<p class="empty-state">Loading broadcast history...</p>';
+    }
+
+    if (!navigator.onLine) {
+        if (!cachedBroadcasts) {
+             historyContainer.innerHTML = '<p class="empty-state">You are offline. Cannot load broadcast history.</p>';
+        }
+        return;
+    }
+
+    // 2. Fetch from network
+    const { data: broadcasts, error } = await supabase
+        .from('broadcasts')
+        .select('message, timestamp')
+        .order('timestamp', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching broadcasts:', error.message);
+        showMessage('Failed to load broadcasts from server.', 'error', 5000);
+        return;
+    }
+
+    // 3. Cache and render fresh data
+    localStorage.setItem(BROADCAST_CACHE_KEY, JSON.stringify(broadcasts));
+    renderBroadcastHistory(broadcasts);
+}
+
 
 // =================================================================
 // --- Page Specific Logic Initialization ---
@@ -336,12 +513,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             navigator.serviceWorker.register('sw.js') 
                 .then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    setupPushNotifications(); // Attempt to setup push after SW is registered
                 })
                 .catch(err => {
                     console.log('ServiceWorker registration failed: ', err);
                 });
         });
     }
+    
+    // Request permission immediately on load (will prompt the user)
+    requestNotificationPermission();
 
     // Await checkAuth to handle redirects and ensure profile is loaded
     const profileLoaded = await checkAuth(); 
@@ -359,7 +540,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // =================================================================
     // LOGIN PAGE (index.html) Logic
     // =================================================================
-
     if (window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/')) {
         const loginForm = document.getElementById('loginForm');
         
@@ -396,11 +576,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
     }
-    
-    // =================================================================
-    // REGISTER PAGE (register.html) Logic
-    // =================================================================
 
+    // =================================================================
+    // REGISTRATION PAGE (register.html) Logic
+    // =================================================================
     if (window.location.pathname.endsWith('/register.html')) {
         const registerForm = document.getElementById('registerForm');
         
@@ -422,7 +601,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const emergency2 = document.getElementById('emergency2').value || null;
                 const medical = document.getElementById('medical').value || null;
                 
-                showMessage('Registering...', 'success', 2000);
+                showMessage('Registering...', 'info', 2000);
                 
                 // Step 1: Auth sign up
                 const { data: authData, error: authError } = await supabase.auth.signUp({ 
@@ -476,6 +655,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
     }
+    
+    // =================================================================
+    // HOME PAGE (home.html) Logic
+    // =================================================================
+    if (window.location.pathname.endsWith('/home.html')) {
+        setupBroadcastListener();
+    }
+
 
     // =================================================================
     // PROFILE PAGE (profile.html) Logic
@@ -484,7 +671,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.location.pathname.endsWith('/profile.html')) {
         
         const detailsContainer = document.getElementById('profileDetailsContainer');
-
+        
         function updateProfileDisplay(htmlContent) {
             if (detailsContainer) {
                 detailsContainer.innerHTML = htmlContent;
@@ -528,11 +715,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p><strong>Conditions:</strong> ${profile.medical || 'None specified.'}</p>
                     </div>
 
-                    <button type="button" class="main-button" style="margin-top: 30px;">Edit Profile</button>
+                    <button type="button" id="editProfileBtn" class="main-button" style="margin-top: 30px;">Edit Profile</button>
                 </div>
             `;
             
             updateProfileDisplay(html);
+            
+            const editBtn = document.getElementById('editProfileBtn');
+            if(editBtn) {
+                editBtn.addEventListener('click', () => {
+                    showMessage('Edit functionality not yet implemented.', 'info', 3000);
+                });
+            }
         }
 
         async function loadProfile() {
@@ -595,7 +789,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const latitudeInput = document.getElementById('latitude'); 
         const longitudeInput = document.getElementById('longitude'); 
         const submitButton = document.getElementById('submitReportBtn');
-        const photoInput = document.getElementById('photo'); // Single file input (camera only if capture="camera" is set in HTML)
+        const photoInput = document.getElementById('photo'); 
 
         let isFetchingLocation = false;
         let currentLat = null; 
@@ -604,6 +798,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         function handleLocationFetch() {
             if (isFetchingLocation) return;
             isFetchingLocation = true;
+            
             locationTextEl.value = 'Fetching Location...'; 
             latitudeInput.value = ''; 
             longitudeInput.value = '';
@@ -611,6 +806,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentLon = null;
 
             getLocation((result) => {
+                isFetchingLocation = false;
                 if (result.success) {
                     locationTextEl.value = result.locationText;
                     latitudeInput.value = result.lat; 
@@ -622,11 +818,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     locationTextEl.value = result.errorMessage;
                     showMessage(result.errorMessage, 'error', 5000);
                 }
-                isFetchingLocation = false;
             });
         }
 
-        // Initial location fetch
         handleLocationFetch();
 
         if (getLocationBtn) {
@@ -647,7 +841,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        // --- REPORT SUBMISSION LOGIC ---
         if (reportForm) {
             reportForm.addEventListener('submit', async function(event) {
                 event.preventDefault();
@@ -681,7 +874,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
-                // Start countdown
                 countdownModal.classList.remove('hidden');
                 
                 const countdownAudio = document.getElementById('countdownSound');
@@ -713,22 +905,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         let photoPath = null; 
 
-                        // 1. CRITICAL: Handle Photo Upload - REQUIRES INTERNET
+                        // 1. Handle Photo Upload - REQUIRES INTERNET
                         if (photoFile) {
                             if (navigator.onLine) {
-                                // Upload photo BEFORE submitting the report
                                 photoPath = await uploadImage(photoFile, userId); 
                                 
                                 if (!photoPath) {
-                                    // If upload failed but connection is online, stop submission
                                     countdownModal.classList.add('hidden');
                                     submitButton.disabled = false;
                                     return; 
                                 }
                             } else {
-                                // Photo provided, but user is offline: cannot queue file, must warn
                                 showMessage("You are offline. Cannot upload photo; submitting report without image.", 'warning', 7000);
-                                photoPath = null; // Ensure photo_url is null for the queued report
+                                photoPath = null; 
                             }
                         }
 
@@ -757,7 +946,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     successModal.classList.remove('hidden');
                                     playSound('successSound'); 
                                     showMessage('Report submitted successfully!', 'success', 5000);
-                                    // Optionally force a history refresh after success
                                     localStorage.removeItem(HISTORY_CACHE_KEY); 
                                 }
                             } catch (e) {
@@ -765,7 +953,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 showMessage(`An unexpected error occurred: ${e.message}`, 'error', 5000);
                             }
                         } else {
-                            // OFFLINE QUEUE: If submission fails because we are offline
+                            // OFFLINE QUEUE
                             queueReport(reportPayload);
                             
                             countdownModal.classList.add('hidden');
@@ -782,7 +970,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // =================================================================
-    // HISTORY PAGE (history.html) Logic (FIXED: Uses Cache-First Data Strategy)
+    // HISTORY PAGE (history.html) Logic
     // =================================================================
     if (window.location.pathname.endsWith('/history.html')) {
         
@@ -801,7 +989,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             let error = null;
             const cachedData = localStorage.getItem(HISTORY_CACHE_KEY);
             
-            // 1. Try Network First (If online)
             if (navigator.onLine) {
                 try {
                     const response = await supabase
@@ -814,17 +1001,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     error = response.error;
 
                     if (data) {
-                        // Cache the fresh data
                         localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(data));
                     }
                 } catch(e) {
                     console.error("Network history fetch failed:", e);
-                    // Use a generic network error message
                     error = { message: "Network request failed. Using cached data if available." };
                 }
             }
             
-            // 2. Fallback to Cache (If offline or network failed)
             if (!data && cachedData) {
                 data = JSON.parse(cachedData);
                 showMessage('You are offline. Showing cached report history.', 'info', 5000);
@@ -834,10 +1018,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                  return;
             }
             
-            // 3. Render Data
             if (data && data.length > 0) {
                 reportsList.innerHTML = data.map(report => {
-                    const statusClass = report.status === 'Resolved' ? 'status-resolved' : 'status-pending';
+                    // This class is updated in style.css for amber color
+                    const statusClass = report.status === 'Resolved' ? 'Resolved' : (report.status === 'Assigned' ? 'Assigned' : 'Reported');
                     const statusText = report.status || 'Reported'; 
                     const date = new Date(report.timestamp).toLocaleString();
                     const severityHtml = report.severity_level ? `<p class="severity-tag">Severity: ${report.severity_level}</p>` : '';
@@ -850,7 +1034,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (report.photo_url) {
                         let publicUrl = null;
                         
-                        // Regenerate public URL using the stored path
                         try {
                             const { data: urlData } = supabase.storage
                                 .from(REPORT_BUCKET)
@@ -864,7 +1047,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (publicUrl) {
                              photoHtml = `<p><a href="${publicUrl}" target="_blank" class="text-link">View Attached Photo</a></p>`;
                         } else {
-                            // Only show if a photo was recorded but link failed (e.g., bucket permissions)
                             photoHtml = `<p class="text-link" style="color:#f44336; font-style: italic; font-size: 0.9em;">(Photo link unavailable)</p>`;
                         }
                     }
@@ -873,7 +1055,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="report-card-history">
                             <div class="report-header">
                                 <h4>${report.incident_type}</h4>
-                                <span class="report-status ${statusClass}">${statusText}</span>
+                                <span class="report-status status-tag ${statusClass}">${statusText}</span>
                             </div>
                             ${severityHtml}
                             <p><strong>Location:</strong> ${locationText}</p>
@@ -889,5 +1071,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         loadReportsHistory();
+    }
+    
+    // =================================================================
+    // BROADCASTS PAGE (broadcasts.html) Logic (NEW)
+    // =================================================================
+    if (window.location.pathname.endsWith('/broadcasts.html')) {
+        fetchBroadcastHistory();
     }
 });
