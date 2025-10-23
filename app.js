@@ -2,7 +2,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.3/+esm';
 
 // =================================================================
-// YOUR SUPABASE CONFIGURATION (RESTORED - FIX)
+// YOUR SUPABASE CONFIGURATION 
 // =================================================================
 const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; 
 // !!! THE CORRECT ANON KEY HAS BEEN RESTORED HERE !!!
@@ -16,11 +16,11 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const REPORT_BUCKET = 'emergency_photos'; 
 const OFFLINE_QUEUE_KEY = '__REPORTS_QUEUE__'; // Key for localStorage queue
 const HISTORY_CACHE_KEY = '__REPORT_HISTORY__'; // Key for localStorage history cache
-const BROADCAST_CACHE_KEY = '__BROADCAST_HISTORY__'; // NEW Key for broadcast history cache (RESTORED)
-const INSTALL_PROMPT_KEY = '__PWA_PROMPT_SEEN__'; // NEW: Key to track if user has been prompted (RESTORED)
+const BROADCAST_CACHE_KEY = '__BROADCAST_HISTORY__'; // Key for broadcast history cache
+const INSTALL_PROMPT_KEY = '__PWA_PROMPT_SEEN__'; // Key to track if user has been prompted
 
 // =================================================================
-// --- PWA INSTALLATION PROMPT LOGIC (RESTORED) ---
+// --- PWA INSTALLATION PROMPT LOGIC ---
 // =================================================================
 let deferredPrompt = null;
 
@@ -315,8 +315,8 @@ function setupDrawerMenu() {
             localStorage.clear();
             localStorage.removeItem(HISTORY_CACHE_KEY); 
             localStorage.removeItem(OFFLINE_QUEUE_KEY);
-            localStorage.removeItem(BROADCAST_CACHE_KEY); // <-- RESTORED: Clear Broadcast cache
-            localStorage.removeItem(INSTALL_PROMPT_KEY); // <-- RESTORED: Clear PWA prompt key on logout
+            localStorage.removeItem(BROADCAST_CACHE_KEY); // Clear Broadcast cache
+            localStorage.removeItem(INSTALL_PROMPT_KEY); // Clear PWA prompt key on logout
 
             if (error) {
                 showMessage('Logout failed: ' + error.message, 'error');
@@ -516,7 +516,7 @@ async function attemptQueuedReports() {
 }
 
 // =================================================================
-// REAL-TIME & PUSH NOTIFICATIONS (RESTORED)
+// REAL-TIME & PUSH NOTIFICATIONS
 // =================================================================
 
 function requestNotificationPermission() {
@@ -551,8 +551,9 @@ async function setupPushNotifications() {
     }
 }
 
-// Updated to show native notification when the app is focused
 function setupBroadcastListener() {
+    // CRITICAL: Supabase Real-time listens to the table you configured for RLS. 
+    // If you used the custom Real-time channel for broadcasts, this is correct.
     const channel = supabase.channel('resq_broadcast');
 
     channel.on(
@@ -595,7 +596,7 @@ function setupBroadcastListener() {
 
 
 // =================================================================
-// BROADCAST HISTORY LOGIC (RESTORED)
+// BROADCAST HISTORY LOGIC
 // =================================================================
 
 function renderBroadcastHistory(broadcasts) {
@@ -641,6 +642,7 @@ async function fetchBroadcastHistory() {
     }
 
     // 2. Fetch from network
+    // This query is likely blocked by RLS if the user hasn't set the policy.
     const { data: broadcasts, error } = await supabase
         .from('broadcasts')
         .select('message, timestamp')
@@ -648,7 +650,8 @@ async function fetchBroadcastHistory() {
 
     if (error) {
         console.error('Error fetching broadcasts:', error.message);
-        showMessage('Failed to load broadcasts from server.', 'error', 5000);
+        // CRITICAL REMINDER: This error confirms the RLS issue for history fetch.
+        showMessage('Failed to load broadcasts from server. Check RLS policy on the "broadcasts" table.', 'error', 7000);
         return;
     }
 
@@ -669,7 +672,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             navigator.serviceWorker.register('sw.js') 
                 .then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    setupPushNotifications(); // RESTORED: Attempt to setup push after SW is registered
+                    setupPushNotifications(); // Attempt to setup push after SW is registered
                 })
                 .catch(err => {
                     console.log('ServiceWorker registration failed: ', err);
@@ -677,7 +680,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // RESTORED: Request permission immediately on load (will prompt the user)
+    // Request permission immediately on load (will prompt the user)
     requestNotificationPermission();
 
     // Await checkAuth to handle redirects and ensure profile is loaded
@@ -816,7 +819,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // HOME PAGE (home.html) Logic
     // =================================================================
     if (window.location.pathname.endsWith('/home.html')) {
-        setupBroadcastListener(); // RESTORED: Start listening for alerts
+        setupBroadcastListener(); // Start listening for real-time alerts
     }
 
 
@@ -1232,7 +1235,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // =================================================================
-    // BROADCASTS PAGE (broadcasts.html) Logic (RESTORED)
+    // BROADCASTS PAGE (broadcasts.html) Logic
     // =================================================================
     if (window.location.pathname.endsWith('/broadcasts.html')) {
         fetchBroadcastHistory();
