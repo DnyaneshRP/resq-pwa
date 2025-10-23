@@ -9,6 +9,10 @@ const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg'; 
 // =================================================================
 
+// --- Push Notification VAPID Key Placeholder ---
+// NOTE: Replace this with your actual VAPID public key string (base64 URL safe)
+const VAPID_PUBLIC_KEY = 'BJRi3_9_wXG3-j_H20H0C-9uV5H7d2n2x8-1x6p8h5h0x6u6g3e5h5j5s5t5g4b4a4d4e4f4g4h4i4j4k4l4m4n4o4p4q4r4s4t4u4v4w4x4y4z404142434445464748494'; // REPLACE WITH YOUR ACTUAL KEY
+
 // --- Initialize Supabase Client ---
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -18,9 +22,11 @@ const OFFLINE_QUEUE_KEY = '__REPORTS_QUEUE__'; // Key for localStorage queue
 const HISTORY_CACHE_KEY = '__REPORT_HISTORY__'; // Key for localStorage history cache
 const BROADCAST_CACHE_KEY = '__BROADCAST_HISTORY__'; // Key for broadcast history cache
 const INSTALL_PROMPT_KEY = '__PWA_PROMPT_SEEN__'; // Key to track if user has been prompted
+const PUSH_SUBSCRIPTION_KEY = '__PUSH_SUBSCRIPTION__'; // NEW: Key for storing push subscription data
 
 // =================================================================
 // --- PWA INSTALLATION PROMPT LOGIC ---
+// (No changes here, kept for completeness)
 // =================================================================
 let deferredPrompt = null;
 
@@ -278,14 +284,16 @@ function setupDrawerMenu() {
     const logoutButton = document.getElementById('logoutButton');
 
     // Drawer links need to be updated to reflect the new broadcasts page
-    const navBroadcasts = document.querySelector('nav a[href="broadcasts.html"]');
-    
-    // Set up the active state if on the broadcasts page
-    if (navBroadcasts && window.location.pathname.endsWith('/broadcasts.html')) {
-        document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
-        navBroadcasts.classList.add('active');
-    }
-    
+    const currentPath = window.location.pathname.split('/').pop();
+
+    document.querySelectorAll('nav a').forEach(a => {
+        a.classList.remove('active');
+        const hrefPath = a.getAttribute('href').split('/').pop();
+        if (hrefPath === currentPath) {
+            a.classList.add('active');
+        }
+    });
+
     if (menuButton) {
         menuButton.addEventListener('click', () => {
             sideDrawer.classList.add('open');
@@ -311,6 +319,10 @@ function setupDrawerMenu() {
     if (logoutButton) {
         logoutButton.addEventListener('click', async (e) => {
             e.preventDefault();
+            
+            // Unsubscribe from push notifications on logout
+            await unsubscribePushNotifications();
+            
             const { error } = await supabase.auth.signOut();
             localStorage.clear();
             localStorage.removeItem(HISTORY_CACHE_KEY); 
@@ -371,6 +383,9 @@ async function checkAuth() {
              setTimeout(() => window.location.href = 'index.html', 500); 
              return false;
         }
+        
+        // NEW: Subscribe to push when user is confirmed logged in
+        setupPushNotifications();
 
     } else {
         if (!onAuthPage) {
@@ -444,6 +459,7 @@ function formatDateTime(isoString) {
 
 // =================================================================
 // OFFLINE REPORT QUEUEING LOGIC
+// (No changes here, kept for completeness)
 // =================================================================
 
 function getQueuedReports() {
@@ -516,14 +532,31 @@ async function attemptQueuedReports() {
 }
 
 // =================================================================
-// REAL-TIME & PUSH NOTIFICATIONS
+// REAL-TIME & PUSH NOTIFICATIONS (UPDATED)
 // =================================================================
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
 
 function requestNotificationPermission() {
     if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
         Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
                 showMessage('Notifications enabled!', 'success', 3000);
+                // Attempt push subscription after permission is granted
+                setupPushNotifications(); 
             } else {
                 console.warn('Notification permission denied.');
             }
@@ -531,30 +564,86 @@ function requestNotificationPermission() {
     }
 }
 
-// This function prepares the PWA to receive push notifications
+/**
+ * NEW: Handles push notification subscription and stores endpoint.
+ * NOTE: For this to work in production, you must replace VAPID_PUBLIC_KEY 
+ * and setup a server that saves this subscription data to a database 
+ * (along with the user_id) so your Web Push server can use it later.
+ */
 async function setupPushNotifications() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.warn('Push messaging is not supported.');
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || Notification.permission === 'denied') {
+        console.warn('Push messaging is not supported or permission denied.');
+        return;
+    }
+
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+        console.log('User not logged in, skipping push subscription setup.');
+        return;
+    }
+    
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (subscription) {
+        // Already subscribed, ensure local cache is up-to-date (optional: check if expired/needs refresh)
+        localStorage.setItem(PUSH_SUBSCRIPTION_KEY, JSON.stringify(subscription));
+        console.log('User already subscribed to push notifications.');
         return;
     }
 
     try {
-        const registration = await navigator.serviceWorker.ready;
+        // Convert VAPID key to Uint8Array for subscription options
+        const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+
+        subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: applicationServerKey
+        });
+
+        const subscriptionData = subscription.toJSON();
+        localStorage.setItem(PUSH_SUBSCRIPTION_KEY, JSON.stringify(subscriptionData));
         
-        if (Notification.permission === 'granted') {
-            console.log('Push service is ready. Native push is enabled in Service Worker.');
-            // NOTE: Logic for subscribing to a push service would go here.
-        }
+        // --- CRITICAL STEP FOR PRODUCTION ---
+        // You would typically send this subscription object (endpoint, keys) 
+        // and the current userId to your backend server here to store it in your database.
+        console.log('Push Subscription successful:', subscriptionData);
+        // await sendSubscriptionToServer(userId, subscriptionData); 
+        // ------------------------------------
 
     } catch (e) {
-        console.error('Error setting up Push Notifications:', e);
+        if (Notification.permission === 'denied') {
+            console.warn('Push subscription failed: Notification permission was denied.');
+        } else {
+            console.error('Push Subscription failed:', e);
+        }
     }
 }
 
+// NEW: Function to handle push unsubscribe on logout
+async function unsubscribePushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+
+        if (subscription) {
+            await subscription.unsubscribe();
+            // Optional: Send a request to your server to remove the old subscription
+            console.log('Push subscription successfully unsubscribed.');
+        }
+        localStorage.removeItem(PUSH_SUBSCRIPTION_KEY);
+    } catch (e) {
+        console.error('Error during push unsubscribe:', e);
+    }
+}
+
+
 /**
  * FIX: Switched from listening to a custom 'broadcast' event on a custom channel 
- * to listening for the standard 'postgres_changes' INSERT event on the 'broadcasts' table,
- * which is what the admin app triggers.
+ * to listening for the standard 'postgres_changes' INSERT event on the 'broadcasts' table.
+ * This handles the IN-APP REAL-TIME notifications.
  */
 function setupBroadcastListener() {
     // 1. Create a channel to listen for database changes
@@ -575,12 +664,14 @@ function setupBroadcastListener() {
             // 1. In-App Toast
             showMessage(`CRITICAL ALERT: ${message}`, 'warning', 10000);
 
-            // 2. Native Notification (Only if app is open but not focused, or permission is granted)
+            // 2. Native Notification (Only if app is open but not focused)
+            // If the app is closed, the SW's 'push' handler will take over (when push is configured).
             if (Notification.permission === 'granted' && document.hidden) { 
-                new Notification('RESQ CRITICAL ALERT', {
+                new Notification('RESQ CRITICAL ALERT (Real-Time)', {
                     body: message,
-                    icon: '/path/to/app-icon-96x96.png', // Use your app icon
-                    vibrate: [1000, 500, 1000]
+                    icon: '/icons/resq-192.png', // Use your app icon
+                    vibrate: [1000, 500, 1000],
+                    data: { url: '/broadcasts.html' }
                 });
             }
             
@@ -601,7 +692,7 @@ function setupBroadcastListener() {
         }
     ).subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-            console.log('Subscribed to broadcasts table changes.');
+            console.log('Subscribed to broadcasts table changes (Supabase Realtime).');
         } else {
             console.warn('Subscription status:', status);
         }
@@ -622,7 +713,7 @@ function renderBroadcastHistory(broadcasts) {
         return;
     }
 
-    // Ensure broadcasts are sorted by timestamp, newest first (cache should already be, but safe to sort here)
+    // Ensure broadcasts are sorted by timestamp, newest first
     broadcasts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     historyContainer.innerHTML = broadcasts.map(broadcast => `
@@ -665,6 +756,7 @@ async function fetchBroadcastHistory() {
     }
 
     // 2. Fetch from network
+    // NOTE: This uses the RLS policy you correctly set: "Allow authenticated users to read all broadcasts"
     const { data: broadcasts, error } = await supabase
         .from('broadcasts')
         .select('message, timestamp')
@@ -672,7 +764,6 @@ async function fetchBroadcastHistory() {
 
     if (error) {
         console.error('Error fetching broadcasts:', error.message);
-        // This is the check for the RLS issue. If this fires, the SQL was not run.
         showMessage('Failed to load broadcasts from server. (Error: ' + error.message + '). Please ensure RLS policy is set for "authenticated" users to SELECT.', 'error', 10000);
         return;
     }
@@ -694,7 +785,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             navigator.serviceWorker.register('sw.js') 
                 .then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    setupPushNotifications(); // Attempt to setup push after SW is registered
+                    // Push setup moved to checkAuth to run only after successful login
                 })
                 .catch(err => {
                     console.log('ServiceWorker registration failed: ', err);
@@ -717,8 +808,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Attempt to send any reports queued while offline
     attemptQueuedReports();
-    
-    // =================================================================
+
+
+   // =================================================================
     // LOGIN PAGE (index.html) Logic
     // =================================================================
     if (window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/')) {
@@ -750,6 +842,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     localStorage.setItem('userId', userId);
                     setDrawerHeader(); 
                     showMessage('Login Successful! Redirecting...', 'success', 1000);
+                    // IMPORTANT: Setup push notifications before redirect
+                    await setupPushNotifications();
+                    
                     setTimeout(() => {
                         window.location.href = 'home.html';
                     }, 1000);
@@ -830,6 +925,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await fetchAndStoreProfile(userId); 
                 setDrawerHeader(); 
                 showMessage('Registration successful! Redirecting to Home...', 'success', 1000);
+                // IMPORTANT: Setup push notifications before redirect
+                await setupPushNotifications();
+                
                 setTimeout(() => {
                     window.location.href = 'home.html';
                 }, 1000);
@@ -1152,6 +1250,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // =================================================================
     // HISTORY PAGE (history.html) Logic
+    // (No changes here, kept for completeness)
     // =================================================================
     if (window.location.pathname.endsWith('/history.html')) {
         
@@ -1260,6 +1359,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // BROADCASTS PAGE (broadcasts.html) Logic
     // =================================================================
     if (window.location.pathname.endsWith('/broadcasts.html')) {
+        setupBroadcastListener(); // Ensure Realtime listener is active on this page
         fetchBroadcastHistory();
     }
 });
