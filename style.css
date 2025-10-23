@@ -625,8 +625,8 @@ button:disabled, .main-button:disabled {
     transform: translateX(-50%);
     padding: 15px 25px; 
     border-radius: 10px;
-    color: black;
-    background-color: #ffc107;
+    color: white;
+    background-color:#444;
     font-weight: 600;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     z-index: 2000;
