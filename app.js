@@ -608,6 +608,614 @@ function setupBroadcastListener() {
     });
 }
 
+// --- Supabase SDK Imports ---
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.3/+esm';
+
+// =================================================================
+// YOUR SUPABASE CONFIGURATION 
+// =================================================================
+const SUPABASE_URL = 'https://ayptiehjxxincwsbtysl.supabase.co'; 
+// !!! THE CORRECT ANON KEY HAS BEEN RESTORED HERE !!!
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g11CgiGzS-MetDY1h0kV-d0vg'; 
+// =================================================================
+
+// --- Initialize Supabase Client ---
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Define constants
+const REPORT_BUCKET = 'emergency_photos'; 
+const OFFLINE_QUEUE_KEY = '__REPORTS_QUEUE__'; // Key for localStorage queue
+const HISTORY_CACHE_KEY = '__REPORT_HISTORY__'; // Key for localStorage history cache
+const BROADCAST_CACHE_KEY = '__BROADCAST_HISTORY__'; // Key for broadcast history cache
+const INSTALL_PROMPT_KEY = '__PWA_PROMPT_SEEN__'; // Key to track if user has been prompted
+
+// =================================================================
+// --- PWA INSTALLATION PROMPT LOGIC ---
+// =================================================================
+let deferredPrompt = null;
+
+// Add event listener for the beforeinstallprompt event
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent the default browser prompt 
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    deferredPrompt = e;
+    
+    // Only show our custom prompt UI on the index page and only if the user hasn't explicitly dismissed it before.
+    const onAuthPage = window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/register.html') || window.location.pathname.endsWith('/');
+    
+    if (onAuthPage && localStorage.getItem(INSTALL_PROMPT_KEY) !== 'true') {
+        showPWAInstallPrompt();
+    }
+});
+
+// Listener for appinstalled event to clean up and hide UI
+window.addEventListener('appinstalled', () => {
+    hidePWAInstallPrompt();
+    deferredPrompt = null;
+    localStorage.setItem(INSTALL_PROMPT_KEY, 'true');
+});
+
+function addPwaModalStyles() {
+    // Dynamically inject necessary styles for the PWA modal if not present
+    if (!document.getElementById('pwaModalStyles')) {
+        const style = document.createElement('style');
+        style.id = 'pwaModalStyles';
+        style.textContent = `
+            .pwa-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.6);
+                display: none; /* starts hidden */
+                justify-content: center;
+                align-items: flex-end; /* Show at the bottom of the screen for mobile feel */
+                z-index: 5001;
+            }
+            .pwa-modal-content {
+                background-color: white;
+                padding: 30px 20px;
+                border-radius: 12px 12px 0 0; /* Rounded top corners */
+                box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+                text-align: center;
+                max-width: 100%;
+                width: 100%;
+                box-sizing: border-box;
+                animation: slideUp 0.3s ease-out forwards;
+            }
+            @keyframes slideUp {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+            }
+            .pwa-modal-content h3 {
+                color: var(--primary-color, #d32f2f);
+                margin-top: 0;
+                font-size: 1.4em;
+            }
+            .pwa-modal-content p {
+                color: #555;
+            }
+            .pwa-modal-actions {
+                margin-top: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .secondary-button-pwa {
+                padding: 12px 15px;
+                border-radius: 8px;
+                font-weight: 600;
+                text-decoration: none;
+                text-align: center;
+                cursor: pointer;
+                transition: background-color 0.2s, box-shadow 0.2s;
+                background-color: #f0f2f5; 
+                color: #333; 
+                border: 1px solid #e0e0e0;
+                width: 100%;
+                box-sizing: border-box;
+                font-size: 1em; /* Match main-button font size */
+            }
+            .secondary-button-pwa:hover {
+                background-color: #e0e0e0;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+function showPWAInstallPrompt() {
+    if (deferredPrompt) {
+        addPwaModalStyles();
+
+        if (!document.getElementById('pwaInstallModal')) {
+            const modalHtml = `
+                <div id="pwaInstallModal" class="pwa-modal-overlay">
+                    <div class="pwa-modal-content">
+                        <h3>Install ResQ App</h3>
+                        <p>Get the full, fastest experience with reliable offline features.</p>
+                        <div class="pwa-modal-actions">
+                            <button id="installPwaBtn" class="main-button">
+                                <i class="fas fa-download"></i> Install App Now
+                            </button>
+                            <button id="dismissPwaBtn" class="secondary-button-pwa">
+                                Continue to Website
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            document.getElementById('installPwaBtn').addEventListener('click', handleInstallClick);
+            document.getElementById('dismissPwaBtn').addEventListener('click', handleDismissClick);
+        }
+        document.getElementById('pwaInstallModal').style.display = 'flex';
+    }
+}
+
+function hidePWAInstallPrompt() {
+    const modal = document.getElementById('pwaInstallModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function handleInstallClick() {
+    hidePWAInstallPrompt();
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                showMessage('ResQ PWA installation accepted!', 'success', 5000);
+            } else {
+                showMessage('Installation dismissed. You can install it later from the browser menu.', 'info', 7000);
+            }
+            deferredPrompt = null;
+            // Mark as seen regardless of choice, to prevent immediate re-prompt
+            localStorage.setItem(INSTALL_PROMPT_KEY, 'true');
+        });
+    }
+}
+
+function handleDismissClick() {
+    hidePWAInstallPrompt();
+    // Mark as dismissed, don't re-prompt them immediately. They can still install manually.
+    localStorage.setItem(INSTALL_PROMPT_KEY, 'true'); 
+    showMessage('Continuing to web app. You can install the app later.', 'info', 5000);
+}
+
+
+// =================================================================
+// --- Global Utilities ---
+// =================================================================
+
+function showMessage(message, type = 'success', duration = 3000) {
+    const messageBox = document.getElementById('customMessageBox');
+    if (!messageBox) return;
+
+    messageBox.className = `custom-message-box hidden ${type}`;
+    messageBox.textContent = message;
+
+    setTimeout(() => {
+        messageBox.classList.remove('hidden');
+        messageBox.classList.add('show');
+    }, 10); 
+
+    setTimeout(() => {
+        messageBox.classList.remove('show');
+        setTimeout(() => {
+            messageBox.classList.add('hidden');
+        }, 300); 
+    }, duration);
+}
+
+function playSound(id) {
+    const audio = document.getElementById(id);
+    if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.play().catch(error => {
+            console.warn('Audio playback prevented by browser:', error);
+        });
+    }
+}
+
+async function fetchProfileWithTimeout(userId) {
+    const fetchPromise = supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+    
+    // 5 second timeout
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Profile load timed out (5s). Check network or RLS policy.")), 5000)
+    );
+
+    return Promise.race([fetchPromise, timeoutPromise]);
+}
+
+async function fetchAndStoreProfile(userId) {
+      try {
+        const { data, error } = await fetchProfileWithTimeout(userId);
+            
+        if (error) {
+            throw new Error(error.message);
+        }
+
+        if (data) {
+            // Note: Keep this logic clean to ensure all necessary fields are stored
+            localStorage.setItem('profileData', JSON.stringify(data));
+            return true;
+        } else {
+            throw new Error('Profile data record is missing from the database.');
+        }
+    } catch (e) {
+        console.error('Error fetching profile for local storage:', e);
+        return !!localStorage.getItem('profileData');
+    }
+}
+
+function setDrawerHeader() {
+    const drawerTitle = document.getElementById('drawerTitle');
+    if (!drawerTitle) return;
+
+    const profileDataString = localStorage.getItem('profileData');
+    if (profileDataString) {
+        try {
+            const profile = JSON.parse(profileDataString);
+            if (profile.fullname && profile.fullname.trim() !== '') {
+                const firstName = profile.fullname.split(' ')[0];
+                drawerTitle.textContent = `Hello, ${firstName}`;
+                return;
+            }
+        } catch (e) {
+            console.error('Error parsing profile data:', e);
+        }
+    }
+    drawerTitle.textContent = 'ResQ Menu';
+}
+
+
+function setupDrawerMenu() {
+    const menuButton = document.getElementById('menuButton');
+    const sideDrawer = document.getElementById('sideDrawer');
+    const closeDrawer = document.getElementById('closeDrawer');
+    const drawerBackdrop = document.getElementById('drawerBackdrop');
+    const logoutButton = document.getElementById('logoutButton');
+
+    // Drawer links need to be updated to reflect the new broadcasts page
+    const navBroadcasts = document.querySelector('nav a[href="broadcasts.html"]');
+    
+    // Set up the active state if on the broadcasts page
+    if (navBroadcasts && window.location.pathname.endsWith('/broadcasts.html')) {
+        document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+        navBroadcasts.classList.add('active');
+    }
+    
+    if (menuButton) {
+        menuButton.addEventListener('click', () => {
+            sideDrawer.classList.add('open');
+            drawerBackdrop.classList.add('show'); 
+            setDrawerHeader(); 
+        });
+    }
+
+    if (closeDrawer) {
+        closeDrawer.addEventListener('click', () => {
+            sideDrawer.classList.remove('open');
+            drawerBackdrop.classList.remove('show'); 
+        });
+    }
+
+    if (drawerBackdrop) {
+        drawerBackdrop.addEventListener('click', () => {
+            sideDrawer.classList.remove('open');
+            drawerBackdrop.classList.remove('show'); 
+        });
+    }
+    
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const { error } = await supabase.auth.signOut();
+            localStorage.clear();
+            localStorage.removeItem(HISTORY_CACHE_KEY); 
+            localStorage.removeItem(OFFLINE_QUEUE_KEY);
+            localStorage.removeItem(BROADCAST_CACHE_KEY); // Clear Broadcast cache
+            localStorage.removeItem(INSTALL_PROMPT_KEY); // Clear PWA prompt key on logout
+
+            if (error) {
+                showMessage('Logout failed: ' + error.message, 'error');
+            } else {
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(
+                        cacheNames.map(cacheName => caches.delete(cacheName))
+                    );
+                }
+                showMessage('Logged out successfully.', 'success');
+                window.location.href = 'index.html';
+            }
+        });
+    }
+}
+
+// --- Global Utility: Check Authentication (FIXED FOR PERSISTENCE) ---
+async function checkAuth() {
+    const { data: { session } } = await supabase.auth.getSession();
+    let profileLoaded = false;
+    
+    const onAuthPage = window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/register.html') || window.location.pathname.endsWith('/');
+
+    if (session) {
+        if (onAuthPage) {
+            window.location.href = 'home.html'; 
+            return false; 
+        }
+        
+        const userId = session.user.id;
+        localStorage.setItem('userId', userId);
+        
+        const profileData = localStorage.getItem('profileData');
+        let profile = profileData ? JSON.parse(profileData) : {};
+
+        if (!profileData || !profile.fullname || profile.fullname.trim() === '') {
+            if (navigator.onLine) {
+                profileLoaded = await fetchAndStoreProfile(userId);
+            } else {
+                profileLoaded = false; 
+                showMessage('Offline and profile data is missing. Please connect to the internet to verify credentials.', 'error', 10000);
+            }
+        } else {
+            profileLoaded = true;
+        }
+        
+        if (!profileLoaded && !onAuthPage) {
+              showMessage('Critical Error: Failed to load user profile. Please log in again.', 'error', 10000);
+              await supabase.auth.signOut();
+              localStorage.clear();
+              setTimeout(() => window.location.href = 'index.html', 500); 
+              return false;
+        }
+
+    } else {
+        if (!onAuthPage) {
+            window.location.href = 'index.html'; 
+            return false; 
+        }
+    }
+    return profileLoaded;
+}
+
+function getLocation(callback) {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const locationText = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
+                callback({ success: true, lat, lon, locationText });
+            },
+            (error) => {
+                let errorMessage = "Location not available. Ensure services are enabled.";
+                if (error.code === error.PERMISSION_DENIED) {
+                    errorMessage = "PERMISSION DENIED: Allow location access.";
+                } else if (error.code === error.TIMEOUT) {
+                    errorMessage = "TIMEOUT: Signal weak. Try moving & click 'Get Location'.";
+                }
+                callback({ success: false, errorMessage });
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
+        );
+    } else {
+        callback({ success: false, errorMessage: "Geolocation not supported by this browser." });
+    }
+}
+
+async function uploadImage(file, userId) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${userId}/${fileName}`;
+
+    showMessage('Uploading photo...', 'info', 2000);
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(REPORT_BUCKET) 
+        .upload(filePath, file);
+        
+    if (uploadError) {
+        console.error('Photo Upload Error:', uploadError.message);
+        showMessage('Photo upload failed. Check Storage RLS and Bucket name.', 'error', 5000);
+        return null;
+    }
+    
+    return filePath;
+}
+
+function formatDateTime(isoString) {
+    if (!isoString) return 'N/A';
+    try {
+        const date = new Date(isoString);
+        return date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (e) {
+        return 'Invalid Date';
+    }
+}
+
+// =================================================================
+// OFFLINE REPORT QUEUEING LOGIC
+// =================================================================
+
+function getQueuedReports() {
+    try {
+        const queueString = localStorage.getItem(OFFLINE_QUEUE_KEY);
+        return queueString ? JSON.parse(queueString) : [];
+    } catch (e) {
+        console.error('Error reading report queue:', e);
+        return [];
+    }
+}
+
+function saveQueuedReports(queue) {
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+}
+
+function queueReport(reportPayload) {
+    const queue = getQueuedReports();
+    reportPayload.offline_timestamp = Date.now(); // Add timestamp for ordering
+    queue.push(reportPayload);
+    saveQueuedReports(queue);
+    showMessage('Report saved offline. Will send automatically when connection is restored.', 'info', 7000);
+}
+
+async function attemptQueuedReports() {
+    const queue = getQueuedReports();
+    if (queue.length === 0) return;
+
+    if (!navigator.onLine) {
+        console.log('Offline: Cannot send queued reports now.');
+        return;
+    }
+    
+    queue.sort((a, b) => a.offline_timestamp - b.offline_timestamp);
+    
+    let reportsSent = 0;
+    const failedQueue = [];
+
+    showMessage(`Connection restored! Attempting to send ${queue.length} queued reports...`, 'success', 5000);
+
+    for (const report of queue) {
+        // Construct the payload to match the database schema
+        const payloadToSend = {
+            user_id: report.user_id,
+            incident_type: report.incident_type,
+            incident_details: report.incident_details,
+            severity_level: report.severity_level,
+            latitude: report.latitude,
+            longitude: report.longitude,
+            photo_url: report.photo_url, // This will be null if offline, as expected
+            status: 'Reported',
+        };
+        
+        const { error } = await supabase.from('emergency_reports').insert([payloadToSend]);
+
+        if (error) {
+            console.error('Failed to send queued report:', error.message, report);
+            failedQueue.push(report); 
+        } else {
+            reportsSent++;
+            localStorage.removeItem(HISTORY_CACHE_KEY); // Invalidate history cache
+        }
+    }
+
+    if (reportsSent > 0) {
+        showMessage(`Successfully sent ${reportsSent} queued report(s).`, 'success', 5000);
+    }
+    
+    saveQueuedReports(failedQueue);
+}
+
+// =================================================================
+// REAL-TIME & PUSH NOTIFICATIONS
+// =================================================================
+
+function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                showMessage('Notifications enabled!', 'success', 3000);
+            } else {
+                console.warn('Notification permission denied.');
+            }
+        });
+    }
+}
+
+// This function prepares the PWA to receive push notifications
+async function setupPushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.warn('Push messaging is not supported.');
+        return;
+    }
+
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        
+        if (Notification.permission === 'granted') {
+            console.log('Push service is ready. Native push is enabled in Service Worker.');
+            // NOTE: Logic for subscribing to a push service would go here.
+        }
+
+    } catch (e) {
+        console.error('Error setting up Push Notifications:', e);
+    }
+}
+
+/**
+ * FIX IMPLEMENTED HERE: Switched from listening to a custom event to 
+ * listening for the standard 'postgres_changes' INSERT event on the 'broadcasts' table.
+ */
+function setupBroadcastListener() {
+    // 1. Create a channel to listen for database changes
+    const channel = supabase.channel('broadcasts_channel');
+
+    channel.on(
+        'postgres_changes', // Listen for changes in the PostgreSQL database
+        { event: 'INSERT', schema: 'public', table: 'broadcasts' }, // Filter for new rows in the broadcasts table
+        (payload) => {
+            const newBroadcast = payload.new;
+            // The message and timestamp are pulled directly from the new row data
+            const message = newBroadcast.message || 'Critical message received.';
+            const timestamp = newBroadcast.timestamp || new Date().toISOString();
+            
+            console.log('Database Broadcast Received:', newBroadcast);
+            playSound('alarmSound'); 
+            
+            // 1. In-App Toast
+            showMessage(`CRITICAL ALERT: ${message}`, 'warning', 10000);
+
+            // 2. Native Notification (Only if app is open but not focused, or permission is granted)
+            if (Notification.permission === 'granted' && document.hidden) { 
+                new Notification('RESQ CRITICAL ALERT', {
+                    body: message,
+                    icon: '/path/to/app-icon-96x96.png', // Use your app icon
+                    vibrate: [1000, 500, 1000]
+                });
+            }
+            
+            // 3. Store the message locally
+            let broadcasts = JSON.parse(localStorage.getItem(BROADCAST_CACHE_KEY) || '[]');
+            broadcasts.unshift({ message: message, timestamp: timestamp });
+            localStorage.setItem(BROADCAST_CACHE_KEY, JSON.stringify(broadcasts.slice(0, 50))); // Keep last 50
+
+            if (navigator.vibrate) {
+                navigator.vibrate([1000, 500, 1000, 500, 1000]);
+            }
+            
+            // Optional: If on broadcasts page, re-render history immediately
+            if (window.location.pathname.endsWith('/broadcasts.html')) {
+                // Rerender history using the updated cache
+                renderBroadcastHistory(broadcasts.slice(0, 50)); 
+            }
+        }
+    ).subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+            console.log('Subscribed to broadcasts table changes.');
+        } else {
+            console.warn('Subscription status:', status);
+        }
+    });
+}
 
 // =================================================================
 // BROADCAST HISTORY LOGIC
