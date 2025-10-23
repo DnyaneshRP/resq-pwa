@@ -551,24 +551,32 @@ async function setupPushNotifications() {
     }
 }
 
+/**
+ * FIX: Switched from listening to a custom 'broadcast' event on a custom channel 
+ * to listening for the standard 'postgres_changes' INSERT event on the 'broadcasts' table,
+ * which is what the admin app triggers.
+ */
 function setupBroadcastListener() {
-    // CRITICAL: Supabase Real-time listens to the table you configured for RLS. 
-    // If you used the custom Real-time channel for broadcasts, this is correct.
-    const channel = supabase.channel('resq_broadcast');
+    // 1. Create a channel to listen for database changes
+    const channel = supabase.channel('broadcasts_channel');
 
     channel.on(
-        'broadcast', 
-        { event: 'critical_alert' }, 
+        'postgres_changes', // Listen for changes in the PostgreSQL database
+        { event: 'INSERT', schema: 'public', table: 'broadcasts' }, // Filter for new rows in the broadcasts table
         (payload) => {
-            const message = payload.payload.message || 'Critical message received.';
-            console.log('Broadcast Received:', message);
+            const newBroadcast = payload.new;
+            // The message and timestamp are pulled directly from the new row data
+            const message = newBroadcast.message || 'Critical message received.';
+            const timestamp = newBroadcast.timestamp || new Date().toISOString();
+            
+            console.log('Database Broadcast Received:', newBroadcast);
             playSound('alarmSound'); 
             
             // 1. In-App Toast
             showMessage(`CRITICAL ALERT: ${message}`, 'warning', 10000);
 
-            // 2. Native Notification (Only if app is open/focused and permission is granted)
-            if (Notification.permission === 'granted') {
+            // 2. Native Notification (Only if app is open but not focused, or permission is granted)
+            if (Notification.permission === 'granted' && document.hidden) { 
                 new Notification('RESQ CRITICAL ALERT', {
                     body: message,
                     icon: '/path/to/app-icon-96x96.png', // Use your app icon
@@ -576,18 +584,24 @@ function setupBroadcastListener() {
                 });
             }
             
-            // Also store the message locally to show immediately on the broadcasts page
+            // 3. Store the message locally
             let broadcasts = JSON.parse(localStorage.getItem(BROADCAST_CACHE_KEY) || '[]');
-            broadcasts.unshift({ message: message, timestamp: new Date().toISOString() });
+            broadcasts.unshift({ message: message, timestamp: timestamp });
             localStorage.setItem(BROADCAST_CACHE_KEY, JSON.stringify(broadcasts.slice(0, 50))); // Keep last 50
 
             if (navigator.vibrate) {
                 navigator.vibrate([1000, 500, 1000, 500, 1000]);
             }
+            
+            // Optional: If on broadcasts page, re-render history immediately
+            if (window.location.pathname.endsWith('/broadcasts.html')) {
+                // Rerender history using the updated cache
+                renderBroadcastHistory(broadcasts.slice(0, 50)); 
+            }
         }
     ).subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-            console.log('Subscribed to ResQ Broadcast channel.');
+            console.log('Subscribed to broadcasts table changes.');
         } else {
             console.warn('Subscription status:', status);
         }
@@ -608,6 +622,9 @@ function renderBroadcastHistory(broadcasts) {
         return;
     }
 
+    // Ensure broadcasts are sorted by timestamp, newest first (cache should already be, but safe to sort here)
+    broadcasts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
     historyContainer.innerHTML = broadcasts.map(broadcast => `
         <div class="broadcast-card-history">
             <span class="broadcast-date">${formatDateTime(broadcast.timestamp)}</span>
@@ -619,6 +636,12 @@ function renderBroadcastHistory(broadcasts) {
 async function fetchBroadcastHistory() {
     const historyContainer = document.getElementById('broadcastsHistoryContainer');
     if (!historyContainer) return;
+    
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+        historyContainer.innerHTML = '<p class="empty-state" style="color:#f44336;">Please log in to load broadcast history.</p>';
+        return;
+    }
     
     // 1. Load from cache first
     const cachedBroadcasts = localStorage.getItem(BROADCAST_CACHE_KEY);
@@ -642,7 +665,6 @@ async function fetchBroadcastHistory() {
     }
 
     // 2. Fetch from network
-    // This query is likely blocked by RLS if the user hasn't set the policy.
     const { data: broadcasts, error } = await supabase
         .from('broadcasts')
         .select('message, timestamp')
@@ -650,8 +672,8 @@ async function fetchBroadcastHistory() {
 
     if (error) {
         console.error('Error fetching broadcasts:', error.message);
-        // CRITICAL REMINDER: This error confirms the RLS issue for history fetch.
-        showMessage('Failed to load broadcasts from server. Check RLS policy on the "broadcasts" table.', 'error', 7000);
+        // This is the check for the RLS issue. If this fires, the SQL was not run.
+        showMessage('Failed to load broadcasts from server. (Error: ' + error.message + '). Please ensure RLS policy is set for "authenticated" users to SELECT.', 'error', 10000);
         return;
     }
 
