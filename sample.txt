@@ -1,3 +1,13 @@
+=======================================
+
+Public Key:
+BL9HAtibpsa7srZdiMIGfshvs09fWbNO52FvRyw6ACuQt5ZuBA-KzzRZiEMSoJ-74SLPm55aIrMhmw1y78qH6BI
+
+Private Key:
+6f7hEmvUAjLncmOGzvZunqbJfl6wjquQMERRozxRo0g
+
+=======================================
+
 six things:
 1)remove additional context from supabase and files
 2)put status in history page
