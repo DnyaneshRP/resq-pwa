@@ -16,7 +16,167 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const REPORT_BUCKET = 'emergency_photos'; 
 const OFFLINE_QUEUE_KEY = '__REPORTS_QUEUE__'; // Key for localStorage queue
 const HISTORY_CACHE_KEY = '__REPORT_HISTORY__'; // Key for localStorage history cache
-const BROADCAST_CACHE_KEY = '__BROADCAST_HISTORY__'; // NEW Key for broadcast history cache
+const BROADCAST_CACHE_KEY = '__BROADCAST_HISTORY__'; // NEW Key for broadcast history cache (RESTORED)
+const INSTALL_PROMPT_KEY = '__PWA_PROMPT_SEEN__'; // NEW: Key to track if user has been prompted (RESTORED)
+
+// =================================================================
+// --- PWA INSTALLATION PROMPT LOGIC (RESTORED) ---
+// =================================================================
+let deferredPrompt = null;
+
+// Add event listener for the beforeinstallprompt event
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent the default browser prompt 
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    deferredPrompt = e;
+    
+    // Only show our custom prompt UI on the index page and only if the user hasn't explicitly dismissed it before.
+    const onAuthPage = window.location.pathname.endsWith('/index.html') || window.location.pathname.endsWith('/register.html') || window.location.pathname.endsWith('/');
+    
+    if (onAuthPage && localStorage.getItem(INSTALL_PROMPT_KEY) !== 'true') {
+        showPWAInstallPrompt();
+    }
+});
+
+// Listener for appinstalled event to clean up and hide UI
+window.addEventListener('appinstalled', () => {
+    hidePWAInstallPrompt();
+    deferredPrompt = null;
+    localStorage.setItem(INSTALL_PROMPT_KEY, 'true');
+});
+
+function addPwaModalStyles() {
+    // Dynamically inject necessary styles for the PWA modal if not present
+    if (!document.getElementById('pwaModalStyles')) {
+        const style = document.createElement('style');
+        style.id = 'pwaModalStyles';
+        style.textContent = `
+            .pwa-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.6);
+                display: none; /* starts hidden */
+                justify-content: center;
+                align-items: flex-end; /* Show at the bottom of the screen for mobile feel */
+                z-index: 5001;
+            }
+            .pwa-modal-content {
+                background-color: white;
+                padding: 30px 20px;
+                border-radius: 12px 12px 0 0; /* Rounded top corners */
+                box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+                text-align: center;
+                max-width: 100%;
+                width: 100%;
+                box-sizing: border-box;
+                animation: slideUp 0.3s ease-out forwards;
+            }
+            @keyframes slideUp {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+            }
+            .pwa-modal-content h3 {
+                color: var(--primary-color, #d32f2f);
+                margin-top: 0;
+                font-size: 1.4em;
+            }
+            .pwa-modal-content p {
+                color: #555;
+            }
+            .pwa-modal-actions {
+                margin-top: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .secondary-button-pwa {
+                padding: 12px 15px;
+                border-radius: 8px;
+                font-weight: 600;
+                text-decoration: none;
+                text-align: center;
+                cursor: pointer;
+                transition: background-color 0.2s, box-shadow 0.2s;
+                background-color: #f0f2f5; 
+                color: #333; 
+                border: 1px solid #e0e0e0;
+                width: 100%;
+                box-sizing: border-box;
+                font-size: 1em; /* Match main-button font size */
+            }
+            .secondary-button-pwa:hover {
+                background-color: #e0e0e0;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+function showPWAInstallPrompt() {
+    if (deferredPrompt) {
+        addPwaModalStyles();
+
+        if (!document.getElementById('pwaInstallModal')) {
+            const modalHtml = `
+                <div id="pwaInstallModal" class="pwa-modal-overlay">
+                    <div class="pwa-modal-content">
+                        <h3>Install ResQ App</h3>
+                        <p>Get the full, fastest experience with reliable offline features.</p>
+                        <div class="pwa-modal-actions">
+                            <button id="installPwaBtn" class="main-button">
+                                <i class="fas fa-download"></i> Install App Now
+                            </button>
+                            <button id="dismissPwaBtn" class="secondary-button-pwa">
+                                Continue to Website
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            document.getElementById('installPwaBtn').addEventListener('click', handleInstallClick);
+            document.getElementById('dismissPwaBtn').addEventListener('click', handleDismissClick);
+        }
+        document.getElementById('pwaInstallModal').style.display = 'flex';
+    }
+}
+
+function hidePWAInstallPrompt() {
+    const modal = document.getElementById('pwaInstallModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function handleInstallClick() {
+    hidePWAInstallPrompt();
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                showMessage('ResQ PWA installation accepted!', 'success', 5000);
+            } else {
+                showMessage('Installation dismissed. You can install it later from the browser menu.', 'info', 7000);
+            }
+            deferredPrompt = null;
+            // Mark as seen regardless of choice, to prevent immediate re-prompt
+            localStorage.setItem(INSTALL_PROMPT_KEY, 'true');
+        });
+    }
+}
+
+function handleDismissClick() {
+    hidePWAInstallPrompt();
+    // Mark as dismissed, don't re-prompt them immediately. They can still install manually.
+    localStorage.setItem(INSTALL_PROMPT_KEY, 'true'); 
+    showMessage('Continuing to web app. You can install the app later.', 'info', 5000);
+}
+
 
 // =================================================================
 // --- Global Utilities ---
@@ -77,6 +237,7 @@ async function fetchAndStoreProfile(userId) {
         }
 
         if (data) {
+            // Note: Keep this logic clean to ensure all necessary fields are stored
             localStorage.setItem('profileData', JSON.stringify(data));
             return true;
         } else {
@@ -116,17 +277,13 @@ function setupDrawerMenu() {
     const drawerBackdrop = document.getElementById('drawerBackdrop');
     const logoutButton = document.getElementById('logoutButton');
 
-    // Drawer links for history/profile pages need to be updated to reflect the new broadcasts page
-    // Assuming you have HTML structure that includes links for home.html, report.html, history.html, broadcasts.html, profile.html
+    // Drawer links need to be updated to reflect the new broadcasts page
     const navBroadcasts = document.querySelector('nav a[href="broadcasts.html"]');
     
-    // Check if the HTML links exist, otherwise add them dynamically or ensure they are present in all page HTML
-    if (navBroadcasts) {
-        // Set up the active state if on the broadcasts page
-        if (window.location.pathname.endsWith('/broadcasts.html')) {
-            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
-            navBroadcasts.classList.add('active');
-        }
+    // Set up the active state if on the broadcasts page
+    if (navBroadcasts && window.location.pathname.endsWith('/broadcasts.html')) {
+        document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+        navBroadcasts.classList.add('active');
     }
     
     if (menuButton) {
@@ -158,7 +315,8 @@ function setupDrawerMenu() {
             localStorage.clear();
             localStorage.removeItem(HISTORY_CACHE_KEY); 
             localStorage.removeItem(OFFLINE_QUEUE_KEY);
-            localStorage.removeItem(BROADCAST_CACHE_KEY); // Clear new cache key
+            localStorage.removeItem(BROADCAST_CACHE_KEY); // <-- RESTORED: Clear Broadcast cache
+            localStorage.removeItem(INSTALL_PROMPT_KEY); // <-- RESTORED: Clear PWA prompt key on logout
 
             if (error) {
                 showMessage('Logout failed: ' + error.message, 'error');
@@ -304,7 +462,7 @@ function saveQueuedReports(queue) {
 
 function queueReport(reportPayload) {
     const queue = getQueuedReports();
-    reportPayload.offline_timestamp = Date.now(); 
+    reportPayload.offline_timestamp = Date.now(); // Add timestamp for ordering
     queue.push(reportPayload);
     saveQueuedReports(queue);
     showMessage('Report saved offline. Will send automatically when connection is restored.', 'info', 7000);
@@ -327,14 +485,15 @@ async function attemptQueuedReports() {
     showMessage(`Connection restored! Attempting to send ${queue.length} queued reports...`, 'success', 5000);
 
     for (const report of queue) {
+        // Construct the payload to match the database schema
         const payloadToSend = {
             user_id: report.user_id,
             incident_type: report.incident_type,
-            incident_details: report.incident_details || report.message,
-            severity_level: report.severity_level || report.severity,
+            incident_details: report.incident_details,
+            severity_level: report.severity_level,
             latitude: report.latitude,
             longitude: report.longitude,
-            photo_url: report.photo_url,
+            photo_url: report.photo_url, // This will be null if offline, as expected
             status: 'Reported',
         };
         
@@ -345,19 +504,19 @@ async function attemptQueuedReports() {
             failedQueue.push(report); 
         } else {
             reportsSent++;
+            localStorage.removeItem(HISTORY_CACHE_KEY); // Invalidate history cache
         }
     }
 
     if (reportsSent > 0) {
         showMessage(`Successfully sent ${reportsSent} queued report(s).`, 'success', 5000);
-        localStorage.removeItem(HISTORY_CACHE_KEY); 
     }
     
     saveQueuedReports(failedQueue);
 }
 
 // =================================================================
-// REAL-TIME & PUSH NOTIFICATIONS (Task 2)
+// REAL-TIME & PUSH NOTIFICATIONS (RESTORED)
 // =================================================================
 
 function requestNotificationPermission() {
@@ -383,10 +542,8 @@ async function setupPushNotifications() {
         const registration = await navigator.serviceWorker.ready;
         
         if (Notification.permission === 'granted') {
-            // Note: In a real app, you would generate a VAPID key pair, get the subscription
-            // using registration.pushManager.subscribe, and send the resulting subscription 
-            // object to your Supabase/backend to store and use for sending pushes.
             console.log('Push service is ready. Native push is enabled in Service Worker.');
+            // NOTE: Logic for subscribing to a push service would go here.
         }
 
     } catch (e) {
@@ -394,7 +551,7 @@ async function setupPushNotifications() {
     }
 }
 
-// Updated to show native notification when the app is focused (Task 2)
+// Updated to show native notification when the app is focused
 function setupBroadcastListener() {
     const channel = supabase.channel('resq_broadcast');
 
@@ -438,7 +595,7 @@ function setupBroadcastListener() {
 
 
 // =================================================================
-// BROADCAST HISTORY LOGIC (Task 3)
+// BROADCAST HISTORY LOGIC (RESTORED)
 // =================================================================
 
 function renderBroadcastHistory(broadcasts) {
@@ -500,7 +657,6 @@ async function fetchBroadcastHistory() {
     renderBroadcastHistory(broadcasts);
 }
 
-
 // =================================================================
 // --- Page Specific Logic Initialization ---
 // =================================================================
@@ -513,7 +669,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             navigator.serviceWorker.register('sw.js') 
                 .then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    setupPushNotifications(); // Attempt to setup push after SW is registered
+                    setupPushNotifications(); // RESTORED: Attempt to setup push after SW is registered
                 })
                 .catch(err => {
                     console.log('ServiceWorker registration failed: ', err);
@@ -521,7 +677,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Request permission immediately on load (will prompt the user)
+    // RESTORED: Request permission immediately on load (will prompt the user)
     requestNotificationPermission();
 
     // Await checkAuth to handle redirects and ensure profile is loaded
@@ -660,7 +816,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // HOME PAGE (home.html) Logic
     // =================================================================
     if (window.location.pathname.endsWith('/home.html')) {
-        setupBroadcastListener();
+        setupBroadcastListener(); // RESTORED: Start listening for alerts
     }
 
 
@@ -1020,11 +1176,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if (data && data.length > 0) {
                 reportsList.innerHTML = data.map(report => {
-                    // This class is updated in style.css for amber color
-                    const statusClass = report.status === 'Resolved' ? 'Resolved' : (report.status === 'Assigned' ? 'Assigned' : 'Reported');
+                    const statusClass = report.status === 'Resolved' ? 'status-resolved' : (report.status === 'Assigned' ? 'status-assigned' : 'status-reported');
                     const statusText = report.status || 'Reported'; 
                     const date = new Date(report.timestamp).toLocaleString();
-                    const severityHtml = report.severity_level ? `<p class="severity-tag">Severity: ${report.severity_level}</p>` : '';
+                    
+                    // Added dynamic severity class for styling
+                    const severityClass = report.severity_level ? `severity-${report.severity_level.toLowerCase()}` : '';
+                    const severityHtml = report.severity_level ? `<p class="severity-tag ${severityClass}">Severity: ${report.severity_level}</p>` : '';
                     
                     const locationText = (report.latitude && report.longitude) 
                         ? `Lat: ${report.latitude.toFixed(4)}, Lon: ${report.longitude.toFixed(4)}`
@@ -1074,7 +1232,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // =================================================================
-    // BROADCASTS PAGE (broadcasts.html) Logic (NEW)
+    // BROADCASTS PAGE (broadcasts.html) Logic (RESTORED)
     // =================================================================
     if (window.location.pathname.endsWith('/broadcasts.html')) {
         fetchBroadcastHistory();

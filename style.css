@@ -131,7 +131,7 @@ h1, h2 {
     outline: none;
 }
 
-button {
+button, .main-button {
     width: 100%;
     padding: 18px; /* Large, easy-to-tap button */
     background-color: #d32f2f;
@@ -146,13 +146,13 @@ button {
     box-shadow: 0 5px #a00; /* Subtle 3D effect */
 }
 
-button:active {
+button:active, .main-button:active {
     background-color: #a00;
     transform: translateY(3px);
     box-shadow: 0 2px #a00;
 }
 
-button:disabled {
+button:disabled, .main-button:disabled {
     background-color: #999;
     box-shadow: none;
     cursor: not-allowed;
@@ -356,26 +356,28 @@ button:disabled {
     border-radius: 5px;
     font-size: 0.8em;
     font-weight: 600;
-    color: #333; /* FIX: Default text color to dark for visibility */
+    color: #333; /* Default text color for visibility */
+    /* Ensure background is applied by specific classes below */
 }
 
+/* FIX: Ensure background colors are strongly applied with !important */
 /* Pending/Reported Status (Initial State, Blue Badge) */
 .status-reported,
 .status-pending {
-    background-color: #1e88e5; /* Blue */
-    color: white; /* Override for dark background */
+    background-color: #1e88e5 !important; /* Blue */
+    color: white !important; /* Override for dark background */
 }
 
 /* In Progress Status (Active State, Amber Badge) */
 .status-assigned {
-    background-color: #ffc107; /* Amber */
-    color: #333; /* Dark text for contrast on light background */
+    background-color: #ffc107 !important; /* Amber */
+    color: #333 !important; /* Dark text for contrast on light background */
 }
 
 /* Resolved Status (Success State, Green Badge) */
 .status-resolved {
-    background-color: #388e3c; /* Green */
-    color: white; /* Override for dark background */
+    background-color: #388e3c !important; /* Green */
+    color: white !important; /* Override for dark background */
 }
 
 .report-detail-line {
@@ -419,12 +421,13 @@ button:disabled {
 }
 
 /* ------------------------------------------- */
-/* --- BROADCASTS PAGE STYLES (NEW) --- */
+/* --- BROADCASTS PAGE STYLES (UPDATED) --- */
 /* ------------------------------------------- */
 .broadcast-list {
     margin: 20px 15px; 
 }
-.broadcast-item {
+/* Renamed class to match HTML generated in app.js */
+.broadcast-card-history { 
     background-color: white;
     padding: 15px;
     margin-bottom: 15px;
@@ -433,10 +436,12 @@ button:disabled {
     border-left: 5px solid #1e88e5; /* Blue info color */
     transition: transform 0.2s;
 }
-.broadcast-item:active {
+/* Renamed class to match HTML generated in app.js */
+.broadcast-card-history:active { 
     transform: scale(0.99);
 }
-.broadcast-timestamp {
+/* Renamed class to match HTML generated in app.js */
+.broadcast-date { 
     font-size: 0.8em;
     color: #888;
     margin-bottom: 5px;
@@ -450,6 +455,68 @@ button:disabled {
     line-height: 1.4;
     margin-top: 10px;
 }
+
+/* ------------------------------------------- */
+/* --- PWA INSTALLATION MODAL STYLES (New) --- */
+/* ------------------------------------------- */
+
+.pwa-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex; 
+    justify-content: center;
+    align-items: flex-end; /* Show at the bottom */
+    z-index: 5001;
+}
+.pwa-modal-content {
+    background-color: white;
+    padding: 30px 20px;
+    border-radius: 12px 12px 0 0; 
+    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+}
+.pwa-modal-content h3 {
+    color: var(--primary-color, #d32f2f);
+    margin-top: 0;
+    font-size: 1.4em;
+}
+.pwa-modal-actions {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.secondary-button-pwa {
+    padding: 18px;
+    border-radius: 12px;
+    font-weight: 700; 
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
+    background-color: #f0f2f5; 
+    color: #333; 
+    border: 1px solid #e0e0e0;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1.1em;
+}
+.secondary-button-pwa:hover {
+    background-color: #e0e0e0;
+}
+.secondary-button-pwa:active {
+    background-color: #e0e0e0;
+    transform: none; /* Override main button active state for secondary style */
+    box-shadow: none;
+}
+
 
 /* ----------------- DRAWER & MESSAGE BOX STYLES... ----------------- */
 
