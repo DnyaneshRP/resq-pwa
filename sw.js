@@ -1,7 +1,7 @@
 // Service Worker for ResQ PWA
 // Handles robust caching (for offline functionality) and push notifications.
 
-const CACHE_NAME = "resq-cache-v8"; // Incrementing version to ensure updates
+const CACHE_NAME = "resq-cache-v9"; // Incrementing version to ensure all caches are updated
 const ASSETS = [
     '/',
     '/index.html',
@@ -11,7 +11,7 @@ const ASSETS = [
     '/about.html',
     '/report.html', 
     '/history.html', 
-    '/broadcasts.html', // Added new broadcasts page
+    '/broadcasts.html', 
     '/style.css',
     '/app.js',
     '/manifest.json',
@@ -26,9 +26,9 @@ const ASSETS = [
 
 // Installation: Cache all assets (Cache-First)
 self.addEventListener('install', (event) => {
+    console.log('Opened cache, pre-caching assets');
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            console.log('Opened cache, pre-caching assets');
             return cache.addAll(ASSETS).catch(error => {
                 console.warn('One or more assets failed to cache:', error);
             });
@@ -54,31 +54,56 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch: Cache-First strategy for PWA Shell, Network-Only for Data/API
+// Fetch: Stale-While-Revalidate for PWA Shell, Network-Only for Data/API
 self.addEventListener('fetch', (event) => {
     const requestUrl = new URL(event.request.url);
 
-    // 1. Cache-First Strategy for PWA Shell Assets
-    // Check if the request URL is a PWA asset (either by exact path or by being a cached external URL)
+    // 1. Stale-While-Revalidate Strategy for PWA Shell Assets
+    // Check if the request is a GET request for a local or whitelisted external asset
     const isPwaAsset = ASSETS.includes(requestUrl.pathname) || 
                        ASSETS.includes(event.request.url) ||
-                       requestUrl.origin === self.location.origin;
+                       (requestUrl.origin === self.location.origin && event.request.method === 'GET');
 
     if (isPwaAsset) {
+        // Use Stale-While-Revalidate strategy
         event.respondWith(
-            caches.match(event.request).then((response) => {
-                // Return cached response or fetch from network (and potentially cache it)
-                return response || fetch(event.request).catch(() => {
-                    // Fallback for failed fetches - return the index page
-                    return caches.match('/index.html') || caches.match('/'); 
+            caches.open(CACHE_NAME).then(async (cache) => {
+                
+                // Start the network request in the background
+                const networkResponsePromise = fetch(event.request).then((response) => {
+                    // Check for valid response (e.g., status 200)
+                    if (response && response.status === 200) {
+                        // IMPORTANT: Clone the response to save one copy to the cache 
+                        // and return the other copy to the browser.
+                        cache.put(event.request, response.clone());
+                    }
+                    return response;
+                }).catch(() => {
+                    // Handle network failure without cache hit below
+                });
+
+                // Check cache first for immediate response
+                const cachedResponse = await cache.match(event.request);
+
+                // Return cached response if available (fastest option, even if stale)
+                if (cachedResponse) {
+                    return cachedResponse;
+                }
+
+                // If cache misses, wait for the network response
+                return networkResponsePromise.catch(() => {
+                    // Network failed AND no cache hit. Use the ultimate offline fallback.
+                    console.log('Network failed and no cached asset, falling back to index.');
+                    return cache.match('/index.html') || cache.match('/'); 
                 });
             })
         );
         return; 
     }
 
-    // 2. Network-Only Strategy for All Other Requests (Supabase API, Storage, etc.)
-    // If it's not a shell asset, allow it to go directly to the network without caching.
+    // 2. Network-Only Strategy for All Other Requests (Supabase API, Storage, POSTs)
+    // We do not call event.respondWith, allowing the request to proceed as normal (Network-Only).
+    // This is safer for dynamic data.
 });
 
 
