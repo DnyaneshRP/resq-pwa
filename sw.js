@@ -1,7 +1,7 @@
 // Service Worker for ResQ PWA
 // Handles robust caching (for offline functionality) and push notifications.
 
-const CACHE_NAME = "resq-cache-v10"; // NEW VERSION! Incrementing version to ensure all caches are updated
+const CACHE_NAME = "resq-cache-v9"; // Incrementing version to ensure all caches are updated
 const ASSETS = [
     '/',
     '/index.html',
@@ -15,8 +15,7 @@ const ASSETS = [
     '/style.css',
     '/app.js',
     '/manifest.json',
-    '/icons/resq-192.png', // Ensure this path is correct
-    '/icons/resq-72.png', // Badge icon path (make sure you have this icon!)
+    '/icons/resq-192.png',
     '/countdown.wav', 
     '/success.mp3',   
     // Critical external dependency for icons
@@ -24,10 +23,6 @@ const ASSETS = [
     // Supabase SDK dependency for offline shell
     'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.3/+esm' 
 ];
-
-// ------------------------------------------------------------------
-// --- PWA LIFECYCLE & CACHING (Your original logic, updated cache name) ---
-// ------------------------------------------------------------------
 
 // Installation: Cache all assets (Cache-First)
 self.addEventListener('install', (event) => {
@@ -64,28 +59,40 @@ self.addEventListener('fetch', (event) => {
     const requestUrl = new URL(event.request.url);
 
     // 1. Stale-While-Revalidate Strategy for PWA Shell Assets
+    // Check if the request is a GET request for a local or whitelisted external asset
     const isPwaAsset = ASSETS.includes(requestUrl.pathname) || 
                        ASSETS.includes(event.request.url) ||
-                       (requestUrl.origin === self.location.origin && event.request.method === 'GET' && !requestUrl.pathname.startsWith('/api/') && !requestUrl.pathname.startsWith('/rest/')); // Exclude Supabase API paths
+                       (requestUrl.origin === self.location.origin && event.request.method === 'GET');
 
     if (isPwaAsset) {
+        // Use Stale-While-Revalidate strategy
         event.respondWith(
             caches.open(CACHE_NAME).then(async (cache) => {
                 
+                // Start the network request in the background
                 const networkResponsePromise = fetch(event.request).then((response) => {
+                    // Check for valid response (e.g., status 200)
                     if (response && response.status === 200) {
+                        // IMPORTANT: Clone the response to save one copy to the cache 
+                        // and return the other copy to the browser.
                         cache.put(event.request, response.clone());
                     }
                     return response;
-                }).catch(() => {}); // Catch network failure
+                }).catch(() => {
+                    // Handle network failure without cache hit below
+                });
 
+                // Check cache first for immediate response
                 const cachedResponse = await cache.match(event.request);
 
+                // Return cached response if available (fastest option, even if stale)
                 if (cachedResponse) {
                     return cachedResponse;
                 }
 
+                // If cache misses, wait for the network response
                 return networkResponsePromise.catch(() => {
+                    // Network failed AND no cache hit. Use the ultimate offline fallback.
                     console.log('Network failed and no cached asset, falling back to index.');
                     return cache.match('/index.html') || cache.match('/'); 
                 });
@@ -95,60 +102,50 @@ self.addEventListener('fetch', (event) => {
     }
 
     // 2. Network-Only Strategy for All Other Requests (Supabase API, Storage, POSTs)
-    // Handled by default if no event.respondWith is called
+    // We do not call event.respondWith, allowing the request to proceed as normal (Network-Only).
+    // This is safer for dynamic data.
 });
 
 
-// -----------------------------------------------------------------
-// --- PUSH NOTIFICATIONS LOGIC (The Core Feature Update) ---
-// -----------------------------------------------------------------
+// =================================================================
+// PUSH NOTIFICATIONS LOGIC (Retained for PWA features)
+// =================================================================
 
-// 1. PUSH EVENT: Fired when a push message is received from the server
-self.addEventListener('push', function(event) {
-    // The data sent from your server. We expect { message: string, url: string }
-    const data = event.data ? event.data.json() : { 
-        message: 'A new critical alert has been issued.', 
-        url: '/broadcasts.html' 
-    };
-    
-    console.log('Push received:', data);
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : { title: 'Emergency Alert', body: 'A critical broadcast was sent.', url: '/broadcasts.html' };
+  
+  const title = data.title;
+  const options = {
+    body: data.body,
+    icon: '/icons/resq-192.png', 
+    badge: '/icons/resq-192.png', 
+    vibrate: [500, 100, 500],
+    data: {
+        url: data.url
+    }
+  };
 
-    const title = '🚨 ResQ Emergency Alert';
-    const options = {
-        body: data.message, 
-        icon: '/icons/resq-192.png', 
-        badge: '/icons/resq-72.png', // A smaller icon is often used for the badge
-        vibrate: [200, 100, 200, 100, 200], // More noticeable vibration pattern
-        data: {
-            url: data.url || '/broadcasts.html' // The page to open on click
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Handle the notification click event
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const urlToOpen = event.notification.data.url || '/broadcasts.html';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(urlToOpen) && 'focus' in client) {
+          return client.focus();
         }
-    };
-
-    // Keep the service worker alive until the notification is shown
-    event.waitUntil(
-        self.registration.showNotification(title, options)
-    );
-});
-
-
-// 2. NOTIFICATION CLICK EVENT: Fired when the user taps the notification
-self.addEventListener('notificationclick', function(event) {
-    event.notification.close();
-    
-    const targetUrl = event.notification.data.url;
-
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-            for (let i = 0; i < clientList.length; i++) {
-                const client = clientList[i];
-                // Check if the target URL is part of the existing client URL
-                if (client.url.includes(targetUrl) && 'focus' in client) {
-                    return client.focus(); // Focus existing tab
-                }
-            }
-            if (clients.openWindow) {
-                return clients.openWindow(targetUrl); // Open new tab
-            }
-        })
-    );
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
 });
