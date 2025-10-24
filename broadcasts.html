@@ -49,64 +49,42 @@
   </div>
   
   <div id="customMessageBox" class="custom-message-box hidden"></div>
-
-  <!-- Supabase + App Script -->
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-    const supabaseUrl = 'https://ayptiehjxxincwsbtysl.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cHRpZWhqeHhpbmN3c2J0eXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTY2NzIsImV4cCI6MjA3NjE3MjY3Mn0.jafnb-fxqWbZm7uJf2g17CgiGzS-MetDY1h0kV-d0vg';  // Replace with your anon key
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    async function loadBroadcasts() {
-        const { data, error } = await supabase
-            .from('broadcasts')
-            .select('*')
-            .order('timestamp', { ascending: false });
-
-        const listContainer = document.getElementById('broadcastList');
-        listContainer.innerHTML = ''; // Clear any content
-
-        if (error) {
-            console.error('Error fetching broadcasts:', error);
-            listContainer.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom: 10px;"></i>
-                    <p>Failed to load broadcasts. Please try again later.</p>
-                </div>
-            `;
-            return;
-        }
-
-        if (!data || data.length === 0) {
-            listContainer.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-box-open fa-3x" style="margin-bottom: 10px;"></i>
-                    <p>No emergency broadcasts have been received yet. Check back later for official alerts.</p>
-                </div>
-            `;
-            return;
-        }
-
-        data.forEach(broadcast => {
-            const date = new Date(broadcast.timestamp).toLocaleString();
-            const broadcastHtml = `
-                <div class="broadcast-item">
-                    <div class="broadcast-timestamp">
-                        <i class="far fa-clock"></i> ${date}
-                    </div>
-                    <div class="broadcast-message">
-                        ${broadcast.title}: ${broadcast.message}
-                    </div>
-                </div>
-            `;
-            listContainer.insertAdjacentHTML('beforeend', broadcastHtml);
-        });
-    }
-
-    document.addEventListener('DOMContentLoaded', loadBroadcasts);
-  </script>
-
+  
   <script type="module" src="app.js"></script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- MOCK DATA FOR DEMONSTRATION ---
+        // You will replace this section with your actual data fetching logic.
+        const mockBroadcasts = []; // Keep this array empty to show the "No broadcasts" message correctly.
+        /* Use the following to test the cards:
+        const mockBroadcasts = [
+            { id: 1, message: "Severe weather alert: Flash flood warning in effect for central districts. Seek high ground immediately.", timestamp: "2025-10-22T10:00:00Z" },
+            { id: 2, message: "Road closure update: Highway 401 East is closed due to an overturned vehicle. Please use alternate routes.", timestamp: "2025-10-22T08:30:00Z" }
+        ];
+        */
+        
+        const listContainer = document.getElementById('broadcastList');
+        
+        if (mockBroadcasts.length > 0) {
+            listContainer.innerHTML = ''; // Clear empty state
+            
+            mockBroadcasts.forEach(broadcast => {
+                const date = new Date(broadcast.timestamp).toLocaleString();
+                const broadcastHtml = `
+                    <div class="broadcast-item">
+                        <div class="broadcast-timestamp">
+                            <i class="far fa-clock"></i> ${date}
+                        </div>
+                        <div class="broadcast-message">
+                            ${broadcast.message}
+                        </div>
+                    </div>
+                `;
+                listContainer.insertAdjacentHTML('beforeend', broadcastHtml);
+            });
+        }
+    });
+  </script>
 </body>
 </html>
