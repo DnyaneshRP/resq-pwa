@@ -1,625 +1,627 @@
 /* Global Styles */
 body {
-    font-family: 'Inter', sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f0f2f5; /* Light grey background for native feel */
-    color: #333;
-    -webkit-tap-highlight-color: transparent;
-    font-size: 16px; /* Base font size */
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f2f5; /* Light grey background for native feel */
+    color: #333;
+    -webkit-tap-highlight-color: transparent;
+    font-size: 16px; /* Base font size */
 }
 
 /* ------------------------------------------- */
-/* --- Centering Fix for Login/Register Pages (Point 1) --- */
+/* --- Centering Fix for Login/Register Pages --- */
 /* ------------------------------------------- */
 .login-page, .register-page {
-    min-height: 100vh;
-    display: flex; /* Enable Flexbox */
-    justify-content: center; /* Center horizontally */
-    align-items: center; /* Center vertically */
-    padding: 20px;
-    box-sizing: border-box;
+    min-height: 100vh;
+    display: flex; /* Enable Flexbox */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    padding: 20px;
+    box-sizing: border-box;
 }
 .app {
-    /* Responsive container for all pages */
-    max-width: 450px; 
-    width: 100%;
-    margin: 0 auto;
-    padding: 0;
-    padding-top: 70px; /* Space for fixed header on protected pages */
-    box-sizing: border-box;
+    /* Responsive container for all pages */
+    max-width: 450px; 
+    width: 100%;
+    margin: 0 auto;
+    padding: 0;
+    padding-top: 70px; /* Space for fixed header on protected pages */
+    box-sizing: border-box;
 }
 /* Override padding-top for login/register pages */
 .login-page .app, .register-page .app {
-    padding-top: 0;
+    padding-top: 0;
 }
 
 
 /* Header/Navbar Styles (Native App Feel) */
 .header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background-color: #d32f2f; /* Red primary color */
-    color: white;
-    padding: 12px 15px; /* Larger padding */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    z-index: 50;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: #d32f2f; /* Red primary color */
+    color: white;
+    padding: 12px 15px; /* Larger padding */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
 }
 
 .header h2 {
-    margin: 0; 
-    font-size: 1.3em;
-    font-weight: 600;
+    margin: 0; 
+    font-size: 1.3em;
+    font-weight: 600;
 }
 
 .hamburger {
-    font-size: 26px; /* Larger tap target */
-    cursor: pointer;
-    margin-right: 15px;
-    padding: 5px;
-    border-radius: 8px;
-    transition: background-color 0.2s;
+    font-size: 26px; /* Larger tap target */
+    cursor: pointer;
+    margin-right: 15px;
+    padding: 5px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
 }
 .hamburger:active {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Form Styles (Login/Register) */
 .form-container {
-    background-color: white;
-    padding: 30px; /* Generous padding */
-    border-radius: 16px; /* Rounded corners */
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-    margin-top: 0;
+    background-color: white;
+    padding: 30px; /* Generous padding */
+    border-radius: 16px; /* Rounded corners */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    margin-top: 0;
 }
 
 h1, h2 {
-    color: #d32f2f;
-    text-align: center;
-    margin-bottom: 25px;
+    color: #d32f2f;
+    text-align: center;
+    margin-bottom: 25px;
 }
 
 .form-group {
-    margin-bottom: 20px; /* Increased spacing */
+    margin-bottom: 20px; /* Increased spacing */
 }
 
 .form-group label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 500;
-    color: #555;
-    font-size: 0.9em;
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #555;
+    font-size: 0.9em;
 }
 
 .form-group input, .form-group select {
-    width: 100%;
-    padding: 14px 10px; /* Taller input fields for touch */
-    border: 1px solid #ddd;
-    border-radius: 10px; /* Rounded inputs */
-    box-sizing: border-box;
-    font-size: 1em;
-    transition: border-color 0.3s, box-shadow 0.3s;
+    width: 100%;
+    padding: 14px 10px; /* Taller input fields for touch */
+    border: 1px solid #ddd;
+    border-radius: 10px; /* Rounded inputs */
+    box-sizing: border-box;
+    font-size: 1em;
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .form-group input:focus, .form-group select:focus {
-    border-color: #d32f2f;
-    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.2);
-    outline: none;
+    border-color: #d32f2f;
+    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.2);
+    outline: none;
 }
 
-/* Updated Textarea Style (Fix - Point 2) */
+/* Textarea Style */
 .form-group textarea {
-    width: 100%;
-    padding: 14px 10px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    box-sizing: border-box;
-    font-size: 1em;
-    resize: vertical; /* Allow vertical resizing */
-    min-height: 100px; /* Decent size */
-    transition: border-color 0.3s, box-shadow 0.3s;
+    width: 100%;
+    padding: 14px 10px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-sizing: border-box;
+    font-size: 1em;
+    resize: vertical; /* Allow vertical resizing */
+    min-height: 100px; /* Decent size */
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .form-group textarea:focus {
-    border-color: #d32f2f;
-    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.2);
-    outline: none;
+    border-color: #d32f2f;
+    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.2);
+    outline: none;
 }
 
 button, .main-button {
-    width: 100%;
-    padding: 18px; /* Large, easy-to-tap button */
-    background-color: #d32f2f;
-    color: white;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    font-size: 1.1em;
-    font-weight: 700;
-    transition: background-color 0.3s, transform 0.1s;
-    margin-top: 25px;
-    box-shadow: 0 5px #a00; /* Subtle 3D effect */
+    width: 100%;
+    padding: 18px; /* Large, easy-to-tap button */
+    background-color: #d32f2f;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: 700;
+    transition: background-color 0.3s, transform 0.1s;
+    margin-top: 25px;
+    box-shadow: 0 5px #a00; /* Subtle 3D effect */
 }
 
 button:active, .main-button:active {
-    background-color: #a00;
-    transform: translateY(3px);
-    box-shadow: 0 2px #a00;
+    background-color: #a00;
+    transform: translateY(3px);
+    box-shadow: 0 2px #a00;
 }
 
 button:disabled, .main-button:disabled {
-    background-color: #999;
-    box-shadow: none;
-    cursor: not-allowed;
+    background-color: #999;
+    box-shadow: none;
+    cursor: not-allowed;
 }
 
 
 .text-center {
-    text-align: center;
-    margin-top: 25px;
+    text-align: center;
+    margin-top: 25px;
 }
 
 .text-center a {
-    color: #d32f2f;
-    text-decoration: none;
-    font-weight: 600;
+    color: #d32f2f;
+    text-decoration: none;
+    font-weight: 600;
 }
 
 /* Protected Page Content Styles */
 .app > h1 {
-    font-size: 1.8em;
-    text-align: left;
-    margin-top: 10px;
-    margin-bottom: 15px;
-    padding: 0 15px; 
+    font-size: 1.8em;
+    text-align: left;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    padding: 0 15px; 
 }
 .app > p {
-    font-size: 1em;
-    color: #666;
-    margin-bottom: 10px;
-    padding: 0 15px;
+    font-size: 1em;
+    color: #666;
+    margin-bottom: 10px;
+    padding: 0 15px;
 }
 
 /* Profile/About Page Container Styles */
 .profile-info {
-    background-color: white;
-    padding: 25px;
-    border-radius: 16px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    margin: 20px 15px; 
-    font-size: 1em; 
+    background-color: white;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    margin: 20px 15px; 
+    font-size: 1em; 
 }
 
 .profile-item {
-    padding: 12px 0; 
-    border-bottom: 1px solid #eee;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    padding: 12px 0; 
+    border-bottom: 1px solid #eee;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .profile-item:last-child {
-    border-bottom: none;
+    border-bottom: none;
 }
 
 .profile-label {
-    font-weight: 600;
-    color: #444;
-    min-width: 130px;
-    margin-right: 15px;
+    font-weight: 600;
+    color: #444;
+    min-width: 130px;
+    margin-right: 15px;
 }
 
 .profile-value {
-    flex-grow: 1;
-    text-align: right;
-    color: #333;
-    font-weight: 400;
+    flex-grow: 1;
+    text-align: right;
+    color: #333;
+    font-weight: 400;
 }
 
 /* List styles for About page */
 .profile-info ul {
-    list-style: disc inside;
-    padding-left: 0;
-    margin-top: 15px;
-    line-height: 1.5;
+    list-style: disc inside;
+    padding-left: 0;
+    margin-top: 15px;
+    line-height: 1.5;
 }
 .profile-info li {
-    margin-bottom: 8px;
-    color: #555;
+    margin-bottom: 8px;
+    color: #555;
 }
 
 /* ------------------------------------------- */
 /* --- HOME PAGE CARDS --- */
 /* ------------------------------------------- */
 .home-card-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    padding: 0 15px;
-    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 0 15px;
+    margin-top: 20px;
 }
 .action-card {
-    display: block;
-    text-decoration: none;
-    padding: 25px;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-    text-align: center;
+    display: block;
+    text-decoration: none;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-align: center;
 }
 .action-card:active {
-    transform: translateY(2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 .action-card i {
-    font-size: 3em;
-    margin-bottom: 15px;
+    font-size: 3em;
+    margin-bottom: 15px;
 }
 .action-card h3 {
-    margin: 0 0 5px 0;
-    font-size: 1.5em;
-    font-weight: 700;
+    margin: 0 0 5px 0;
+    font-size: 1.5em;
+    font-weight: 700;
 }
 .action-card p {
-    margin: 0;
-    font-size: 0.9em;
-    color: inherit;
-    padding: 0; 
+    margin: 0;
+    font-size: 0.9em;
+    color: inherit;
+    padding: 0; 
 }
 .primary-action {
-    background-color: #d32f2f; /* Red */
-    color: white;
+    background-color: #d32f2f; /* Red */
+    color: white;
 }
 .primary-action i {
-    color: white;
+    color: white;
 }
 .secondary-action {
-    background-color: #ffffff; /* White */
-    color: #333;
-    border: 1px solid #ddd;
+    background-color: #ffffff; /* White */
+    color: #333;
+    border: 1px solid #ddd;
 }
 .secondary-action i {
-    color: #d32f2f;
+    color: #d32f2f;
 }
 /* Style for the Emergency Broadcasts card */
 .info-action {
-    background-color: #fffde7; /* Very light yellow */
-    color: #e65100; /* Deep orange/amber text */
-    border: 1px solid #ffcc80;
+    background-color: #fffde7; /* Very light yellow */
+    color: #e65100; /* Deep orange/amber text */
+    border: 1px solid #ffcc80;
 }
 .info-action i {
-    color: #e65100;
+    color: #e65100;
 }
 
 /* ------------------------------------------- */
 /* --- REPORT/HISTORY PAGE CARD/FORM STYLES --- */
 /* ------------------------------------------- */
 
-/* Report Form Card (Point 2) */
+/* Report Form Card */
 .report-form-card {
-    background-color: white;
-    padding: 25px;
-    border-radius: 16px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    margin: 20px 15px; 
+    background-color: white;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    margin: 20px 15px; 
 }
 
 /* Location Status Input Styling */
 #locationStatus {
-    text-align: center;
-    font-weight: 600;
-    border: none;
-    background-color: #fffde7;
+    text-align: center;
+    font-weight: 600;
+    border: none;
+    background-color: #fffde7;
 }
 
-/* Report History Card Styles (Point 3) */
+/* Report History Card Styles */
 .history-list {
-    margin: 20px 15px; 
+    margin: 20px 15px; 
 }
 
 .report-card-history {
-    background-color: white;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    border-left: 5px solid #d32f2f; /* Highlight bar (Red for incident) */
-    transition: transform 0.2s;
+    background-color: white;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-left: 5px solid #d32f2f; /* Highlight bar (Red for incident) */
+    transition: transform 0.2s;
 }
 
 .report-card-history:active {
-    transform: scale(0.99);
+    transform: scale(0.99);
 }
 
 .report-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px dashed #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed #eee;
 }
 
 .report-header h4 {
-    margin: 0;
-    color: #d32f2f;
-    font-size: 1.1em;
+    margin: 0;
+    color: #d32f2f;
+    font-size: 1.1em;
 }
 
 .report-status {
-    padding: 4px 8px;
-    border-radius: 5px;
-    font-size: 0.8em;
-    font-weight: 600;
-    color: #333; /* Default text color for visibility */
-    /* Ensure background is applied by specific classes below */
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 0.8em;
+    font-weight: 600;
+    color: #333; 
 }
 
-/* FIX: Ensure background colors are strongly applied with !important */
+/* Status Badges */
 /* Pending/Reported Status (Initial State, Blue Badge) */
 .status-reported,
 .status-pending {
-    background-color: #1e88e5 !important; /* Blue */
-    color: white !important; /* Override for dark background */
+    background-color: #1e88e5 !important; /* Blue */
+    color: white !important; 
 }
 
 /* In Progress Status (Active State, Amber Badge) */
 .status-assigned {
-    background-color: #ffc107 !important; /* Amber */
-    color: #333 !important; /* Dark text for contrast on light background */
+    background-color: #ffc107 !important; /* Amber */
+    color: #333 !important; 
 }
 
 /* Resolved Status (Success State, Green Badge) */
 .status-resolved {
-    background-color: #388e3c !important; /* Green */
-    color: white !important; /* Override for dark background */
+    background-color: #388e3c !important; /* Green */
+    color: white !important; 
 }
 
 .report-detail-line {
-    font-size: 0.95em;
-    color: #333;
-    margin: 4px 0;
+    font-size: 0.95em;
+    color: #333;
+    margin: 4px 0;
 }
 .report-description {
-    font-size: 0.9em;
-    color: #555;
-    margin: 5px 0 10px 0;
-    /* word-wrap: break-word; */
+    font-size: 0.9em;
+    color: #555;
+    margin: 5px 0 10px 0;
 }
 
 .report-footer {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    font-size: 0.8em;
-    color: #888;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid #f0f0f0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    font-size: 0.8em;
+    color: #888;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f0f0f0;
 }
 .report-footer i {
-    margin-right: 5px;
+    margin-right: 5px;
 }
 .report-photo {
-    width: 100%;
-    max-height: 150px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 10px;
+    width: 100%;
+    max-height: 150px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 10px;
 }
 /* States for empty/loading */
 .loading-state, .error-state, .empty-state {
-    text-align: center;
-    padding: 30px;
-    color: #777;
-    font-style: italic;
+    text-align: center;
+    padding: 30px;
+    color: #777;
+    font-style: italic;
 }
 
 /* ------------------------------------------- */
-/* --- BROADCASTS PAGE STYLES (FINALIZED FOR CONSISTENCY) --- */
+/* --- BROADCASTS PAGE STYLES (MATCHING REPORT CARD STRUCTURE) --- */
 /* ------------------------------------------- */
 .broadcast-list {
-    margin: 20px 15px; 
+    margin: 20px 15px; 
 }
 
-/* Alias classes for robustness and consistency with report cards */
-.broadcast-card-history,
 .broadcast-item {
-    background-color: white;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    border-left: 5px solid #1e88e5; /* Blue/Info color for alerts */
-    transition: transform 0.2s;
+    background-color: white;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-left: 5px solid #1e88e5; /* Blue/Info color for alerts */
+    transition: transform 0.2s;
 }
 
-.broadcast-card-history:active,
 .broadcast-item:active {
-    transform: scale(0.99);
+    transform: scale(0.99);
 }
 
-/* Date/Timestamp line styling */
-.broadcast-date,
+.broadcast-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed #eee;
+}
+
+.broadcast-header h4 {
+    margin: 0;
+    color: #1e88e5; /* Use blue for broadcast titles */
+    font-size: 1.1em;
+}
+
 .broadcast-timestamp {
-    font-size: 0.8em;
-    color: #888;
-    margin-bottom: 5px;
-    padding-bottom: 5px;
-    border-bottom: 1px dashed #eee;
-    display: block; /* Ensures border spans full width */
+    font-size: 0.8em;
+    color: #888;
+    font-weight: 500;
 }
 
 .broadcast-message {
-    font-size: 1em;
-    color: #333;
-    font-weight: 500;
-    line-height: 1.4;
-    margin-top: 5px; 
+    font-size: 1em; /* Standard body text size */
+    color: #333;
+    line-height: 1.4;
+    margin-top: 5px; 
 }
 
 
 /* ------------------------------------------- */
-/* --- PWA INSTALLATION MODAL STYLES (New) --- */
+/* --- PWA INSTALLATION MODAL STYLES --- */
 /* ------------------------------------------- */
 
 .pwa-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex; 
-    justify-content: center;
-    align-items: flex-end; /* Show at the bottom */
-    z-index: 5001;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex; 
+    justify-content: center;
+    align-items: flex-end; /* Show at the bottom */
+    z-index: 5001;
 }
 .pwa-modal-content {
-    background-color: white;
-    padding: 30px 20px;
-    border-radius: 12px 12px 0 0; 
-    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
-    text-align: center;
-    max-width: 100%;
-    width: 100%;
-    box-sizing: border-box;
+    background-color: white;
+    padding: 30px 20px;
+    border-radius: 12px 12px 0 0; 
+    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
 }
 .pwa-modal-content h3 {
-    color: var(--primary-color, #d32f2f);
-    margin-top: 0;
-    font-size: 1.4em;
+    color: var(--primary-color, #d32f2f);
+    margin-top: 0;
+    font-size: 1.4em;
 }
 .pwa-modal-actions {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 .secondary-button-pwa {
-    padding: 18px;
-    border-radius: 12px;
-    font-weight: 700; 
-    text-decoration: none;
-    text-align: center;
-    cursor: pointer;
-    transition: background-color 0.2s, box-shadow 0.2s;
-    background-color: #f0f2f5; 
-    color: #333; 
-    border: 1px solid #e0e0e0;
-    width: 100%;
-    box-sizing: border-box;
-    font-size: 1.1em;
+    padding: 18px;
+    border-radius: 12px;
+    font-weight: 700; 
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
+    background-color: #f0f2f5; 
+    color: #333; 
+    border: 1px solid #e0e0e0;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1.1em;
 }
 .secondary-button-pwa:hover {
-    background-color: #e0e0e0;
+    background-color: #e0e0e0;
 }
 .secondary-button-pwa:active {
-    background-color: #e0e0e0;
-    transform: none; /* Override main button active state for secondary style */
-    box-shadow: none;
+    background-color: #e0e0e0;
+    transform: none; /* Override main button active state for secondary style */
+    box-shadow: none;
 }
 
 
-/* ----------------- DRAWER & MESSAGE BOX STYLES... ----------------- */
-
 /* ------------------------------------------- */
-/* --- SLIDE-OUT DRAWER STYLES --- */
+/* --- SLIDE-OUT DRAWER STYLES (ADJUSTED FOR SIZE) --- */
 /* ------------------------------------------- */
 
 .side-drawer {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100%; 
-    width: 80%; 
-    max-width: 320px; 
-    background-color: white;
-    box-shadow: 2px 0 15px rgba(0,0,0,0.5);
-    z-index: 1000; 
-    overflow-y: auto;
-    transform: translateX(-100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1); 
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%; 
+    width: 80%; 
+    max-width: 320px; 
+    background-color: white;
+    box-shadow: 2px 0 15px rgba(0,0,0,0.5);
+    z-index: 1000; 
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1); 
 }
 
 .side-drawer.open {
-    transform: translateX(0);
+    transform: translateX(0);
 }
 
 .drawer-header {
-    background-color: #d32f2f;
-    color: white;
-    padding: 20px; 
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1.2em;
+    background-color: #d32f2f;
+    color: white;
+    padding: 20px; 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.1em; /* Slightly reduced header size */
 }
 
 .close-btn {
-    font-size: 36px;
-    cursor: pointer;
-    line-height: 1;
-    color: white;
-    padding: 5px;
-    border-radius: 50%;
-    transition: background-color 0.2s;
+    font-size: 32px; /* Slightly reduced button size */
+    cursor: pointer;
+    line-height: 1;
+    color: white;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
 }
 
 .drawer-content {
-    padding-top: 5px;
+    padding-top: 5px;
 }
 
 .drawer-link {
-    display: flex;
-    align-items: center;
-    padding: 18px 20px; /* Taller touch targets */
-    text-decoration: none;
-    color: #333;
-    font-size: 1.1em;
-    border-bottom: 1px solid #f0f2f5;
-    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    padding: 15px 20px; /* Reduced vertical padding */
+    text-decoration: none;
+    color: #333;
+    font-size: 1em; /* Reduced link font size */
+    border-bottom: 1px solid #f0f2f5;
+    transition: background-color 0.2s;
 }
 .drawer-link i {
-    margin-right: 15px;
-    color: #d32f2f;
-    font-size: 1.2em;
+    margin-right: 15px;
+    color: #d32f2f;
+    font-size: 1.2em;
 }
 
 .drawer-link:hover, .drawer-link:active {
-    background-color: #f5f5f5;
+    background-color: #f5f5f5;
 }
 
 .logout-link {
-    color: #d32f2f !important;
-    font-weight: 600;
+    color: #d32f2f !important;
+    font-weight: 600;
 }
 .logout-link i {
-    color: #d32f2f;
+    color: #d32f2f;
 }
 
 /* Overlay Backdrop */
 .drawer-backdrop {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6); 
-    z-index: 999; 
-    opacity: 0; 
-    transition: opacity 0.3s ease-in-out;
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); 
+    z-index: 999; 
+    opacity: 0; 
+    transition: opacity 0.3s ease-in-out;
 }
 
 .drawer-backdrop.active {
-    display: block;
-    opacity: 1;
+    display: block;
+    opacity: 1;
 }
 
 /* ------------------------------------------- */
@@ -627,92 +629,92 @@ button:disabled, .main-button:disabled {
 /* ------------------------------------------- */
 
 .custom-message-box {
-    position: fixed;
-    bottom: 30px; 
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 15px 25px; 
-    border-radius: 10px;
-    color: white;
-    background-color:darkslategrey;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 2000;
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-    min-width: 280px;
-    text-align: center;
-    font-size: 1em;
+    position: fixed;
+    bottom: 30px; 
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 25px; 
+    border-radius: 10px;
+    color: white;
+    background-color:darkslategrey;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+    min-width: 280px;
+    text-align: center;
+    font-size: 1em;
 }
 
 .custom-message-box.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }
 
 .custom-message-box.success {
-    background-color: #4CAF50;
+    background-color: #4CAF50;
 }
 
 .custom-message-box.error {
-    background-color: #f44336;
+    background-color: #f44336;
 }
 
 .custom-message-box.hidden {
-    display: none;
+    display: none;
 }
 
 /* --- Report Modal Styles --- */
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 3000;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
 }
 .modal-content {
-    background-color: white;
-    padding: 40px;
-    border-radius: 16px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-    text-align: center;
-    max-width: 80%;
-    width: 300px; /* fixed width for better mobile view */
+    background-color: white;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    text-align: center;
+    max-width: 80%;
+    width: 300px; /* fixed width for better mobile view */
 }
 .modal-content h3 {
-    color: #333;
-    margin-top: 0;
+    color: #333;
+    margin-top: 0;
 }
 #countdownTimer {
-    font-size: 4em;
-    color: #d32f2f;
-    font-weight: 900;
+    font-size: 4em;
+    color: #d32f2f;
+    font-weight: 900;
 }
 .success-icon {
-    font-size: 3em;
-    color: #4CAF50;
-    margin-bottom: 10px;
+    font-size: 3em;
+    color: #4CAF50;
+    margin-bottom: 10px;
 }
 .modal-content button {
-    margin-top: 20px;
-    background-color: #4CAF50;
-    box-shadow: 0 5px #388E3C;
+    margin-top: 20px;
+    background-color: #4CAF50;
+    box-shadow: 0 5px #388E3C;
 }
 .modal-content button:active {
-    background-color: #388E3C;
-    box-shadow: 0 2px #388E3C;
+    background-color: #388E3C;
+    box-shadow: 0 2px #388E3C;
 }
 
 /* --- Utility Class (MUST BE PRESENT) --- */
 .hidden {
-    display: none !important;
+    display: none !important;
 }
 /* Ensure the backdrop is correctly hidden by default */
 .modal-overlay.hidden {
-    display: none !important;
+    display: none !important;
 }
