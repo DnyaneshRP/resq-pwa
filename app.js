@@ -13,7 +13,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // PUSH NOTIFICATION CONFIGURATION (STEP 3 INTEGRATION)
 // =================================================================
 // 🚨 IMPORTANT: YOUR VAPID Public Key from Step 1
-const VAPID_PUBLIC_KEY = 'BIKEt-qRMavs8aTn6xkP82Do46HdD4vrztAfFfRxbN_GD0F_qrxPatnKJsrkLkOcuUPm1sN6ak4mQRwxxqMhjrw'; 
+const VAPID_PUBLIC_KEY = 'BL9HAtibpsa7srZdiMIGfshvs09fWbNO52FvRyw6ACuQt5ZuBA-KzzRZiEMSoJ-74SLPm55aIrMhmw1y78qH6BI'; 
 const SUBSCRIPTIONS_TABLE = 'push_subscriptions'; // NEW CONSTANT for Supabase table
 
 // --- Initialize Supabase Client ---
