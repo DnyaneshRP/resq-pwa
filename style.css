@@ -419,12 +419,13 @@ button:disabled, .main-button:disabled {
 }
 
 /* ------------------------------------------- */
-/* --- BROADCASTS PAGE STYLES (MATCHING REPORT CARD STRUCTURE) --- */
+/* --- BROADCASTS PAGE STYLES (NOW MATCHING REPORT CARD STRUCTURE) --- */
 /* ------------------------------------------- */
 .broadcast-list {
     margin: 20px 15px; 
 }
 
+/* Broadcast item visually matches report history card */
 .broadcast-item {
     background-color: white;
     padding: 15px;
@@ -439,13 +440,14 @@ button:disabled, .main-button:disabled {
     transform: scale(0.99);
 }
 
+/* Match report-header structure (title and date/status side-by-side) */
 .broadcast-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
     padding-bottom: 5px;
-    border-bottom: 1px dashed #eee;
+    border-bottom: 1px dashed #eee; 
 }
 
 .broadcast-header h4 {
@@ -455,16 +457,18 @@ button:disabled, .main-button:disabled {
 }
 
 .broadcast-timestamp {
+    /* Style to ensure date/time is visible and aligned */
     font-size: 0.8em;
     color: #888;
     font-weight: 500;
 }
 
 .broadcast-message {
-    font-size: 1em; /* Standard body text size */
-    color: #333;
+    /* Match report-description styling for body text */
+    font-size: 0.9em;
+    color: #555;
     line-height: 1.4;
-    margin-top: 5px; 
+    margin: 0; 
 }
 
 
@@ -531,7 +535,7 @@ button:disabled, .main-button:disabled {
 
 
 /* ------------------------------------------- */
-/* --- SLIDE-OUT DRAWER STYLES (ADJUSTED FOR SIZE) --- */
+/* --- SLIDE-OUT DRAWER STYLES (FINAL ADJUSTMENTS) --- */
 /* ------------------------------------------- */
 
 .side-drawer {
@@ -556,15 +560,15 @@ button:disabled, .main-button:disabled {
 .drawer-header {
     background-color: #d32f2f;
     color: white;
-    padding: 20px; 
+    padding: 18px 20px; /* Reduced vertical padding */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 1.1em; /* Slightly reduced header size */
+    font-size: 1.1em; 
 }
 
 .close-btn {
-    font-size: 32px; /* Slightly reduced button size */
+    font-size: 32px; 
     cursor: pointer;
     line-height: 1;
     color: white;
@@ -574,16 +578,16 @@ button:disabled, .main-button:disabled {
 }
 
 .drawer-content {
-    padding-top: 5px;
+    padding-top: 0; /* Adjusted for smaller links */
 }
 
 .drawer-link {
     display: flex;
     align-items: center;
-    padding: 15px 20px; /* Reduced vertical padding */
+    padding: 14px 20px; /* Further reduced vertical padding for smaller feel */
     text-decoration: none;
     color: #333;
-    font-size: 1em; /* Reduced link font size */
+    font-size: 1em; 
     border-bottom: 1px solid #f0f2f5;
     transition: background-color 0.2s;
 }
